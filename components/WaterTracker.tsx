@@ -15,6 +15,9 @@ export function WaterTracker({ ozLogged, goal = 128, readOnly, onAdd, onSetCusto
   const pct = Math.min(100, (ozLogged / goal) * 100);
   const done = ozLogged >= goal;
 
+  const barColor = done ? 'var(--green)' : pct > 60 ? '#3b9ede' : '#1e6ea8';
+  const barGlow = done ? 'var(--glow-green)' : '0 0 6px #3b9ede66';
+
   function handleCustomSubmit(e: React.FormEvent) {
     e.preventDefault();
     const val = parseInt(customInput);
@@ -24,83 +27,81 @@ export function WaterTracker({ ozLogged, goal = 128, readOnly, onAdd, onSetCusto
     }
   }
 
-  const barColor = done
-    ? 'var(--green)'
-    : pct > 50
-    ? '#3b82f6'
-    : '#60a5fa';
+  const pixelFont = { fontFamily: '"Press Start 2P", monospace' };
+  const vt323 = { fontFamily: '"VT323", monospace' };
 
   return (
     <div className="mt-2 space-y-2">
-      {/* Progress bar */}
       <div className="flex items-center gap-2">
         <div
           className="flex-1 h-4"
-          style={{ border: '2px solid var(--text)', background: 'var(--bg)' }}
+          style={{ border: '2px solid var(--border)', background: 'var(--bg)' }}
         >
           <div
             className="h-full transition-all duration-300"
-            style={{ width: `${pct}%`, background: barColor }}
+            style={{
+              width: `${pct}%`,
+              background: barColor,
+              boxShadow: pct > 0 ? barGlow : 'none',
+            }}
           />
         </div>
         <span
           style={{
-            fontFamily: '"Press Start 2P", monospace',
-            fontSize: '8px',
-            color: done ? 'var(--green)' : 'var(--text)',
-            minWidth: '70px',
+            ...vt323,
+            fontSize: '18px',
+            color: done ? 'var(--green)' : 'var(--text-muted)',
+            minWidth: '72px',
             textAlign: 'right',
           }}
         >
-          {ozLogged} / {goal} oz
+          {ozLogged}/{goal}oz
         </span>
       </div>
 
-      {/* Quick-add buttons */}
       {!readOnly && (
         <div className="flex gap-2 flex-wrap">
           {[8, 16, 32].map((oz) => (
             <button
               key={oz}
               onClick={() => onAdd(oz)}
-              className="px-3 py-1 text-xs transition-all active:translate-y-px"
+              className="px-3 py-1 cursor-pointer transition-all duration-150 active:translate-y-px"
               style={{
-                fontFamily: '"Press Start 2P", monospace',
-                fontSize: '8px',
-                border: '2px solid var(--text)',
-                boxShadow: '2px 2px 0 var(--text)',
-                background: 'var(--surface)',
+                ...pixelFont,
+                fontSize: '7px',
+                border: '2px solid var(--border)',
+                boxShadow: '2px 2px 0 #000',
+                background: 'var(--surface-2)',
                 color: 'var(--text)',
               }}
             >
               +{oz}
             </button>
           ))}
-
-          {/* Custom input */}
           <form onSubmit={handleCustomSubmit} className="flex gap-1">
             <input
               type="number"
               value={customInput}
               onChange={(e) => setCustomInput(e.target.value)}
               placeholder="oz"
-              className="w-14 px-2 py-1 text-xs bg-white"
+              className="w-14 px-2 py-1"
               style={{
-                fontFamily: '"Press Start 2P", monospace',
-                fontSize: '8px',
+                ...pixelFont,
+                fontSize: '7px',
                 border: '2px solid var(--border)',
+                background: 'var(--surface-2)',
                 outline: 'none',
               }}
             />
             <button
               type="submit"
-              className="px-2 py-1 text-xs"
+              className="px-2 py-1 cursor-pointer"
               style={{
-                fontFamily: '"Press Start 2P", monospace',
-                fontSize: '8px',
-                border: '2px solid var(--text)',
-                boxShadow: '2px 2px 0 var(--text)',
-                background: 'var(--surface)',
+                ...pixelFont,
+                fontSize: '7px',
+                border: '2px solid var(--border)',
+                boxShadow: '2px 2px 0 #000',
+                background: 'var(--surface-2)',
                 color: 'var(--text)',
               }}
             >

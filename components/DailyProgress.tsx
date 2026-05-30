@@ -24,38 +24,40 @@ export function DailyProgress({ entry }: DailyProgressProps) {
   const allDone = done === total;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       <div className="flex items-center justify-between">
         <span
           style={{
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '8px',
+            fontSize: '7px',
             color: allDone ? 'var(--green)' : 'var(--text-muted)',
           }}
         >
-          {done} / {total} CORE TASKS
+          {done}/{total} CORE TASKS
         </span>
         {allDone && (
           <span
             style={{
               fontFamily: '"Press Start 2P", monospace',
-              fontSize: '8px',
+              fontSize: '7px',
               color: 'var(--green)',
+              textShadow: '0 0 8px var(--green)',
             }}
           >
-            ALL DONE!
+            COMPLETE ✓
           </span>
         )}
       </div>
       <div
         className="h-5"
-        style={{ border: '2px solid var(--text)', background: 'var(--bg)' }}
+        style={{ border: '2px solid var(--border)', background: 'var(--bg)' }}
       >
         <div
           className="h-full transition-all duration-500"
           style={{
             width: `${pct}%`,
             background: allDone ? 'var(--green)' : 'var(--accent)',
+            boxShadow: allDone ? 'var(--glow-green)' : pct > 0 ? 'var(--glow-accent)' : 'none',
           }}
         />
       </div>
