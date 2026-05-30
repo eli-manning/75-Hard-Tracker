@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { format } from 'date-fns';
+import { format, differenceInDays, parseISO } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 import { useAllUsers } from '@/hooks/useAllUsers';
 import { useDayData } from '@/hooks/useDayData';
@@ -89,8 +89,13 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
       .finally(() => setProfileLoading(false));
   }, [activeUid, currentUser]);
 
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
   const today = format(new Date(), 'MMMM d, yyyy').toUpperCase();
   const streak = activeProfile.currentStreak ?? 0;
+  // Compute dayNumber live from the profile so start-date changes reflect immediately
+  const dayNum = activeProfile.challengeStartDate
+    ? differenceInDays(parseISO(todayStr), parseISO(activeProfile.challengeStartDate)) + 1
+    : 0;
 
   return (
     <div className="min-h-screen pb-24" style={{ background: 'var(--bg)' }}>
@@ -134,7 +139,6 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
         <div className="px-4 space-y-6 page-enter">
           <div className="pt-2 space-y-3">
             {(() => {
-              const dayNum = dayEntry?.dayNumber ?? 0;
               const notStarted = dayNum <= 0;
               const daysUntil = notStarted ? Math.abs(dayNum) + 1 : 0;
               return (
@@ -145,8 +149,8 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
                         <h1 style={{ ...pixelFont, fontSize: '16px', color: 'var(--text-muted)', lineHeight: 1.4 }}>
                           STARTS IN
                         </h1>
-                        <h2 style={{ ...pixelFont, fontSize: '32px', color: 'var(--accent)', lineHeight: 1.1, textShadow: 'var(--glow-accent)', marginTop: 4 }}>
-                          {daysUntil}D
+                        <h2 style={{ ...pixelFont, fontSize: '28px', color: 'var(--accent)', lineHeight: 1.1, textShadow: 'var(--glow-accent)', marginTop: 4 }}>
+                          {daysUntil} DAYS
                         </h2>
                       </>
                     ) : (

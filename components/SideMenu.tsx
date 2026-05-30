@@ -28,6 +28,12 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate }: SideMenuPr
   const pixelFont = { fontFamily: '"Press Start 2P", monospace' };
   const vt323 = { fontFamily: '"VT323", monospace' };
 
+  // Sync inputs when profile prop changes (e.g. after save propagates back up)
+  useEffect(() => {
+    if (!editingName) setNameInput(profile.displayName);
+    if (!editingStart) setStartInput(profile.challengeStartDate);
+  }, [profile.displayName, profile.challengeStartDate, editingName, editingStart]);
+
   // Lock scroll when open
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : '';
