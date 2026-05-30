@@ -23,23 +23,20 @@ export function ChallengeItem({
 }: ChallengeItemProps) {
   const isDisabled = readOnly || disabled;
 
-  function handleRowClick() {
-    if (!isDisabled && onToggle) onToggle();
-  }
-
   return (
     <div
-      onClick={handleRowClick}
+      onClick={isDisabled ? undefined : onToggle}
       className="p-3 transition-all duration-200"
       style={{
         border: completed ? '2px solid var(--green)' : '2px solid var(--border)',
         background: completed ? 'var(--green-light)' : 'var(--surface)',
         boxShadow: completed ? 'var(--glow-green), 2px 2px 0 #000' : '2px 2px 0 #000',
         cursor: isDisabled ? 'default' : 'pointer',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
       }}
     >
       <div className="flex items-start gap-3">
-        {/* Pixel checkbox */}
         <div
           className="shrink-0 mt-0.5 transition-all duration-150"
           style={{
@@ -63,16 +60,14 @@ export function ChallengeItem({
         </div>
 
         <div className="flex-1 min-w-0">
-          <span
-            style={{
-              fontFamily: '"VT323", monospace',
-              fontSize: '20px',
-              color: completed ? 'var(--green)' : 'var(--text)',
-              textDecoration: completed ? 'line-through' : 'none',
-              opacity: completed ? 0.7 : 1,
-              letterSpacing: '0.02em',
-            }}
-          >
+          <span style={{
+            fontFamily: '"VT323", monospace',
+            fontSize: '20px',
+            color: completed ? 'var(--green)' : 'var(--text)',
+            textDecoration: completed ? 'line-through' : 'none',
+            opacity: completed ? 0.7 : 1,
+            letterSpacing: '0.02em',
+          }}>
             {label}
           </span>
           {disabled && disabledReason && (
@@ -80,12 +75,8 @@ export function ChallengeItem({
               {disabledReason}
             </p>
           )}
-          {/* Stop propagation so sub-controls don't fire row toggle */}
-          {children && (
-            <div className="mt-2" onClick={(e) => e.stopPropagation()}>
-              {children}
-            </div>
-          )}
+          {/* Children render directly — each interactive element inside handles its own stopPropagation */}
+          {children && <div className="mt-2">{children}</div>}
         </div>
       </div>
     </div>

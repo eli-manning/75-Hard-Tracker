@@ -84,7 +84,7 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate }: ChallengeCheck
       <ChallengeItem label="Workout #1 — 45 min" completed={entry.workoutOneCompleted} readOnly={readOnly}
         onToggle={() => patch({ workoutOneCompleted: !entry.workoutOneCompleted })}>
         {!readOnly && (
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex items-center gap-2 mt-1" onClick={(e) => e.stopPropagation()}>
             <input type="number" value={w1Duration}
               onChange={(e) => setW1Duration(Number(e.target.value))}
               onBlur={() => patch({ workoutOneDuration: w1Duration })}
@@ -99,7 +99,7 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate }: ChallengeCheck
         completed={entry.workoutTwoCompleted && entry.workoutTwoOutdoor} readOnly={readOnly}
         onToggle={() => { if (!entry.workoutTwoOutdoor) return; patch({ workoutTwoCompleted: !entry.workoutTwoCompleted }); }}
         disabled={!entry.workoutTwoOutdoor && !readOnly} disabledReason="Confirm outdoor first">
-        <div className="flex flex-wrap items-center gap-2 mt-1">
+        <div className="flex flex-wrap items-center gap-2 mt-1" onClick={(e) => e.stopPropagation()}>
           {!readOnly && (
             <div className="flex items-center gap-2">
               <input type="number" value={w2Duration}
@@ -137,7 +137,7 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate }: ChallengeCheck
       {/* Reading */}
       <ChallengeItem label="Read 10 pages" completed={entry.readingCompleted} readOnly={readOnly}
         onToggle={() => { if (entry.readingCompleted) patch({ readingCompleted: false, pagesRead: 0 }); }}>
-        <div className="mt-2 space-y-2">
+        <div className="mt-2 space-y-2" onClick={(e) => e.stopPropagation()}>
           {/* Progress bar */}
           <div className="flex items-center gap-2">
             <div className="flex-1 h-3" style={{ border: '2px solid var(--border)', background: 'var(--bg)' }}>

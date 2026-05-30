@@ -45,8 +45,10 @@ export function WaterTracker({ ozLogged, goal = 128, readOnly, onAdd, onSetCusto
     opacity: ozLogged <= 0 ? 0.3 : 1,
   };
 
+  function stop(e: React.MouseEvent) { e.stopPropagation(); }
+
   return (
-    <div className="mt-2 space-y-2">
+    <div className="mt-2 space-y-2" onClick={stop}>
       {/* Progress bar */}
       <div className="flex items-center gap-2">
         <div className="flex-1 h-4" style={{ border: '2px solid var(--border)', background: 'var(--bg)' }}>
