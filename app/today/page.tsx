@@ -17,6 +17,7 @@ import { ChallengeChecklist } from '@/components/ChallengeChecklist';
 import { CustomTaskList } from '@/components/CustomTaskList';
 import { StreakBadge } from '@/components/StreakBadge';
 import { setCached } from '@/lib/cache';
+import { SideMenu } from '@/components/SideMenu';
 
 const pixelFont = { fontFamily: '"Press Start 2P", monospace' };
 const vt323 = { fontFamily: '"VT323", monospace' };
@@ -89,6 +90,7 @@ function TodayInner({ currentUser }: { currentUser: UserProfile }) {
   const [activeProfile, setActiveProfile] = useState<UserProfile>(currentUser);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const readOnly = activeUid !== currentUser.uid;
   const { dayEntry, loading: dayLoading, update } = useDayData(activeUid, activeProfile.challengeStartDate);
@@ -125,11 +127,25 @@ function TodayInner({ currentUser }: { currentUser: UserProfile }) {
 
   return (
     <div className="min-h-screen pb-24" style={{ background: 'var(--bg)' }}>
-      {users.length > 0 && (
-        <UserTabBar users={users} activeUid={activeUid} onSelectUser={setActiveUid} currentUserUid={currentUser.uid} />
-      )}
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-4 pt-3 pb-1">
+        {users.length > 0 ? (
+          <UserTabBar users={users} activeUid={activeUid} onSelectUser={setActiveUid} currentUserUid={currentUser.uid} />
+        ) : <div />}
+        <button
+          onClick={() => setMenuOpen(true)}
+          className="cursor-pointer flex flex-col gap-1.5 p-1 ml-2 shrink-0 opacity-60 hover:opacity-100 transition-opacity"
+          aria-label="Open menu"
+        >
+          <span style={{ display: 'block', width: 20, height: 2, background: 'var(--text)' }} />
+          <span style={{ display: 'block', width: 20, height: 2, background: 'var(--text)' }} />
+          <span style={{ display: 'block', width: 20, height: 2, background: 'var(--text)' }} />
+        </button>
+      </div>
 
-      {readOnly && !showLoading && (
+      <SideMenu open={menuOpen} onClose={() => setMenuOpen(false)} profile={currentUser} />
+
+      {readOnly && !showLoading && !menuOpen && (
         <div className="mx-4 mb-2 px-3 py-2 text-center" style={{
           ...pixelFont, fontSize: '6px',
           background: 'var(--surface-2)', border: '2px solid var(--border)', color: 'var(--text-muted)',
