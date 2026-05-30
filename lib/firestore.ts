@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { getFirebaseDb } from './firebase';
 import { UserProfile, DayEntry, CustomTask } from './types';
+import { getCached, setCached, invalidate } from './cache';
 import { differenceInDays, parseISO } from 'date-fns';
 
 function db() {
@@ -23,8 +24,13 @@ function db() {
 // ── Users ────────────────────────────────────────────────────────────────────
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
+  const key = `profile-${uid}`;
+  const cached = getCached<UserProfile>(key);
+  if (cached) return cached;
   const snap = await getDoc(doc(db(), 'users', uid));
-  return snap.exists() ? (snap.data() as UserProfile) : null;
+  const profile = snap.exists() ? (snap.data() as UserProfile) : null;
+  if (profile) setCached(key, profile);
+  return profile;
 }
 
 export async function getAllUsers(): Promise<UserProfile[]> {
@@ -46,6 +52,7 @@ export async function updateUserProfile(
   updates: Partial<UserProfile>
 ): Promise<void> {
   await updateDoc(doc(db(), 'users', uid), updates);
+  invalidate(`profile-${uid}`);
 }
 
 export async function updateStreakOnProfile(uid: string): Promise<void> {
