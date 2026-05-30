@@ -11,8 +11,9 @@ import { BottomNav } from '@/components/BottomNav';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 function tileColor(entry: DayEntry | undefined, date: Date): string {
-  if (isFuture(date) && !isToday(date)) return 'var(--border)';
-  if (!entry) return isToday(date) ? 'var(--accent-light)' : 'var(--red-light)';
+  if (isFuture(date) && !isToday(date)) return 'var(--surface)';
+  if (isToday(date) && (!entry || !entry.allCoreCompleted)) return 'var(--accent-light)';
+  if (!entry) return 'var(--red-light)';
   if (entry.allCoreCompleted) return 'var(--green-light)';
   const done = [
     entry.workoutOneCompleted,
@@ -22,13 +23,14 @@ function tileColor(entry: DayEntry | undefined, date: Date): string {
     entry.readingCompleted,
     entry.photoCompleted,
   ].filter(Boolean).length;
-  if (done === 0) return 'var(--red-light)';
+  if (done === 0) return isToday(date) ? 'var(--accent-light)' : 'var(--red-light)';
   return 'var(--yellow-light)';
 }
 
 function tileBorder(entry: DayEntry | undefined, date: Date): string {
   if (isFuture(date) && !isToday(date)) return 'var(--border)';
-  if (!entry) return isToday(date) ? 'var(--accent)' : 'var(--red)';
+  if (isToday(date) && (!entry || !entry.allCoreCompleted)) return 'var(--accent)';
+  if (!entry) return 'var(--red)';
   if (entry.allCoreCompleted) return 'var(--green)';
   const done = [
     entry.workoutOneCompleted,
@@ -38,7 +40,7 @@ function tileBorder(entry: DayEntry | undefined, date: Date): string {
     entry.readingCompleted,
     entry.photoCompleted,
   ].filter(Boolean).length;
-  if (done === 0) return 'var(--red)';
+  if (done === 0) return isToday(date) ? 'var(--accent)' : 'var(--red)';
   return 'var(--yellow)';
 }
 
@@ -107,7 +109,10 @@ function HistoryInner({ currentUser }: { currentUser: UserProfile }) {
 
   const completed = history.filter((e) => e.allCoreCompleted).length;
   const total = history.filter((e) => !isFuture(parseISO(e.date))).length;
-  const { current: currentStreak, longest } = computeStreak(history);
+  // Use stored values from profile for instant display; fall back to computed if not set
+  const viewProfile = users.find((u) => u.uid === viewUid);
+  const currentStreak = viewProfile?.currentStreak ?? computeStreak(history).current;
+  const longest = viewProfile?.longestStreak ?? computeStreak(history).longest;
 
   const viewUser = users.find((u) => u.uid === viewUid);
 
