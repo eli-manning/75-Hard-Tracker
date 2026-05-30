@@ -8,6 +8,8 @@ export interface UserProfile {
   createdAt: Timestamp;
   challengeStartDate: string; // "YYYY-MM-DD"
   isActive: boolean;
+  currentStreak: number;      // Stored so the today page loads without an extra query
+  longestStreak: number;
 }
 
 export interface DayEntry {
