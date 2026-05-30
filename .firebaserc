@@ -1,1 +1,7 @@
-{}
+{
+  "projects": {
+    "default": "summer-75-hard"
+  },
+  "targets": {},
+  "etags": {}
+}
