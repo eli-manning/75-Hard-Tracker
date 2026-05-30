@@ -67,8 +67,9 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate }: SideMenuPr
   }
 
   const daysSinceStart = profile.challengeStartDate
-    ? Math.max(1, Math.floor((Date.now() - parseISO(profile.challengeStartDate).getTime()) / 86400000) + 1)
+    ? Math.floor((Date.now() - parseISO(profile.challengeStartDate).getTime()) / 86400000) + 1
     : 0;
+  const notStarted = daysSinceStart <= 0;
 
   return (
     <>
@@ -151,7 +152,7 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate }: SideMenuPr
             {[
               { label: 'CURRENT', value: `${profile.currentStreak ?? 0}d`, color: 'var(--accent)' },
               { label: 'LONGEST', value: `${profile.longestStreak ?? 0}d`, color: 'var(--green)' },
-              { label: 'DAY #', value: String(daysSinceStart), color: 'var(--text)' },
+              { label: 'DAY #', value: notStarted ? '—' : String(daysSinceStart), color: notStarted ? 'var(--text-muted)' : 'var(--text)' },
               { label: 'STARTED', value: profile.challengeStartDate ? format(parseISO(profile.challengeStartDate), 'MMM d') : '—', color: 'var(--text-muted)' },
             ].map(({ label, value, color }) => (
               <div key={label} style={{ background: 'var(--surface-2)', border: '2px solid var(--border)', padding: '8px 10px' }}>
