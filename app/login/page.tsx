@@ -2,73 +2,55 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { signInWithGoogle } from '@/lib/auth';
+import { signInWithGoogle, handleGoogleRedirect } from '@/lib/auth';
 import { useAuth } from '@/hooks/useAuth';
+import { LoadingScreen } from '@/components/LoadingScreen';
 
 export default function LoginPage() {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [error, setError] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!loading && user) router.replace('/today');
-  }, [user, loading, router]);
-
-  async function handleGoogle() {
-    setError('');
-    setSubmitting(true);
-    try {
-      await signInWithGoogle();
-      router.replace('/today');
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (!msg.includes('popup-closed-by-user') && !msg.includes('cancelled-popup-request')) {
-        setError('Sign in failed. Try again.');
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  }
+  const [checking, setChecking] = useState(true); // true while checking redirect result
+  const [error] = useState('');
 
   const pixelFont = { fontFamily: '"Press Start 2P", monospace' };
 
+  // On mount: check if we're returning from a Google redirect
+  useEffect(() => {
+    handleGoogleRedirect()
+      .then((redirectUser) => {
+        if (redirectUser) {
+          router.replace('/today');
+        }
+      })
+      .finally(() => setChecking(false));
+  }, [router]);
+
+  // Also redirect if already signed in
+  useEffect(() => {
+    if (!authLoading && !checking && user) {
+      router.replace('/today');
+    }
+  }, [user, authLoading, checking, router]);
+
+  // Show loading screen while auth resolves or redirect is being processed
+  if (authLoading || checking) return <LoadingScreen />;
+
+  // Already logged in — will redirect via effect, show nothing
+  if (user) return <LoadingScreen />;
+
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-4"
-      style={{ background: 'var(--bg)' }}
-    >
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--bg)' }}>
       {/* Scanline overlay */}
-      <div
-        className="fixed inset-0 pointer-events-none z-10"
-        style={{
-          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px)',
-          backgroundSize: '100% 4px',
-        }}
-      />
+      <div className="fixed inset-0 pointer-events-none z-10" style={{
+        backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.12) 2px, rgba(0,0,0,0.12) 4px)',
+      }} />
 
       <div className="relative z-20 w-full max-w-sm space-y-8 text-center">
-        {/* Title block */}
         <div className="space-y-3">
-          <h1
-            style={{
-              ...pixelFont,
-              fontSize: '28px',
-              color: 'var(--accent)',
-              lineHeight: 1.4,
-              textShadow: 'var(--glow-accent)',
-            }}
-          >
+          <h1 style={{ ...pixelFont, fontSize: '28px', color: 'var(--accent)', lineHeight: 1.4, textShadow: 'var(--glow-accent)' }}>
             75
           </h1>
-          <h2
-            style={{
-              ...pixelFont,
-              fontSize: '14px',
-              color: 'var(--accent)',
-              textShadow: 'var(--glow-accent)',
-            }}
-          >
+          <h2 style={{ ...pixelFont, fontSize: '14px', color: 'var(--accent)', textShadow: 'var(--glow-accent)' }}>
             HARD
           </h2>
           <p style={{ ...pixelFont, fontSize: '7px', color: 'var(--text-muted)', letterSpacing: '0.2em' }}>
@@ -76,15 +58,12 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Divider */}
         <div style={{ borderTop: '2px solid var(--border)' }} />
 
-        {/* Google button */}
         <div className="space-y-3">
           <button
-            onClick={handleGoogle}
-            disabled={submitting}
-            className="w-full py-4 flex items-center justify-center gap-3 cursor-pointer transition-all duration-150 active:translate-y-px disabled:opacity-50"
+            onClick={() => signInWithGoogle()}
+            className="w-full py-4 flex items-center justify-center gap-3 cursor-pointer transition-all duration-150 active:translate-y-px"
             style={{
               border: '2px solid var(--border)',
               boxShadow: '3px 3px 0 #000',
@@ -98,23 +77,11 @@ export default function LoginPage() {
               <path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/>
               <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
             </svg>
-            <span style={{ ...pixelFont, fontSize: '8px' }}>
-              {submitting ? 'SIGNING IN...' : 'SIGN IN WITH GOOGLE'}
-            </span>
+            <span style={{ ...pixelFont, fontSize: '8px' }}>SIGN IN WITH GOOGLE</span>
           </button>
 
           {error && (
-            <p
-              style={{
-                fontFamily: '"Press Start 2P", monospace',
-                fontSize: '7px',
-                color: 'var(--red)',
-                background: 'var(--red-light)',
-                border: '2px solid var(--red)',
-                padding: '10px',
-                lineHeight: 2,
-              }}
-            >
+            <p style={{ ...pixelFont, fontSize: '7px', color: 'var(--red)', background: 'var(--red-light)', border: '2px solid var(--red)', padding: '10px', lineHeight: 2 }}>
               {error}
             </p>
           )}
