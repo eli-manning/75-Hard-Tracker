@@ -25,11 +25,11 @@ export function ChallengeItem({
 
   return (
     <div
-      className="p-3 transition-all"
+      className="p-3 transition-all duration-200"
       style={{
-        border: '2px solid var(--border)',
+        border: completed ? '2px solid var(--green)' : '2px solid var(--border)',
         background: completed ? 'var(--green-light)' : 'var(--surface)',
-        boxShadow: completed ? '2px 2px 0 var(--green)' : '2px 2px 0 var(--border)',
+        boxShadow: completed ? 'var(--glow-green), 2px 2px 0 #000' : '2px 2px 0 #000',
       }}
     >
       <div className="flex items-start gap-3">
@@ -37,37 +37,36 @@ export function ChallengeItem({
         <button
           onClick={isDisabled ? undefined : onToggle}
           title={disabled ? disabledReason : undefined}
-          className="shrink-0 mt-0.5 transition-all active:scale-95"
+          className="shrink-0 mt-0.5 transition-all duration-150 active:scale-95"
           style={{
-            width: 20,
-            height: 20,
-            border: '2px solid var(--text)',
-            background: completed ? 'var(--green)' : 'var(--surface)',
+            width: 22,
+            height: 22,
+            border: completed ? '2px solid var(--green)' : '2px solid var(--text-muted)',
+            background: completed ? 'var(--green)' : 'transparent',
+            boxShadow: completed ? 'var(--glow-green)' : 'none',
             cursor: isDisabled ? 'not-allowed' : 'pointer',
-            opacity: isDisabled && !completed ? 0.5 : 1,
+            opacity: isDisabled && !completed ? 0.4 : 1,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '1px 1px 0 var(--text)',
           }}
         >
           {completed && (
             <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
-              <path d="M1 5l3 3 7-7" stroke="#fff" strokeWidth="2" strokeLinecap="square" />
+              <path d="M1 5l3 3 7-7" stroke="#0c0b08" strokeWidth="2.5" strokeLinecap="square" />
             </svg>
           )}
         </button>
 
-        {/* Label + children */}
         <div className="flex-1 min-w-0">
           <span
             style={{
-              fontFamily: 'Inter, sans-serif',
-              fontSize: '14px',
-              fontWeight: 500,
-              color: 'var(--text)',
+              fontFamily: '"VT323", monospace',
+              fontSize: '20px',
+              color: completed ? 'var(--green)' : 'var(--text)',
               textDecoration: completed ? 'line-through' : 'none',
               opacity: completed ? 0.7 : 1,
+              letterSpacing: '0.02em',
             }}
           >
             {label}
@@ -76,9 +75,9 @@ export function ChallengeItem({
             <p
               style={{
                 fontFamily: '"Press Start 2P", monospace',
-                fontSize: '7px',
+                fontSize: '6px',
                 color: 'var(--text-muted)',
-                marginTop: 2,
+                marginTop: 3,
               }}
             >
               {disabledReason}
