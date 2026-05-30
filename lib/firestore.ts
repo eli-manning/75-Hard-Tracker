@@ -48,6 +48,37 @@ export async function updateUserProfile(
   await updateDoc(doc(db(), 'users', uid), updates);
 }
 
+export async function updateStreakOnProfile(uid: string): Promise<void> {
+  const history = await getDayHistory(uid, 120);
+  const sorted = [...history].sort((a, b) => b.date.localeCompare(a.date));
+  const { format } = await import('date-fns');
+  const today = format(new Date(), 'yyyy-MM-dd');
+
+  let current = 0;
+  let longest = 0;
+  let streak = 0;
+  let expected = today;
+
+  for (const entry of sorted) {
+    if (entry.date > today) continue;
+    if (entry.date < expected) { longest = Math.max(longest, streak); streak = 0; break; }
+    if (!entry.allCoreCompleted) {
+      if (entry.date !== today) { longest = Math.max(longest, streak); if (current === 0) current = streak; streak = 0; }
+      const d = new Date(entry.date); d.setDate(d.getDate() - 1);
+      expected = format(d, 'yyyy-MM-dd');
+      continue;
+    }
+    streak++;
+    longest = Math.max(longest, streak);
+    const d = new Date(entry.date); d.setDate(d.getDate() - 1);
+    expected = format(d, 'yyyy-MM-dd');
+  }
+  if (current === 0) current = streak;
+  longest = Math.max(longest, streak);
+
+  await updateDoc(doc(db(), 'users', uid), { currentStreak: current, longestStreak: longest });
+}
+
 // ── Day Entries ───────────────────────────────────────────────────────────────
 
 function defaultDayEntry(uid: string, date: string, challengeStartDate: string): Omit<DayEntry, 'updatedAt'> {
