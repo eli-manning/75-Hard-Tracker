@@ -1,11 +1,11 @@
 import {
   GoogleAuthProvider,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   User,
   Unsubscribe,
-  UserCredential,
 } from 'firebase/auth';
 import { getFirebaseAuth } from './firebase';
 import { getUserProfile, createUserProfile } from './firestore';
@@ -18,11 +18,8 @@ const AVATAR_MAP: Record<string, string> = {
   'rocketeloise@rocketmail.com': '/avatars/rocket.png',
 };
 
-export async function signInWithGoogle(): Promise<UserCredential> {
-  const credential = await signInWithPopup(getFirebaseAuth(), provider);
-  const { uid, email, displayName } = credential.user;
-
-  // Create profile on first sign-in only
+async function ensureProfile(user: User): Promise<void> {
+  const { uid, email, displayName } = user;
   const existing = await getUserProfile(uid);
   if (!existing) {
     const emailKey = (email ?? '').toLowerCase();
@@ -37,8 +34,23 @@ export async function signInWithGoogle(): Promise<UserCredential> {
       longestStreak: 0,
     });
   }
+}
 
-  return credential;
+// Kicks off the Google redirect flow — returns immediately (page navigates away)
+export function signInWithGoogle(): void {
+  signInWithRedirect(getFirebaseAuth(), provider);
+}
+
+// Call on login page mount — resolves redirect result if returning from Google
+export async function handleGoogleRedirect(): Promise<User | null> {
+  try {
+    const result = await getRedirectResult(getFirebaseAuth());
+    if (!result) return null;
+    await ensureProfile(result.user);
+    return result.user;
+  } catch {
+    return null;
+  }
 }
 
 export async function signOut(): Promise<void> {
