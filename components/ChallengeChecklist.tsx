@@ -22,13 +22,8 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate }: ChallengeCheck
   function computeAllCore(updates: Partial<DayEntry> = {}): boolean {
     const e = { ...entry, ...updates };
     return (
-      e.workoutOneCompleted &&
-      e.workoutTwoCompleted &&
-      e.workoutTwoOutdoor &&
-      e.dietCompleted &&
-      e.waterCompleted &&
-      e.readingCompleted &&
-      e.photoCompleted
+      e.workoutOneCompleted && e.workoutTwoCompleted && e.workoutTwoOutdoor &&
+      e.dietCompleted && e.waterCompleted && e.readingCompleted && e.photoCompleted
     );
   }
 
@@ -47,7 +42,7 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate }: ChallengeCheck
   }
 
   function addPages(count: number) {
-    const pagesRead = entry.pagesRead + count;
+    const pagesRead = Math.max(0, entry.pagesRead + count);
     patch({ pagesRead, readingCompleted: pagesRead >= 10 });
   }
 
@@ -57,7 +52,7 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate }: ChallengeCheck
     if (!isNaN(val) && val > 0) { addPages(val); setPagesInput(''); }
   }
 
-  const btnStyle = {
+  const btnBase: React.CSSProperties = {
     ...pixelFont,
     fontSize: '7px',
     padding: '3px 10px',
@@ -68,7 +63,13 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate }: ChallengeCheck
     cursor: 'pointer',
   };
 
-  const inputStyle = {
+  const subBtn: React.CSSProperties = {
+    ...btnBase,
+    color: 'var(--red)',
+    borderColor: 'var(--red-light)',
+  };
+
+  const inputStyle: React.CSSProperties = {
     ...pixelFont,
     fontSize: '7px',
     border: '2px solid var(--border)',
@@ -88,14 +89,14 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate }: ChallengeCheck
               onChange={(e) => setW1Duration(Number(e.target.value))}
               onBlur={() => patch({ workoutOneDuration: w1Duration })}
               className="w-16 px-2 py-1" style={inputStyle} />
-            <span style={{ ...pixelFont, fontSize: '7px', color: 'var(--text-muted)' }}>min</span>
+            <span style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>min</span>
           </div>
         )}
       </ChallengeItem>
 
       {/* Workout 2 */}
-      <ChallengeItem label="Workout #2 — Outdoor" completed={entry.workoutTwoCompleted && entry.workoutTwoOutdoor}
-        readOnly={readOnly}
+      <ChallengeItem label="Workout #2 — Outdoor"
+        completed={entry.workoutTwoCompleted && entry.workoutTwoOutdoor} readOnly={readOnly}
         onToggle={() => { if (!entry.workoutTwoOutdoor) return; patch({ workoutTwoCompleted: !entry.workoutTwoCompleted }); }}
         disabled={!entry.workoutTwoOutdoor && !readOnly} disabledReason="Confirm outdoor first">
         <div className="flex flex-wrap items-center gap-2 mt-1">
@@ -105,24 +106,20 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate }: ChallengeCheck
                 onChange={(e) => setW2Duration(Number(e.target.value))}
                 onBlur={() => patch({ workoutTwoDuration: w2Duration })}
                 className="w-16 px-2 py-1" style={inputStyle} />
-              <span style={{ ...pixelFont, fontSize: '7px', color: 'var(--text-muted)' }}>min</span>
+              <span style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>min</span>
             </div>
           )}
-          <button
-            onClick={readOnly ? undefined : () => patch({
-              workoutTwoOutdoor: !entry.workoutTwoOutdoor,
-              workoutTwoCompleted: entry.workoutTwoCompleted && entry.workoutTwoOutdoor ? false : entry.workoutTwoCompleted,
-            })}
-            style={{
-              ...pixelFont, fontSize: '7px', padding: '3px 10px',
-              border: '2px solid',
-              borderColor: entry.workoutTwoOutdoor ? 'var(--green)' : 'var(--border)',
-              boxShadow: entry.workoutTwoOutdoor ? 'var(--glow-green), 2px 2px 0 #000' : '2px 2px 0 #000',
-              background: entry.workoutTwoOutdoor ? 'var(--green-light)' : 'var(--surface-2)',
-              color: entry.workoutTwoOutdoor ? 'var(--green)' : 'var(--text-muted)',
-              cursor: readOnly ? 'not-allowed' : 'pointer',
-            }}
-          >
+          <button onClick={readOnly ? undefined : () => patch({
+            workoutTwoOutdoor: !entry.workoutTwoOutdoor,
+            workoutTwoCompleted: entry.workoutTwoCompleted && entry.workoutTwoOutdoor ? false : entry.workoutTwoCompleted,
+          })} style={{
+            ...pixelFont, fontSize: '7px', padding: '3px 10px',
+            border: '2px solid', cursor: readOnly ? 'not-allowed' : 'pointer',
+            borderColor: entry.workoutTwoOutdoor ? 'var(--green)' : 'var(--border)',
+            boxShadow: entry.workoutTwoOutdoor ? 'var(--glow-green), 2px 2px 0 #000' : '2px 2px 0 #000',
+            background: entry.workoutTwoOutdoor ? 'var(--green-light)' : 'var(--surface-2)',
+            color: entry.workoutTwoOutdoor ? 'var(--green)' : 'var(--text-muted)',
+          }}>
             {entry.workoutTwoOutdoor ? 'OUTDOOR ✓' : 'INDOOR'}
           </button>
         </div>
@@ -141,6 +138,7 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate }: ChallengeCheck
       <ChallengeItem label="Read 10 pages" completed={entry.readingCompleted} readOnly={readOnly}
         onToggle={() => { if (entry.readingCompleted) patch({ readingCompleted: false, pagesRead: 0 }); }}>
         <div className="mt-2 space-y-2">
+          {/* Progress bar */}
           <div className="flex items-center gap-2">
             <div className="flex-1 h-3" style={{ border: '2px solid var(--border)', background: 'var(--bg)' }}>
               <div className="h-full transition-all duration-300" style={{
@@ -153,17 +151,41 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate }: ChallengeCheck
               {entry.pagesRead}/10 pg
             </span>
           </div>
+
           {!readOnly && (
-            <div className="flex gap-2 flex-wrap">
-              {[1, 5].map((n) => (
-                <button key={n} onClick={() => addPages(n)} style={btnStyle as React.CSSProperties}>+{n}</button>
-              ))}
-              <form onSubmit={submitPages} className="flex gap-1">
-                <input type="number" value={pagesInput} onChange={(e) => setPagesInput(e.target.value)}
-                  placeholder="pg" className="w-12 px-2 py-1" style={inputStyle} />
-                <button type="submit" style={btnStyle as React.CSSProperties}>ADD</button>
-              </form>
-            </div>
+            <>
+              {/* Add pages */}
+              <div className="flex gap-1.5 flex-wrap">
+                <span style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)', alignSelf: 'center' }}>+</span>
+                {[1, 5, 10].map((n) => (
+                  <button key={n} onClick={() => addPages(n)} style={btnBase} className="active:translate-y-px transition-transform">
+                    {n}pg
+                  </button>
+                ))}
+                <form onSubmit={submitPages} className="flex gap-1">
+                  <input type="number" value={pagesInput} onChange={(e) => setPagesInput(e.target.value)}
+                    placeholder="pg" className="w-12 px-2 py-1" style={inputStyle} />
+                  <button type="submit" style={btnBase}>ADD</button>
+                </form>
+              </div>
+
+              {/* Subtract pages */}
+              {entry.pagesRead > 0 && (
+                <div className="flex gap-1.5 flex-wrap">
+                  <span style={{ ...pixelFont, fontSize: '6px', color: 'var(--red)', alignSelf: 'center', opacity: 0.6 }}>−</span>
+                  {[1, 5].map((n) => (
+                    <button key={n} onClick={() => addPages(-n)} disabled={entry.pagesRead <= 0}
+                      style={subBtn} className="active:translate-y-px transition-transform disabled:opacity-30 disabled:cursor-not-allowed">
+                      {n}pg
+                    </button>
+                  ))}
+                  <button onClick={() => patch({ pagesRead: 0, readingCompleted: false })}
+                    style={{ ...subBtn, borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+                    RESET
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </ChallengeItem>
