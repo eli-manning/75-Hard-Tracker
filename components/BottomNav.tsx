@@ -20,11 +20,6 @@ export function BottomNav() {
         background: 'var(--surface)',
         borderTop: '2px solid var(--border)',
         boxShadow: '0 -4px 0 #000',
-        maxWidth: 480,
-        margin: '0 auto',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: '100%',
       }}
     >
       {NAV.map(({ href, label, Icon }) => {
