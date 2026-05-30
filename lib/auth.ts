@@ -15,7 +15,7 @@ const provider = new GoogleAuthProvider();
 
 const AVATAR_MAP: Record<string, string> = {
   'eli@themannings.com': '/avatars/eli.png',
-  'rocket@gmail.com': '/avatars/rocket.png',
+  'rocketeloise@rocketmail.com': '/avatars/rocket.png',
 };
 
 export async function signInWithGoogle(): Promise<UserCredential> {
