@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAllUsers } from '@/hooks/useAllUsers';
 import { useDayData } from '@/hooks/useDayData';
 import { useCustomTasks } from '@/hooks/useCustomTasks';
-import { getUserProfile } from '@/lib/firestore';
+import { getUserProfile, getDayHistory } from '@/lib/firestore';
 import { UserProfile, DayEntry } from '@/lib/types';
 import { AuthGuard } from '@/components/AuthGuard';
 import { BottomNav } from '@/components/BottomNav';
@@ -15,7 +15,6 @@ import { DailyProgress } from '@/components/DailyProgress';
 import { ChallengeChecklist } from '@/components/ChallengeChecklist';
 import { CustomTaskList } from '@/components/CustomTaskList';
 import { StreakBadge } from '@/components/StreakBadge';
-import { getDayHistory } from '@/lib/firestore';
 
 function computeStreak(history: DayEntry[]): number {
   const sorted = [...history].sort((a, b) => b.date.localeCompare(a.date));
@@ -27,58 +26,83 @@ function computeStreak(history: DayEntry[]): number {
     if (entry.date > today) continue;
     if (entry.date < expected) break;
     if (!entry.allCoreCompleted) {
-      if (entry.date === today) continue; // today not done yet, don't break streak
+      if (entry.date === today) continue;
       break;
     }
     streak++;
-    // Move expected back one day
     const d = new Date(expected);
     d.setDate(d.getDate() - 1);
     expected = format(d, 'yyyy-MM-dd');
   }
-
   return streak;
 }
 
+const pixelFont = { fontFamily: '"Press Start 2P", monospace' };
+
+function LoadingScreen({ message }: { message?: string }) {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ background: 'var(--bg)' }}>
+      <div
+        className="w-8 h-8"
+        style={{
+          border: '3px solid var(--border)',
+          borderTopColor: 'var(--accent)',
+          borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite',
+        }}
+      />
+      {message && (
+        <span style={{ ...pixelFont, fontSize: '7px', color: 'var(--text-muted)' }}>
+          {message}
+        </span>
+      )}
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
 function TodayInner({ currentUser }: { currentUser: UserProfile }) {
-  const { users } = useAllUsers();
+  const { users, loading: usersLoading } = useAllUsers();
   const [activeUid, setActiveUid] = useState(currentUser.uid);
   const [activeProfile, setActiveProfile] = useState<UserProfile>(currentUser);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState(false);
   const [streak, setStreak] = useState(0);
 
   const readOnly = activeUid !== currentUser.uid;
-
-  const { dayEntry, loading, update } = useDayData(
-    activeUid,
-    activeProfile.challengeStartDate
-  );
+  const { dayEntry, loading: dayLoading, update } = useDayData(activeUid, activeProfile.challengeStartDate);
   const { tasks } = useCustomTasks(activeUid);
 
-  // Load profile when tab switches
   useEffect(() => {
     if (activeUid === currentUser.uid) {
       setActiveProfile(currentUser);
+      setProfileError(false);
       return;
     }
-    getUserProfile(activeUid).then((p) => {
-      if (p) setActiveProfile(p);
-    });
+    setProfileLoading(true);
+    setProfileError(false);
+    getUserProfile(activeUid)
+      .then((p) => {
+        if (p) setActiveProfile(p);
+        else setProfileError(true);
+      })
+      .catch(() => setProfileError(true))
+      .finally(() => setProfileLoading(false));
   }, [activeUid, currentUser]);
 
-  // Compute streak for active user
   useEffect(() => {
-    getDayHistory(activeUid, 90).then((history) => {
-      setStreak(computeStreak(history));
-    });
+    getDayHistory(activeUid, 90)
+      .then((history) => setStreak(computeStreak(history)))
+      .catch(() => setStreak(0));
   }, [activeUid, dayEntry?.allCoreCompleted]);
 
-  const pixelFont = { fontFamily: '"Press Start 2P", monospace' };
   const today = format(new Date(), 'MMMM d, yyyy').toUpperCase();
+  const isLoading = profileLoading || dayLoading;
 
   return (
     <div className="min-h-screen pb-24" style={{ background: 'var(--bg)' }}>
       {/* User tab bar */}
-      {users.length > 0 && (
+      {!usersLoading && users.length > 0 && (
         <UserTabBar
           users={users}
           activeUid={activeUid}
@@ -88,68 +112,91 @@ function TodayInner({ currentUser }: { currentUser: UserProfile }) {
       )}
 
       {/* Read-only banner */}
-      {readOnly && (
+      {readOnly && !profileLoading && (
         <div
           className="mx-4 mb-2 px-3 py-2 text-center"
           style={{
             ...pixelFont,
-            fontSize: '7px',
-            background: 'var(--yellow-light)',
-            border: '2px solid var(--yellow)',
-            color: 'var(--text)',
+            fontSize: '6px',
+            background: 'var(--surface-2)',
+            border: '2px solid var(--border)',
+            color: 'var(--text-muted)',
+            letterSpacing: '0.05em',
           }}
         >
           VIEWING {activeProfile.displayName.toUpperCase()}&apos;S DAY — READ ONLY
         </div>
       )}
 
-      <div className="px-4 space-y-6">
-        {/* Day header */}
-        <div className="pt-2 space-y-2">
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 style={{ ...pixelFont, fontSize: '28px', color: 'var(--accent)', lineHeight: 1.2 }}>
-                DAY {dayEntry?.dayNumber ?? '—'}
-              </h1>
-              <p style={{ ...pixelFont, fontSize: '7px', color: 'var(--text-muted)', marginTop: 4 }}>
-                {today}
-              </p>
+      {/* Error state */}
+      {profileError && (
+        <div
+          className="mx-4 mb-4 px-3 py-3 text-center"
+          style={{
+            ...pixelFont,
+            fontSize: '7px',
+            background: 'var(--red-light)',
+            border: '2px solid var(--red)',
+            color: 'var(--red)',
+          }}
+        >
+          FAILED TO LOAD USER DATA
+        </div>
+      )}
+
+      {/* Loading overlay for tab switch */}
+      {isLoading ? (
+        <LoadingScreen message="LOADING..." />
+      ) : (
+        <div className="px-4 space-y-6">
+          {/* Day header */}
+          <div className="pt-2 space-y-3">
+            <div className="flex items-start justify-between">
+              <div>
+                <h1
+                  style={{
+                    ...pixelFont,
+                    fontSize: '32px',
+                    color: 'var(--accent)',
+                    lineHeight: 1.1,
+                    textShadow: 'var(--glow-accent)',
+                  }}
+                >
+                  DAY {dayEntry?.dayNumber ?? '—'}
+                </h1>
+                <p style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)', marginTop: 6 }}>
+                  {today}
+                </p>
+              </div>
+              <StreakBadge streak={streak} />
             </div>
-            <StreakBadge streak={streak} />
+            {dayEntry && <DailyProgress entry={dayEntry} />}
           </div>
 
-          {dayEntry && <DailyProgress entry={dayEntry} />}
-        </div>
+          {/* Core tasks */}
+          <div>
+            <h2 style={{ ...pixelFont, fontSize: '9px', color: 'var(--text-muted)', marginBottom: 10 }}>
+              CORE TASKS
+            </h2>
+            {dayEntry && (
+              <ChallengeChecklist entry={dayEntry} readOnly={readOnly} onUpdate={update} />
+            )}
+          </div>
 
-        {/* Core tasks */}
-        <div className="space-y-2">
-          <h2 style={{ ...pixelFont, fontSize: '10px', marginBottom: 8 }}>CORE TASKS</h2>
-          {loading || !dayEntry ? (
-            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: 'var(--text-muted)' }}>
-              Loading...
-            </p>
-          ) : (
-            <ChallengeChecklist
-              entry={dayEntry}
-              readOnly={readOnly}
-              onUpdate={update}
-            />
+          {/* Custom tasks */}
+          {dayEntry && (
+            <div>
+              <CustomTaskList
+                tasks={tasks}
+                dayEntry={dayEntry}
+                uid={activeUid}
+                readOnly={readOnly}
+                onDayUpdate={update}
+              />
+            </div>
           )}
         </div>
-
-        {/* Custom tasks */}
-        {dayEntry && (
-          <div className="space-y-2">
-            <CustomTaskList
-              tasks={tasks}
-              dayEntry={dayEntry}
-              uid={activeUid}
-              readOnly={readOnly}
-              onDayUpdate={update}
-            />
-          </div>
-        )}
-      </div>
+      )}
 
       <BottomNav />
     </div>
@@ -159,23 +206,28 @@ function TodayInner({ currentUser }: { currentUser: UserProfile }) {
 export default function TodayPage() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileError, setProfileError] = useState(false);
 
   useEffect(() => {
     if (user) {
-      getUserProfile(user.uid).then(setProfile);
+      getUserProfile(user.uid)
+        .then(setProfile)
+        .catch(() => setProfileError(true));
     }
   }, [user]);
 
   return (
     <AuthGuard>
-      {profile ? (
+      {profileError ? (
+        <div className="min-h-screen flex items-center justify-center px-6" style={{ background: 'var(--bg)' }}>
+          <div style={{ fontFamily: '"Press Start 2P", monospace', fontSize: '8px', color: 'var(--red)', textAlign: 'center', lineHeight: 2 }}>
+            FAILED TO LOAD PROFILE.{'\n'}CHECK YOUR CONNECTION.
+          </div>
+        </div>
+      ) : profile ? (
         <TodayInner currentUser={profile} />
       ) : (
-        <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg)' }}>
-          <span style={{ fontFamily: '"Press Start 2P", monospace', fontSize: '10px', color: 'var(--text-muted)' }}>
-            LOADING...
-          </span>
-        </div>
+        <LoadingScreen />
       )}
     </AuthGuard>
   );
