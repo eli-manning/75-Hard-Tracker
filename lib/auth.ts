@@ -33,6 +33,8 @@ export async function signInWithGoogle(): Promise<UserCredential> {
       email: email ?? '',
       challengeStartDate: format(new Date(), 'yyyy-MM-dd'),
       isActive: true,
+      currentStreak: 0,
+      longestStreak: 0,
     });
   }
 
