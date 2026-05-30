@@ -81,7 +81,7 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate }: ChallengeCheck
   return (
     <div className="space-y-2">
       {/* Workout 1 */}
-      <ChallengeItem label="Workout #1 — 45 min" completed={entry.workoutOneCompleted} readOnly={readOnly}
+      <ChallengeItem label="Workout #1 — 45 min" icon="/images/workout1.png" completed={entry.workoutOneCompleted} readOnly={readOnly}
         onToggle={() => patch({ workoutOneCompleted: !entry.workoutOneCompleted })}>
         {!readOnly && (
           <div className="flex items-center gap-2 mt-1" onClick={(e) => e.stopPropagation()}>
@@ -95,7 +95,7 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate }: ChallengeCheck
       </ChallengeItem>
 
       {/* Workout 2 */}
-      <ChallengeItem label="Workout #2 — Outdoor"
+      <ChallengeItem label="Workout #2 — Outdoor" icon="/images/workout2.png"
         completed={entry.workoutTwoCompleted && entry.workoutTwoOutdoor} readOnly={readOnly}
         onToggle={() => { if (!entry.workoutTwoOutdoor) return; patch({ workoutTwoCompleted: !entry.workoutTwoCompleted }); }}
         disabled={!entry.workoutTwoOutdoor && !readOnly} disabledReason="Confirm outdoor first">
@@ -126,16 +126,16 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate }: ChallengeCheck
       </ChallengeItem>
 
       {/* Diet */}
-      <ChallengeItem label="No cheat meals today" completed={entry.dietCompleted} readOnly={readOnly}
+      <ChallengeItem label="No cheat meals today" icon="/images/diet.png" completed={entry.dietCompleted} readOnly={readOnly}
         onToggle={() => patch({ dietCompleted: !entry.dietCompleted })} />
 
       {/* Water */}
-      <ChallengeItem label="Drink 1 gallon of water" completed={entry.waterCompleted} readOnly={readOnly}>
+      <ChallengeItem label="Drink 1 gallon of water" icon="/images/water.png" completed={entry.waterCompleted} readOnly={readOnly}>
         <WaterTracker ozLogged={entry.waterOzLogged} goal={128} readOnly={readOnly} onAdd={addWater} onSetCustom={setWater} />
       </ChallengeItem>
 
       {/* Reading */}
-      <ChallengeItem label="Read 10 pages" completed={entry.readingCompleted} readOnly={readOnly}
+      <ChallengeItem label="Read 10 pages" icon="/images/reading.png" completed={entry.readingCompleted} readOnly={readOnly}
         onToggle={() => { if (entry.readingCompleted) patch({ readingCompleted: false, pagesRead: 0 }); }}>
         <div className="mt-2 space-y-2" onClick={(e) => e.stopPropagation()}>
           {/* Progress bar */}
@@ -191,7 +191,7 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate }: ChallengeCheck
       </ChallengeItem>
 
       {/* Photo */}
-      <ChallengeItem label="Progress photo" completed={entry.photoCompleted} readOnly={readOnly}
+      <ChallengeItem label="Progress photo" icon="/images/camera.png" completed={entry.photoCompleted} readOnly={readOnly}
         onToggle={() => patch({ photoCompleted: !entry.photoCompleted })} />
     </div>
   );

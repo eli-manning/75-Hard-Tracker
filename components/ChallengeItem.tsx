@@ -1,9 +1,11 @@
 'use client';
 
 import { ReactNode } from 'react';
+import Image from 'next/image';
 
 interface ChallengeItemProps {
   label: string;
+  icon?: string;        // path to /images/*.png
   completed: boolean;
   readOnly: boolean;
   children?: ReactNode;
@@ -14,6 +16,7 @@ interface ChallengeItemProps {
 
 export function ChallengeItem({
   label,
+  icon,
   completed,
   readOnly,
   children,
@@ -37,6 +40,7 @@ export function ChallengeItem({
       }}
     >
       <div className="flex items-start gap-3">
+        {/* Pixel checkbox */}
         <div
           className="shrink-0 mt-0.5 transition-all duration-150"
           style={{
@@ -60,22 +64,32 @@ export function ChallengeItem({
         </div>
 
         <div className="flex-1 min-w-0">
-          <span style={{
-            fontFamily: '"VT323", monospace',
-            fontSize: '20px',
-            color: completed ? 'var(--green)' : 'var(--text)',
-            textDecoration: completed ? 'line-through' : 'none',
-            opacity: completed ? 0.7 : 1,
-            letterSpacing: '0.02em',
-          }}>
-            {label}
-          </span>
+          <div className="flex items-center gap-2">
+            <span style={{
+              fontFamily: '"VT323", monospace',
+              fontSize: '20px',
+              color: completed ? 'var(--green)' : 'var(--text)',
+              textDecoration: completed ? 'line-through' : 'none',
+              opacity: completed ? 0.7 : 1,
+              letterSpacing: '0.02em',
+            }}>
+              {label}
+            </span>
+            {icon && (
+              <Image
+                src={icon}
+                alt=""
+                width={28}
+                height={28}
+                style={{ objectFit: 'contain', opacity: completed ? 0.3 : 0.8, flexShrink: 0 }}
+              />
+            )}
+          </div>
           {disabled && disabledReason && (
             <p style={{ fontFamily: '"Press Start 2P", monospace', fontSize: '6px', color: 'var(--text-muted)', marginTop: 3 }}>
               {disabledReason}
             </p>
           )}
-          {/* Children render directly — each interactive element inside handles its own stopPropagation */}
           {children && <div className="mt-2">{children}</div>}
         </div>
       </div>
