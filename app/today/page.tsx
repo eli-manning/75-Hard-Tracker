@@ -8,54 +8,19 @@ import { useDayData } from '@/hooks/useDayData';
 import { useCustomTasks } from '@/hooks/useCustomTasks';
 import { useMinDuration } from '@/hooks/useMinDuration';
 import { getUserProfile, getAllUsers } from '@/lib/firestore';
+import { setCached } from '@/lib/cache';
 import { UserProfile } from '@/lib/types';
 import { AuthGuard } from '@/components/AuthGuard';
+import { LoadingScreen } from '@/components/LoadingScreen';
 import { BottomNav } from '@/components/BottomNav';
 import { UserTabBar } from '@/components/UserTabBar';
 import { DailyProgress } from '@/components/DailyProgress';
 import { ChallengeChecklist } from '@/components/ChallengeChecklist';
 import { CustomTaskList } from '@/components/CustomTaskList';
 import { StreakBadge } from '@/components/StreakBadge';
-import { setCached } from '@/lib/cache';
 import { SideMenu } from '@/components/SideMenu';
 
 const pixelFont = { fontFamily: '"Press Start 2P", monospace' };
-const vt323 = { fontFamily: '"VT323", monospace' };
-
-function LoadingScreen() {
-  const [dots, setDots] = useState(0);
-  const [fill, setFill] = useState(0);
-
-  useEffect(() => {
-    const d = setInterval(() => setDots((n) => (n + 1) % 4), 500);
-    // Fill the bar over ~1.2s
-    const b = setInterval(() => setFill((n) => Math.min(n + 1, 100)), 12);
-    return () => { clearInterval(d); clearInterval(b); };
-  }, []);
-
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-8" style={{ background: 'var(--bg)' }}>
-      <div style={{ ...pixelFont, fontSize: '20px', color: 'var(--accent)', textShadow: 'var(--glow-accent)', lineHeight: 1.6 }}>
-        75 HARD
-      </div>
-
-      <div style={{ width: 220 }}>
-        <div style={{ border: '2px solid var(--border)', background: 'var(--bg)', height: 20 }}>
-          <div style={{
-            height: '100%',
-            width: `${fill}%`,
-            background: 'var(--accent)',
-            boxShadow: 'var(--glow-accent)',
-            transition: 'width 80ms linear',
-          }} />
-        </div>
-        <p style={{ ...pixelFont, fontSize: '8px', color: 'var(--text-muted)', textAlign: 'center', marginTop: 10 }}>
-          LOADING{'.'.repeat(dots)}
-        </p>
-      </div>
-    </div>
-  );
-}
 
 function DaySkeleton({ profile }: { profile: UserProfile }) {
   const today = format(new Date(), 'MMMM d, yyyy').toUpperCase();
@@ -96,8 +61,8 @@ function TodayInner({ currentUser }: { currentUser: UserProfile }) {
   const { dayEntry, loading: dayLoading, update } = useDayData(activeUid, activeProfile.challengeStartDate);
   const { tasks } = useCustomTasks(activeUid);
 
-  // Hold loading visible for at least 1.5s to avoid flash
-  const showLoading = useMinDuration(dayLoading || profileLoading, 1500);
+  // Hold the skeleton for at least 1.5s so it never flashes
+  const showSkeleton = useMinDuration(dayLoading || profileLoading, 1500);
 
   useEffect(() => {
     if (activeUid === currentUser.uid) {
@@ -107,16 +72,11 @@ function TodayInner({ currentUser }: { currentUser: UserProfile }) {
     }
     setProfileLoading(true);
     setProfileError(false);
-    // Fetch profile and users in parallel when switching tabs
-    Promise.all([
-      getUserProfile(activeUid),
-      getAllUsers(), // warm the users cache while we're at it
-    ])
-      .then(([p, allUsers]) => {
-        if (p) { setActiveProfile(p); }
+    Promise.all([getUserProfile(activeUid), getAllUsers()])
+      .then(([p, all]) => {
+        if (p) setActiveProfile(p);
         else setProfileError(true);
-        // Keep users cache warm
-        setCached('all-users', allUsers);
+        setCached('all-users', all);
       })
       .catch(() => setProfileError(true))
       .finally(() => setProfileLoading(false));
@@ -127,7 +87,6 @@ function TodayInner({ currentUser }: { currentUser: UserProfile }) {
 
   return (
     <div className="min-h-screen pb-24" style={{ background: 'var(--bg)' }}>
-      {/* Top bar */}
       <div className="flex items-center justify-between px-4 pt-3 pb-1">
         {users.length > 0 ? (
           <UserTabBar users={users} activeUid={activeUid} onSelectUser={setActiveUid} currentUserUid={currentUser.uid} />
@@ -145,7 +104,7 @@ function TodayInner({ currentUser }: { currentUser: UserProfile }) {
 
       <SideMenu open={menuOpen} onClose={() => setMenuOpen(false)} profile={currentUser} />
 
-      {readOnly && !showLoading && !menuOpen && (
+      {readOnly && !showSkeleton && (
         <div className="mx-4 mb-2 px-3 py-2 text-center" style={{
           ...pixelFont, fontSize: '6px',
           background: 'var(--surface-2)', border: '2px solid var(--border)', color: 'var(--text-muted)',
@@ -162,7 +121,7 @@ function TodayInner({ currentUser }: { currentUser: UserProfile }) {
         </div>
       )}
 
-      {showLoading ? (
+      {showSkeleton ? (
         <DaySkeleton profile={activeProfile} />
       ) : (
         <div className="px-4 space-y-6 page-enter">
@@ -195,38 +154,46 @@ function TodayInner({ currentUser }: { currentUser: UserProfile }) {
   );
 }
 
+// This page shows the LoadingScreen while Firebase auth + profile resolve —
+// so there is never a blank gap or a plain text "loading" state.
 export default function TodayPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileFetching, setProfileFetching] = useState(false);
   const [error, setError] = useState(false);
 
+  // Show LoadingScreen for at least 1.5s from the very first render
+  const showLoader = useMinDuration(authLoading || profileFetching || !profile, 1500);
+
   useEffect(() => {
-    if (user) {
-      // Kick off profile + user list fetch in parallel on mount
-      Promise.all([
-        getUserProfile(user.uid),
-        getAllUsers(),
-      ]).then(([p, allUsers]) => {
+    if (!user || profile) return;
+    setProfileFetching(true);
+    Promise.all([getUserProfile(user.uid), getAllUsers()])
+      .then(([p, all]) => {
         if (p) setProfile(p);
         else setError(true);
-        setCached('all-users', allUsers);
-      }).catch(() => setError(true));
-    }
-  }, [user]);
+        setCached('all-users', all);
+      })
+      .catch(() => setError(true))
+      .finally(() => setProfileFetching(false));
+  }, [user, profile]);
 
   return (
-    <AuthGuard>
-      {error ? (
-        <div className="min-h-screen flex items-center justify-center px-6" style={{ background: 'var(--bg)' }}>
-          <div style={{ ...vt323, fontSize: '22px', color: 'var(--red)', textAlign: 'center', lineHeight: 1.8 }}>
-            Failed to load profile. Check your connection.
+    <>
+      {/* LoadingScreen is always present in the DOM until everything is ready */}
+      {showLoader && <LoadingScreen />}
+
+      <AuthGuard>
+        {error ? (
+          <div className="min-h-screen flex items-center justify-center px-6" style={{ background: 'var(--bg)' }}>
+            <div style={{ fontFamily: '"VT323", monospace', fontSize: '22px', color: 'var(--red)', textAlign: 'center', lineHeight: 1.8 }}>
+              Failed to load profile. Check your connection.
+            </div>
           </div>
-        </div>
-      ) : profile ? (
-        <TodayInner currentUser={profile} />
-      ) : (
-        <LoadingScreen />
-      )}
-    </AuthGuard>
+        ) : profile && !showLoader ? (
+          <TodayInner currentUser={profile} />
+        ) : null}
+      </AuthGuard>
+    </>
   );
 }
