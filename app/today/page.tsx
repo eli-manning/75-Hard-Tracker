@@ -61,8 +61,10 @@ function TodayInner({ currentUser }: { currentUser: UserProfile }) {
   const { dayEntry, loading: dayLoading, update } = useDayData(activeUid, activeProfile.challengeStartDate);
   const { tasks } = useCustomTasks(activeUid);
 
-  // Hold the skeleton for at least 1.5s so it never flashes
-  const showSkeleton = useMinDuration(dayLoading || profileLoading, 1500);
+  // Only enforce the min-duration when switching to a different user tab (no cached data).
+  // For your own data (already loaded), show immediately.
+  const isTabSwitch = activeUid !== currentUser.uid && profileLoading;
+  const showSkeleton = useMinDuration(isTabSwitch || (dayLoading && !dayEntry), 1500);
 
   useEffect(() => {
     if (activeUid === currentUser.uid) {
@@ -154,29 +156,42 @@ function TodayInner({ currentUser }: { currentUser: UserProfile }) {
   );
 }
 
-// This page shows the LoadingScreen while Firebase auth + profile resolve —
-// so there is never a blank gap or a plain text "loading" state.
+// Module-level: persists across navigations within the same session.
+// Prevents the 1.5s loading screen from re-showing every time you navigate back.
+let _sessionProfile: UserProfile | null = null;
+
 export default function TodayPage() {
   const { user, loading: authLoading } = useAuth();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  // Initialize from session cache — no loading flash on re-navigation
+  const [profile, setProfile] = useState<UserProfile | null>(_sessionProfile);
   const [profileFetching, setProfileFetching] = useState(false);
   const [error, setError] = useState(false);
 
-  // Show LoadingScreen for at least 1.5s from the very first render
-  const showLoader = useMinDuration(authLoading || profileFetching || !profile, 1500);
+  // Only show the full-screen loader on TRUE first load (no cached profile)
+  const showLoader = useMinDuration(
+    (authLoading || profileFetching) && !profile,
+    1500
+  );
 
   useEffect(() => {
-    if (!user || profile) return;
+    if (!user) return;
+    // If we already have a session profile, just refresh in background
+    if (_sessionProfile) {
+      setProfile(_sessionProfile);
+      // Warm users cache silently
+      getAllUsers().then((all) => setCached('all-users', all)).catch(() => {});
+      return;
+    }
     setProfileFetching(true);
     Promise.all([getUserProfile(user.uid), getAllUsers()])
       .then(([p, all]) => {
-        if (p) setProfile(p);
+        if (p) { setProfile(p); _sessionProfile = p; }
         else setError(true);
         setCached('all-users', all);
       })
       .catch(() => setError(true))
       .finally(() => setProfileFetching(false));
-  }, [user, profile]);
+  }, [user]);
 
   return (
     <>
