@@ -14,9 +14,10 @@ interface SideMenuProps {
   open: boolean;
   onClose: () => void;
   profile: UserProfile;
+  onProfileUpdate: (updated: UserProfile) => void;
 }
 
-export function SideMenu({ open, onClose, profile }: SideMenuProps) {
+export function SideMenu({ open, onClose, profile, onProfileUpdate }: SideMenuProps) {
   const router = useRouter();
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(profile.displayName);
@@ -36,10 +37,12 @@ export function SideMenu({ open, onClose, profile }: SideMenuProps) {
   async function handleSaveName() {
     if (!nameInput.trim() || nameInput === profile.displayName) { setEditingName(false); return; }
     setSaving(true);
-    await updateUserProfile(profile.uid, { displayName: nameInput.trim() });
+    const displayName = nameInput.trim();
+    await updateUserProfile(profile.uid, { displayName });
     invalidate('all-users');
     setSaving(false);
     setEditingName(false);
+    onProfileUpdate({ ...profile, displayName });
   }
 
   async function handleSaveStart() {
@@ -49,6 +52,7 @@ export function SideMenu({ open, onClose, profile }: SideMenuProps) {
     invalidate(`profile-${profile.uid}`);
     setSaving(false);
     setEditingStart(false);
+    onProfileUpdate({ ...profile, challengeStartDate: startInput });
   }
 
   async function handleSignOut() {

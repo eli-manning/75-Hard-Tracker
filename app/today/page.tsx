@@ -49,7 +49,7 @@ function DaySkeleton({ profile }: { profile: UserProfile }) {
   );
 }
 
-function TodayInner({ currentUser }: { currentUser: UserProfile }) {
+function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile; onProfileUpdate: (p: UserProfile) => void }) {
   const { users: allUsers } = useAllUsers();
   // Signed-in user always first, others follow
   const users = [
@@ -109,7 +109,7 @@ function TodayInner({ currentUser }: { currentUser: UserProfile }) {
         </button>
       </div>
 
-      <SideMenu open={menuOpen} onClose={() => setMenuOpen(false)} profile={currentUser} />
+      <SideMenu open={menuOpen} onClose={() => setMenuOpen(false)} profile={currentUser} onProfileUpdate={onProfileUpdate} />
 
       {readOnly && !showSkeleton && (
         <div className="mx-4 mb-2 px-3 py-2 text-center" style={{
@@ -133,16 +133,34 @@ function TodayInner({ currentUser }: { currentUser: UserProfile }) {
       ) : (
         <div className="px-4 space-y-6 page-enter">
           <div className="pt-2 space-y-3">
-            <div className="flex items-start justify-between">
-              <div>
-                <h1 style={{ ...pixelFont, fontSize: '32px', color: 'var(--accent)', lineHeight: 1.1, textShadow: 'var(--glow-accent)' }}>
-                  DAY {dayEntry?.dayNumber ?? '—'}
-                </h1>
-                <p style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)', marginTop: 6 }}>{today}</p>
-              </div>
-              <StreakBadge streak={streak} />
-            </div>
-            {dayEntry && <DailyProgress entry={dayEntry} />}
+            {(() => {
+              const dayNum = dayEntry?.dayNumber ?? 0;
+              const notStarted = dayNum <= 0;
+              const daysUntil = notStarted ? Math.abs(dayNum) + 1 : 0;
+              return (
+                <div className="flex items-start justify-between">
+                  <div>
+                    {notStarted ? (
+                      <>
+                        <h1 style={{ ...pixelFont, fontSize: '16px', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                          STARTS IN
+                        </h1>
+                        <h2 style={{ ...pixelFont, fontSize: '32px', color: 'var(--accent)', lineHeight: 1.1, textShadow: 'var(--glow-accent)', marginTop: 4 }}>
+                          {daysUntil}D
+                        </h2>
+                      </>
+                    ) : (
+                      <h1 style={{ ...pixelFont, fontSize: '32px', color: 'var(--accent)', lineHeight: 1.1, textShadow: 'var(--glow-accent)' }}>
+                        DAY {dayNum}
+                      </h1>
+                    )}
+                    <p style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)', marginTop: 6 }}>{today}</p>
+                  </div>
+                  <StreakBadge streak={streak} />
+                </div>
+              );
+            })()}
+            {dayEntry && dayEntry.dayNumber > 0 && <DailyProgress entry={dayEntry} />}
           </div>
 
           <div>
@@ -228,7 +246,14 @@ export default function TodayPage() {
             </div>
           </div>
         ) : profile && !showLoader ? (
-          <TodayInner currentUser={profile} />
+          <TodayInner
+            currentUser={profile}
+            onProfileUpdate={(updated) => {
+              _memProfile = updated;
+              setSessionCached(SESSION_KEY, updated);
+              setProfile(updated);
+            }}
+          />
         ) : null}
       </AuthGuard>
     </>

@@ -106,7 +106,7 @@ function defaultDayEntry(uid: string, date: string, challengeStartDate: string):
     readingCompleted: false,
     pagesRead: 0,
     customTasksCompleted: [],
-    dayNumber: Math.max(1, dayNumber),
+    dayNumber, // negative/zero means challenge hasn't started yet
     allCoreCompleted: false,
   };
 }
