@@ -122,7 +122,8 @@ function HistoryInner({ currentUser }: { currentUser: UserProfile }) {
   const viewUser = users.find((u) => u.uid === viewUid);
 
   return (
-    <div className="min-h-screen pb-24 px-4 pt-6 page-enter" style={{ background: 'var(--bg)' }}>
+    <div className="min-h-screen pb-24" style={{ background: 'var(--bg)' }}>
+    <div className="px-4 pt-6 page-enter">
       <div className="flex items-center justify-between mb-6">
         <h1 style={{ ...pixelFont, fontSize: '14px', color: 'var(--accent)' }}>HISTORY</h1>
       </div>
@@ -265,6 +266,7 @@ function HistoryInner({ currentUser }: { currentUser: UserProfile }) {
         ))}
       </div>
 
+      </div>  {/* end page-enter */}
       <BottomNav />
     </div>
   );
