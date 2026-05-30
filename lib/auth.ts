@@ -1,11 +1,11 @@
 import {
   GoogleAuthProvider,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   User,
   Unsubscribe,
+  UserCredential,
 } from 'firebase/auth';
 import { getFirebaseAuth } from './firebase';
 import { getUserProfile, createUserProfile } from './firestore';
@@ -36,21 +36,10 @@ async function ensureProfile(user: User): Promise<void> {
   }
 }
 
-// Kicks off the Google redirect flow — returns immediately (page navigates away)
-export function signInWithGoogle(): void {
-  signInWithRedirect(getFirebaseAuth(), provider);
-}
-
-// Call on login page mount — resolves redirect result if returning from Google
-export async function handleGoogleRedirect(): Promise<User | null> {
-  try {
-    const result = await getRedirectResult(getFirebaseAuth());
-    if (!result) return null;
-    await ensureProfile(result.user);
-    return result.user;
-  } catch {
-    return null;
-  }
+export async function signInWithGoogle(): Promise<UserCredential> {
+  const result = await signInWithPopup(getFirebaseAuth(), provider);
+  await ensureProfile(result.user);
+  return result;
 }
 
 export async function signOut(): Promise<void> {
