@@ -50,7 +50,12 @@ function DaySkeleton({ profile }: { profile: UserProfile }) {
 }
 
 function TodayInner({ currentUser }: { currentUser: UserProfile }) {
-  const { users } = useAllUsers();
+  const { users: allUsers } = useAllUsers();
+  // Signed-in user always first, others follow
+  const users = [
+    ...allUsers.filter((u) => u.uid === currentUser.uid),
+    ...allUsers.filter((u) => u.uid !== currentUser.uid),
+  ];
   const [activeUid, setActiveUid] = useState(currentUser.uid);
   const [activeProfile, setActiveProfile] = useState<UserProfile>(currentUser);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -111,7 +116,7 @@ function TodayInner({ currentUser }: { currentUser: UserProfile }) {
           ...pixelFont, fontSize: '6px',
           background: 'var(--surface-2)', border: '2px solid var(--border)', color: 'var(--text-muted)',
         }}>
-          VIEWING {activeProfile.displayName.toUpperCase()}&apos;S DAY — READ ONLY
+          VIEWING {activeProfile.displayName.toUpperCase()}&apos;S DAY
         </div>
       )}
 
