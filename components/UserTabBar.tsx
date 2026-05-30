@@ -48,7 +48,8 @@ export function UserTabBar({ users, activeUid, onSelectUser, currentUserUid }: U
             </div>
 
             {/* Name */}
-            <span
+            <div
+              className="flex items-center gap-1"
               style={{
                 fontFamily: '"Press Start 2P", monospace',
                 fontSize: '6px',
@@ -57,9 +58,11 @@ export function UserTabBar({ users, activeUid, onSelectUser, currentUserUid }: U
                 transition: 'color 200ms',
               }}
             >
-              {u.displayName.toUpperCase()}
-              {u.uid === currentUserUid ? ' ▶' : ''}
-            </span>
+              {u.uid === currentUserUid && (
+                <span style={{ lineHeight: 1, fontSize: '7px', position: 'relative', top: '-2px' }}>▶</span>
+              )}
+              <span>{u.displayName.toUpperCase()}</span>
+            </div>
           </button>
         );
       })}
