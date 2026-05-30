@@ -10,9 +10,11 @@ import { AuthGuard } from '@/components/AuthGuard';
 import { BottomNav } from '@/components/BottomNav';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-function tileColor(entry: DayEntry | undefined, date: Date): string {
+function tileColor(entry: DayEntry | undefined, date: Date, startDate: string | null): string {
   if (isFuture(date) && !isToday(date)) return 'var(--surface)';
   if (isToday(date) && (!entry || !entry.allCoreCompleted)) return 'var(--accent-light)';
+  // Before the challenge started — just show as empty
+  if (!entry && startDate && format(date, 'yyyy-MM-dd') < startDate) return 'var(--surface)';
   if (!entry) return 'var(--red-light)';
   if (entry.allCoreCompleted) return 'var(--green-light)';
   const done = [
@@ -27,9 +29,10 @@ function tileColor(entry: DayEntry | undefined, date: Date): string {
   return 'var(--yellow-light)';
 }
 
-function tileBorder(entry: DayEntry | undefined, date: Date): string {
+function tileBorder(entry: DayEntry | undefined, date: Date, startDate: string | null): string {
   if (isFuture(date) && !isToday(date)) return 'var(--border)';
   if (isToday(date) && (!entry || !entry.allCoreCompleted)) return 'var(--accent)';
+  if (!entry && startDate && format(date, 'yyyy-MM-dd') < startDate) return 'var(--border)';
   if (!entry) return 'var(--red)';
   if (entry.allCoreCompleted) return 'var(--green)';
   const done = [
@@ -113,6 +116,8 @@ function HistoryInner({ currentUser }: { currentUser: UserProfile }) {
   const viewProfile = users.find((u) => u.uid === viewUid);
   const currentStreak = viewProfile?.currentStreak ?? computeStreak(history).current;
   const longest = viewProfile?.longestStreak ?? computeStreak(history).longest;
+  // Only show red for days after the challenge started and before today
+  const startDate = viewProfile?.challengeStartDate ?? null;
 
   const viewUser = users.find((u) => u.uid === viewUid);
 
@@ -197,8 +202,8 @@ function HistoryInner({ currentUser }: { currentUser: UserProfile }) {
           {days.map((day) => {
             const dateStr = format(day, 'yyyy-MM-dd');
             const entry = entryMap.get(dateStr);
-            const bg = tileColor(entry, day);
-            const border = tileBorder(entry, day);
+            const bg = tileColor(entry, day, startDate);
+            const border = tileBorder(entry, day, startDate);
             return (
               <div
                 key={dateStr}
