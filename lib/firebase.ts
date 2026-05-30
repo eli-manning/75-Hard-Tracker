@@ -12,15 +12,13 @@ const firebaseConfig = {
 };
 
 // Firebase only runs client-side (static export)
-let app: FirebaseApp | undefined;
+let _app: FirebaseApp | undefined;
 let _auth: Auth | undefined;
 let _db: Firestore | undefined;
 
 function getApp(): FirebaseApp {
-  if (!app) {
-    app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-  }
-  return app;
+  if (!_app) _app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+  return _app;
 }
 
 export function getFirebaseAuth(): Auth {
@@ -33,7 +31,9 @@ export function getFirebaseDb(): Firestore {
   return _db;
 }
 
-// Convenience re-exports used across the app — safe after hydration
-export { getAuth, getFirestore };
-export const auth = typeof window !== 'undefined' ? getFirebaseAuth() : ({} as Auth);
-export const db = typeof window !== 'undefined' ? getFirebaseDb() : ({} as Firestore);
+// Eagerly warm Firebase so getFirebaseAuth() is synchronous when called from a click handler.
+// This prevents Chrome from treating signInWithPopup as "not from a user gesture."
+if (typeof window !== 'undefined') {
+  getFirebaseAuth();
+  getFirebaseDb();
+}

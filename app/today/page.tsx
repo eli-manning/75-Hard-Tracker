@@ -8,7 +8,7 @@ import { useDayData } from '@/hooks/useDayData';
 import { useCustomTasks } from '@/hooks/useCustomTasks';
 import { useMinDuration } from '@/hooks/useMinDuration';
 import { getUserProfile, getAllUsers } from '@/lib/firestore';
-import { setCached } from '@/lib/cache';
+import { setCached, getSessionCached, setSessionCached } from '@/lib/cache';
 import { UserProfile } from '@/lib/types';
 import { AuthGuard } from '@/components/AuthGuard';
 import { LoadingScreen } from '@/components/LoadingScreen';
@@ -156,18 +156,24 @@ function TodayInner({ currentUser }: { currentUser: UserProfile }) {
   );
 }
 
-// Module-level: persists across navigations within the same session.
-// Prevents the 1.5s loading screen from re-showing every time you navigate back.
-let _sessionProfile: UserProfile | null = null;
+// Module-level var: survives client-side navigation (same JS context).
+// sessionStorage fallback: survives iOS PWA kills within the same browser session.
+let _memProfile: UserProfile | null = null;
+const SESSION_KEY = '75hard-profile';
+
+function getBootProfile(): UserProfile | null {
+  if (_memProfile) return _memProfile;
+  return getSessionCached<UserProfile>(SESSION_KEY);
+}
 
 export default function TodayPage() {
   const { user, loading: authLoading } = useAuth();
-  // Initialize from session cache — no loading flash on re-navigation
-  const [profile, setProfile] = useState<UserProfile | null>(_sessionProfile);
+  // Boot from whichever cache layer has data — zero loading flash on re-navigation
+  const [profile, setProfile] = useState<UserProfile | null>(getBootProfile);
   const [profileFetching, setProfileFetching] = useState(false);
   const [error, setError] = useState(false);
 
-  // Only show the full-screen loader on TRUE first load (no cached profile)
+  // Only show the loader when we genuinely have no profile data yet
   const showLoader = useMinDuration(
     (authLoading || profileFetching) && !profile,
     1500
@@ -175,18 +181,29 @@ export default function TodayPage() {
 
   useEffect(() => {
     if (!user) return;
-    // If we already have a session profile, just refresh in background
-    if (_sessionProfile) {
-      setProfile(_sessionProfile);
-      // Warm users cache silently
+    const boot = getBootProfile();
+    if (boot) {
+      // Have cached profile — show it, refresh silently in background
+      setProfile(boot);
+      getUserProfile(user.uid)
+        .then((p) => {
+          if (p) { _memProfile = p; setSessionCached(SESSION_KEY, p); setProfile(p); }
+        })
+        .catch(() => {});
       getAllUsers().then((all) => setCached('all-users', all)).catch(() => {});
       return;
     }
+    // First ever load — fetch everything
     setProfileFetching(true);
     Promise.all([getUserProfile(user.uid), getAllUsers()])
       .then(([p, all]) => {
-        if (p) { setProfile(p); _sessionProfile = p; }
-        else setError(true);
+        if (p) {
+          _memProfile = p;
+          setSessionCached(SESSION_KEY, p);
+          setProfile(p);
+        } else {
+          setError(true);
+        }
         setCached('all-users', all);
       })
       .catch(() => setError(true))
