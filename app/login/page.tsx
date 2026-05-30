@@ -2,16 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { signIn, signUp } from '@/lib/auth';
+import { signInWithGoogle } from '@/lib/auth';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function LoginPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -19,27 +15,18 @@ export default function LoginPage() {
     if (!loading && user) router.replace('/today');
   }, [user, loading, router]);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleGoogle() {
     setError('');
     setSubmitting(true);
     try {
-      if (mode === 'signup') {
-        await signUp(email, password, displayName);
-      } else {
-        await signIn(email, password);
-      }
+      await signInWithGoogle();
       router.replace('/today');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes('invalid-credential') || msg.includes('wrong-password')) {
-        setError('Wrong email or password.');
-      } else if (msg.includes('email-already-in-use')) {
-        setError('Email already in use. Try signing in.');
-      } else if (msg.includes('weak-password')) {
-        setError('Password must be at least 6 characters.');
+      if (msg.includes('popup-closed-by-user') || msg.includes('cancelled-popup-request')) {
+        // User dismissed — not an error
       } else {
-        setError('Something went wrong. Try again.');
+        setError('Sign in failed. Try again.');
       }
     } finally {
       setSubmitting(false);
@@ -54,7 +41,7 @@ export default function LoginPage() {
       style={{ background: 'var(--bg)' }}
     >
       <div
-        className="w-full max-w-sm p-6 space-y-6"
+        className="w-full max-w-sm p-8 space-y-8 text-center"
         style={{
           background: 'var(--surface)',
           border: '2px solid var(--text)',
@@ -62,11 +49,11 @@ export default function LoginPage() {
         }}
       >
         {/* Title */}
-        <div className="text-center space-y-1">
+        <div className="space-y-2">
           <h1
             style={{
               ...pixelFont,
-              fontSize: '14px',
+              fontSize: '20px',
               color: 'var(--accent)',
               lineHeight: 1.6,
             }}
@@ -78,96 +65,33 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Mode toggle */}
-        <div className="flex">
-          {(['login', 'signup'] as const).map((m) => (
-            <button
-              key={m}
-              onClick={() => { setMode(m); setError(''); }}
-              className="flex-1 py-2 transition-all"
-              style={{
-                ...pixelFont,
-                fontSize: '8px',
-                border: '2px solid var(--text)',
-                boxShadow: mode === m ? '2px 2px 0 var(--text)' : 'none',
-                background: mode === m ? 'var(--accent)' : 'var(--surface)',
-                color: mode === m ? '#fff' : 'var(--text)',
-              }}
-            >
-              {m === 'login' ? 'SIGN IN' : 'SIGN UP'}
-            </button>
-          ))}
-        </div>
+        {/* Divider */}
+        <div style={{ borderTop: '2px solid var(--border)' }} />
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {mode === 'signup' && (
-            <div className="space-y-1">
-              <label style={{ ...pixelFont, fontSize: '7px', color: 'var(--text-muted)' }}>
-                NAME
-              </label>
-              <input
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                required
-                placeholder="Eli"
-                className="w-full px-3 py-2 bg-white"
-                style={{
-                  fontFamily: 'Inter, sans-serif',
-                  fontSize: '14px',
-                  border: '2px solid var(--border)',
-                  outline: 'none',
-                }}
-                onFocus={(e) => (e.target.style.borderColor = 'var(--text)')}
-                onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
-              />
-            </div>
-          )}
-
-          <div className="space-y-1">
-            <label style={{ ...pixelFont, fontSize: '7px', color: 'var(--text-muted)' }}>
-              EMAIL
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              placeholder="you@example.com"
-              className="w-full px-3 py-2 bg-white"
-              style={{
-                fontFamily: 'Inter, sans-serif',
-                fontSize: '14px',
-                border: '2px solid var(--border)',
-                outline: 'none',
-              }}
-              onFocus={(e) => (e.target.style.borderColor = 'var(--text)')}
-              onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label style={{ ...pixelFont, fontSize: '7px', color: 'var(--text-muted)' }}>
-              PASSWORD
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              placeholder="••••••••"
-              className="w-full px-3 py-2 bg-white"
-              style={{
-                fontFamily: 'Inter, sans-serif',
-                fontSize: '14px',
-                border: '2px solid var(--border)',
-                outline: 'none',
-              }}
-              onFocus={(e) => (e.target.style.borderColor = 'var(--text)')}
-              onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
-            />
-          </div>
+        {/* Google button */}
+        <div className="space-y-4">
+          <button
+            onClick={handleGoogle}
+            disabled={submitting}
+            className="w-full py-4 flex items-center justify-center gap-3 transition-all active:translate-y-px disabled:opacity-60"
+            style={{
+              border: '2px solid var(--text)',
+              boxShadow: '3px 3px 0 var(--text)',
+              background: 'var(--surface)',
+              color: 'var(--text)',
+            }}
+          >
+            {/* Google G logo */}
+            <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+              <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+              <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+              <path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/>
+              <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+            </svg>
+            <span style={{ ...pixelFont, fontSize: '9px' }}>
+              {submitting ? 'SIGNING IN...' : 'SIGN IN WITH GOOGLE'}
+            </span>
+          </button>
 
           {error && (
             <p
@@ -175,31 +99,15 @@ export default function LoginPage() {
                 fontFamily: 'Inter, sans-serif',
                 fontSize: '13px',
                 color: 'var(--red)',
-                border: '1px solid var(--red-light)',
                 background: 'var(--red-light)',
+                border: '1px solid var(--red)',
                 padding: '8px',
               }}
             >
               {error}
             </p>
           )}
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full py-3 transition-all active:translate-y-px disabled:opacity-60"
-            style={{
-              ...pixelFont,
-              fontSize: '10px',
-              border: '2px solid var(--text)',
-              boxShadow: '3px 3px 0 var(--text)',
-              background: 'var(--accent)',
-              color: '#fff',
-            }}
-          >
-            {submitting ? 'LOADING...' : mode === 'login' ? 'SIGN IN' : 'CREATE ACCOUNT'}
-          </button>
-        </form>
+        </div>
       </div>
     </div>
   );

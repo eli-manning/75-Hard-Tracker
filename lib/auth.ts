@@ -1,6 +1,6 @@
 import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   User,
@@ -8,41 +8,35 @@ import {
   UserCredential,
 } from 'firebase/auth';
 import { getFirebaseAuth } from './firebase';
-import { createUserProfile } from './firestore';
+import { getUserProfile, createUserProfile } from './firestore';
 import { format } from 'date-fns';
 
-export async function signUp(
-  email: string,
-  password: string,
-  displayName: string
-): Promise<UserCredential> {
-  const auth = getFirebaseAuth();
-  const credential = await createUserWithEmailAndPassword(auth, email, password);
-  const { uid } = credential.user;
+const provider = new GoogleAuthProvider();
 
-  const avatarMap: Record<string, string> = {
-    'eli.patrick.manning@gmail.com': '/avatars/eli.png',
-    'rocket@gmail.com': '/avatars/rocket.png',
-  };
-  const avatarUrl = avatarMap[email.toLowerCase()] ?? '/avatars/default.png';
+const AVATAR_MAP: Record<string, string> = {
+  'eli@themannings.com': '/avatars/eli.png',
+  'rocket@gmail.com': '/avatars/rocket.png',
+};
 
-  await createUserProfile({
-    uid,
-    displayName,
-    avatarUrl,
-    email,
-    challengeStartDate: format(new Date(), 'yyyy-MM-dd'),
-    isActive: true,
-  });
+export async function signInWithGoogle(): Promise<UserCredential> {
+  const credential = await signInWithPopup(getFirebaseAuth(), provider);
+  const { uid, email, displayName } = credential.user;
+
+  // Create profile on first sign-in only
+  const existing = await getUserProfile(uid);
+  if (!existing) {
+    const emailKey = (email ?? '').toLowerCase();
+    await createUserProfile({
+      uid,
+      displayName: displayName ?? email ?? 'User',
+      avatarUrl: AVATAR_MAP[emailKey] ?? '/avatars/default.png',
+      email: email ?? '',
+      challengeStartDate: format(new Date(), 'yyyy-MM-dd'),
+      isActive: true,
+    });
+  }
 
   return credential;
-}
-
-export async function signIn(
-  email: string,
-  password: string
-): Promise<UserCredential> {
-  return signInWithEmailAndPassword(getFirebaseAuth(), email, password);
 }
 
 export async function signOut(): Promise<void> {
