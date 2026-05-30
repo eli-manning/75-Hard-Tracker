@@ -1,7 +1,8 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
+import { ServiceWorkerRegistrar } from '@/components/ServiceWorkerRegistrar';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -11,12 +12,31 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: '75 Hard Tracker',
   description: 'Track your 75 Hard challenge',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: '75 HARD',
+  },
+  icons: {
+    icon: [
+      { url: '/favicon-16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon-48.png', sizes: '48x48', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+  },
 };
 
-export const viewport = {
+export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
+  userScalable: false,
+  themeColor: '#0c0b08',
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -50,13 +70,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             --glow-accent: 0 0 8px #e8643a66;
           }
           * { box-sizing: border-box; }
-          body { background: var(--bg); color: var(--text); }
+          body {
+            background: var(--bg);
+            color: var(--text);
+            /* Safe area insets for iPhone notch/home bar */
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+          }
           input::placeholder { color: var(--text-muted); }
           input { color: var(--text); }
         `}</style>
       </head>
       <body className={inter.className}>
         <AuthProvider>
+          <ServiceWorkerRegistrar />
           <div style={{ maxWidth: 480, margin: '0 auto', minHeight: '100vh', position: 'relative' }}>
             {children}
           </div>
