@@ -153,7 +153,7 @@ function TasksInner({ uid }: { uid: string }) {
   );
 
   return (
-    <div className="min-h-screen pb-24 px-4 pt-6" style={{ background: 'var(--bg)' }}>
+    <div className="min-h-screen pb-24 px-4 pt-6 page-enter" style={{ background: 'var(--bg)' }}>
       <h1 style={{ ...pixelFont, fontSize: '14px', marginBottom: 24, color: 'var(--accent)' }}>
         MY TASKS
       </h1>
