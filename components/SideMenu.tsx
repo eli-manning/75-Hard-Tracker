@@ -16,7 +16,7 @@ import {
 import { UserProfile } from '@/lib/types';
 import { LogOut, X, Calendar, Target, Edit2, Check, UserPlus, UserMinus, Users } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import { invalidate } from '@/lib/cache';
+import { getCached, invalidate } from '@/lib/cache';
 
 interface SideMenuProps {
   open: boolean;
@@ -33,10 +33,11 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate }: SideMenuPr
   const [startInput, setStartInput] = useState(profile.challengeStartDate);
   const [saving, setSaving] = useState(false);
 
-  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
+  // Seed from in-memory cache so the list is instant if the page already fetched users
+  const [allUsers, setAllUsers] = useState<UserProfile[]>(() => getCached<UserProfile[]>('all-users') ?? []);
   const [pendingRequests, setPendingRequests] = useState<string[]>([]);
   const [sentRequests, setSentRequests] = useState<Set<string>>(new Set());
-  const [friendsLoading, setFriendsLoading] = useState(false);
+  const [requestsLoading, setRequestsLoading] = useState(false);
   const [friendsActionUid, setFriendsActionUid] = useState<string | null>(null);
   const [friendSearch, setFriendSearch] = useState('');
 
@@ -58,13 +59,14 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate }: SideMenuPr
   // Load friends data when menu opens
   useEffect(() => {
     if (!open) { setSentRequests(new Set()); setFriendSearch(''); return; }
-    setFriendsLoading(true);
-    Promise.all([getAllUsers(), getPendingRequests(profile.uid)])
-      .then(([users, requests]) => {
-        setAllUsers(users);
-        setPendingRequests(requests);
-      })
-      .finally(() => setFriendsLoading(false));
+    // Users: usually cached and instant — refresh in background without blocking
+    getAllUsers().then(setAllUsers).catch(() => {});
+    // Pending requests: always a network call, show a small spinner just for that section
+    setRequestsLoading(true);
+    getPendingRequests(profile.uid)
+      .then(setPendingRequests)
+      .catch(() => setPendingRequests([]))
+      .finally(() => setRequestsLoading(false));
   }, [open, profile.uid]);
 
   async function handleSaveName() {
@@ -95,8 +97,13 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate }: SideMenuPr
 
   async function handleSendRequest(toUid: string) {
     setFriendsActionUid(toUid);
-    await sendFriendRequest(profile.uid, toUid);
-    setSentRequests((prev) => new Set([...prev, toUid]));
+    const autoAccepted = await sendFriendRequest(profile.uid, toUid);
+    if (autoAccepted) {
+      // Both people had pending requests — we're now friends
+      onProfileUpdate({ ...profile, friends: [...(profile.friends ?? []), toUid] });
+    } else {
+      setSentRequests((prev) => new Set(Array.from(prev).concat(toUid)));
+    }
     setFriendsActionUid(null);
   }
 
@@ -268,141 +275,137 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate }: SideMenuPr
               <span style={{ ...pixelFont, fontSize: '7px', color: 'var(--text-muted)' }}>FRIENDS</span>
             </div>
 
-            {friendsLoading ? (
-              <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '11px', color: 'var(--text-muted)' }}>Loading…</p>
-            ) : (
-              <div className="space-y-3">
+            <div className="space-y-3">
 
-                {/* Pending incoming requests */}
-                {requesters.length > 0 && (
-                  <div className="space-y-2">
-                    <p style={{ ...pixelFont, fontSize: '6px', color: 'var(--accent)' }}>REQUESTS</p>
-                    {requesters.map((u) => (
+              {/* Pending incoming requests */}
+              {requestsLoading ? (
+                <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '11px', color: 'var(--text-muted)' }}>Checking requests…</p>
+              ) : requesters.length > 0 ? (
+                <div className="space-y-2">
+                  <p style={{ ...pixelFont, fontSize: '6px', color: 'var(--accent)' }}>REQUESTS</p>
+                  {requesters.map((u) => (
+                    <div key={u.uid} className="flex items-center gap-2">
+                      <div style={{ width: 28, height: 28, border: '2px solid var(--border)', overflow: 'hidden', flexShrink: 0 }}>
+                        <Image src={u.avatarUrl} alt={u.displayName} width={28} height={28}
+                          className="w-full h-full object-cover object-top"
+                          onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/avatars/default.png'; }} />
+                      </div>
+                      <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: 'var(--text)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {u.displayName}
+                      </span>
+                      <button
+                        onClick={() => handleAccept(u.uid)}
+                        disabled={friendsActionUid === u.uid}
+                        className="cursor-pointer"
+                        style={{ ...pixelFont, fontSize: '6px', padding: '3px 6px', border: '2px solid var(--green)', background: 'var(--green-light)', color: 'var(--green)', opacity: friendsActionUid === u.uid ? 0.5 : 1 }}
+                      >✓</button>
+                      <button
+                        onClick={() => handleDecline(u.uid)}
+                        disabled={friendsActionUid === u.uid}
+                        className="cursor-pointer"
+                        style={{ ...pixelFont, fontSize: '6px', padding: '3px 6px', border: '2px solid var(--red)', background: 'var(--red-light)', color: 'var(--red)', opacity: friendsActionUid === u.uid ? 0.5 : 1 }}
+                      >✕</button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              {/* Current friends */}
+              {friends.length > 0 && (
+                <div className="space-y-2">
+                  <p style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>YOUR FRIENDS</p>
+                  {friends.map((u) => (
+                    <div key={u.uid} className="flex items-center gap-2">
+                      <div style={{ width: 28, height: 28, border: '2px solid var(--border)', overflow: 'hidden', flexShrink: 0 }}>
+                        <Image src={u.avatarUrl} alt={u.displayName} width={28} height={28}
+                          className="w-full h-full object-cover object-top"
+                          onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/avatars/default.png'; }} />
+                      </div>
+                      <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: 'var(--text)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {u.displayName}
+                      </span>
+                      <button
+                        onClick={() => handleRemoveFriend(u.uid)}
+                        disabled={friendsActionUid === u.uid}
+                        className="cursor-pointer opacity-40 hover:opacity-100 transition-opacity"
+                        title="Remove friend"
+                      >
+                        <UserMinus size={14} color="var(--red)" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add friends — search (always shown so users can search even before users load) */}
+              <div className="space-y-2">
+                <p style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>ADD FRIENDS</p>
+                <input
+                  value={friendSearch}
+                  onChange={(e) => setFriendSearch(e.target.value)}
+                  placeholder="Search by name or email…"
+                  style={{
+                    width: '100%',
+                    fontFamily: 'Inter, sans-serif',
+                    fontSize: '12px',
+                    padding: '6px 8px',
+                    border: '2px solid var(--border)',
+                    background: 'var(--surface-2)',
+                    color: 'var(--text)',
+                    outline: 'none',
+                  }}
+                />
+                {(() => {
+                  const q = friendSearch.trim().toLowerCase();
+                  if (!q) return null;
+                  const results = addCandidates.filter(
+                    (u) =>
+                      u.displayName.toLowerCase().includes(q) ||
+                      u.email.toLowerCase().includes(q)
+                  );
+                  if (results.length === 0) {
+                    return (
+                      <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '11px', color: 'var(--text-muted)' }}>
+                        No users found.
+                      </p>
+                    );
+                  }
+                  return results.map((u) => {
+                    const sent = sentRequests.has(u.uid);
+                    return (
                       <div key={u.uid} className="flex items-center gap-2">
                         <div style={{ width: 28, height: 28, border: '2px solid var(--border)', overflow: 'hidden', flexShrink: 0 }}>
                           <Image src={u.avatarUrl} alt={u.displayName} width={28} height={28}
                             className="w-full h-full object-cover object-top"
                             onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/avatars/default.png'; }} />
                         </div>
-                        <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: 'var(--text)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {u.displayName}
-                        </span>
-                        <button
-                          onClick={() => handleAccept(u.uid)}
-                          disabled={friendsActionUid === u.uid}
-                          className="cursor-pointer"
-                          style={{ ...pixelFont, fontSize: '6px', padding: '3px 6px', border: '2px solid var(--green)', background: 'var(--green-light)', color: 'var(--green)', opacity: friendsActionUid === u.uid ? 0.5 : 1 }}
-                        >✓</button>
-                        <button
-                          onClick={() => handleDecline(u.uid)}
-                          disabled={friendsActionUid === u.uid}
-                          className="cursor-pointer"
-                          style={{ ...pixelFont, fontSize: '6px', padding: '3px 6px', border: '2px solid var(--red)', background: 'var(--red-light)', color: 'var(--red)', opacity: friendsActionUid === u.uid ? 0.5 : 1 }}
-                        >✕</button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Current friends */}
-                {friends.length > 0 && (
-                  <div className="space-y-2">
-                    <p style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>YOUR FRIENDS</p>
-                    {friends.map((u) => (
-                      <div key={u.uid} className="flex items-center gap-2">
-                        <div style={{ width: 28, height: 28, border: '2px solid var(--border)', overflow: 'hidden', flexShrink: 0 }}>
-                          <Image src={u.avatarUrl} alt={u.displayName} width={28} height={28}
-                            className="w-full h-full object-cover object-top"
-                            onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/avatars/default.png'; }} />
-                        </div>
-                        <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: 'var(--text)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {u.displayName}
-                        </span>
-                        <button
-                          onClick={() => handleRemoveFriend(u.uid)}
-                          disabled={friendsActionUid === u.uid}
-                          className="cursor-pointer opacity-40 hover:opacity-100 transition-opacity"
-                          title="Remove friend"
-                        >
-                          <UserMinus size={14} color="var(--red)" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Add friends — search */}
-                {addCandidates.length > 0 && (
-                  <div className="space-y-2">
-                    <p style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>ADD FRIENDS</p>
-                    <input
-                      value={friendSearch}
-                      onChange={(e) => setFriendSearch(e.target.value)}
-                      placeholder="Search by name or email…"
-                      style={{
-                        width: '100%',
-                        fontFamily: 'Inter, sans-serif',
-                        fontSize: '12px',
-                        padding: '6px 8px',
-                        border: '2px solid var(--border)',
-                        background: 'var(--surface-2)',
-                        color: 'var(--text)',
-                        outline: 'none',
-                      }}
-                    />
-                    {(() => {
-                      const q = friendSearch.trim().toLowerCase();
-                      const results = q
-                        ? addCandidates.filter(
-                            (u) =>
-                              u.displayName.toLowerCase().includes(q) ||
-                              u.email.toLowerCase().includes(q)
-                          )
-                        : [];
-                      if (q && results.length === 0) {
-                        return (
-                          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '11px', color: 'var(--text-muted)' }}>
-                            No users found.
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {u.displayName}
                           </p>
-                        );
-                      }
-                      return results.map((u) => {
-                        const sent = sentRequests.has(u.uid);
-                        return (
-                          <div key={u.uid} className="flex items-center gap-2">
-                            <div style={{ width: 28, height: 28, border: '2px solid var(--border)', overflow: 'hidden', flexShrink: 0 }}>
-                              <Image src={u.avatarUrl} alt={u.displayName} width={28} height={28}
-                                className="w-full h-full object-cover object-top"
-                                onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/avatars/default.png'; }} />
-                            </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {u.displayName}
-                              </p>
-                              <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '10px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {u.email}
-                              </p>
-                            </div>
-                            {sent ? (
-                              <span style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>SENT</span>
-                            ) : (
-                              <button
-                                onClick={() => handleSendRequest(u.uid)}
-                                disabled={friendsActionUid === u.uid}
-                                className="cursor-pointer"
-                                title="Send friend request"
-                              >
-                                <UserPlus size={14} color="var(--accent)" style={{ opacity: friendsActionUid === u.uid ? 0.5 : 1 }} />
-                              </button>
-                            )}
-                          </div>
-                        );
-                      });
-                    })()}
-                  </div>
-                )}
+                          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '10px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {u.email}
+                          </p>
+                        </div>
+                        {sent ? (
+                          <span style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>SENT</span>
+                        ) : (
+                          <button
+                            onClick={() => handleSendRequest(u.uid)}
+                            disabled={friendsActionUid === u.uid}
+                            className="cursor-pointer"
+                            title="Send friend request"
+                          >
+                            <UserPlus size={14} color="var(--accent)" style={{ opacity: friendsActionUid === u.uid ? 0.5 : 1 }} />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
               </div>
-            )}
+
+            </div>
           </div>
 
           {/* Challenge goal reminder */}

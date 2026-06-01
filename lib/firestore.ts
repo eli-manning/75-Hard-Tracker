@@ -95,12 +95,21 @@ export async function updateStreakOnProfile(uid: string): Promise<void> {
 
 // ── Friends ───────────────────────────────────────────────────────────────────
 
-export async function sendFriendRequest(fromUid: string, toUid: string): Promise<void> {
+// Returns true if both sides had pending requests and were auto-accepted as friends
+export async function sendFriendRequest(fromUid: string, toUid: string): Promise<boolean> {
+  // If the other person already sent us a request, just accept it immediately
+  const mutualRef = doc(db(), 'friendRequests', fromUid, 'incoming', toUid);
+  const mutual = await getDoc(mutualRef);
+  if (mutual.exists()) {
+    await acceptFriendRequest(fromUid, toUid);
+    return true;
+  }
   await setDoc(doc(db(), 'friendRequests', toUid, 'incoming', fromUid), {
     fromUid,
     toUid,
     createdAt: serverTimestamp(),
   });
+  return false;
 }
 
 export async function getPendingRequests(uid: string): Promise<string[]> {
