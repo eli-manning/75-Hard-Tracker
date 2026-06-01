@@ -8,6 +8,8 @@ import { getDayHistory, getUserProfile } from '@/lib/firestore';
 import { DayEntry, UserProfile } from '@/lib/types';
 import { AuthGuard } from '@/components/AuthGuard';
 import { BottomNav } from '@/components/BottomNav';
+import { LoadingScreen } from '@/components/LoadingScreen';
+import { getSessionCached } from '@/lib/cache';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 function tileColor(entry: DayEntry | undefined, date: Date, startDate: string | null): string {
@@ -276,7 +278,8 @@ function HistoryInner({ currentUser }: { currentUser: UserProfile }) {
 
 export default function HistoryPage() {
   const { user } = useAuth();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  // Boot from session cache so navigation is instant — same session key as TodayPage
+  const [profile, setProfile] = useState<UserProfile | null>(() => getSessionCached<UserProfile>('75hard-profile'));
 
   useEffect(() => {
     if (user) getUserProfile(user.uid).then(setProfile);
@@ -284,7 +287,7 @@ export default function HistoryPage() {
 
   return (
     <AuthGuard>
-      {profile && <HistoryInner currentUser={profile} />}
+      {profile ? <HistoryInner currentUser={profile} /> : <LoadingScreen />}
     </AuthGuard>
   );
 }

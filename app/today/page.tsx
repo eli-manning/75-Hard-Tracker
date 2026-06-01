@@ -8,7 +8,7 @@ import { useDayData } from '@/hooks/useDayData';
 import { useCustomTasks } from '@/hooks/useCustomTasks';
 import { useMinDuration } from '@/hooks/useMinDuration';
 import { getUserProfile, getAllUsers, getPendingRequests } from '@/lib/firestore';
-import { setCached, getSessionCached, setSessionCached } from '@/lib/cache';
+import { setCached, getSessionCached, setSessionCached, clearSessionCached } from '@/lib/cache';
 import { UserProfile } from '@/lib/types';
 import { AuthGuard } from '@/components/AuthGuard';
 import { LoadingScreen } from '@/components/LoadingScreen';
@@ -222,14 +222,19 @@ export default function TodayPage() {
   const [profileFetching, setProfileFetching] = useState(false);
   const [error, setError] = useState(false);
 
-  // Only show the loader when we genuinely have no profile data yet
+  // Show loader while auth resolves or while we have a user but no profile yet
   const showLoader = useMinDuration(
-    (authLoading || profileFetching) && !profile,
+    authLoading || !profile,
     600
   );
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      // Clear stale profile so the next login doesn't boot from old data
+      _memProfile = null;
+      clearSessionCached(SESSION_KEY);
+      return;
+    }
     const boot = getBootProfile();
     if (boot) {
       // Have cached profile — show it immediately, refresh silently in background
