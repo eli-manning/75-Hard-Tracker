@@ -194,16 +194,22 @@ export async function updateDayEntry(
     ...updates,
     updatedAt: serverTimestamp(),
   });
+  invalidate(`history-${uid}`);
 }
 
 export async function getDayHistory(
   uid: string,
   limitCount = 90
 ): Promise<DayEntry[]> {
+  const key = `history-${uid}`;
+  const cached = getCached<DayEntry[]>(key);
+  if (cached) return cached;
   const ref = collection(db(), 'days', uid, 'entries');
   const q = query(ref, orderBy('date', 'desc'), limit(limitCount));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data() as DayEntry);
+  const entries = snap.docs.map((d) => d.data() as DayEntry);
+  setCached(key, entries);
+  return entries;
 }
 
 // ── Custom Tasks ──────────────────────────────────────────────────────────────
