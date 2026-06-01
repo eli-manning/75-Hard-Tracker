@@ -7,9 +7,9 @@ import { useAllUsers } from '@/hooks/useAllUsers';
 import { useDayData } from '@/hooks/useDayData';
 import { useCustomTasks } from '@/hooks/useCustomTasks';
 import { useMinDuration } from '@/hooks/useMinDuration';
-import { getUserProfile, getAllUsers, getPendingRequests } from '@/lib/firestore';
-import { setCached, getSessionCached, setSessionCached, clearSessionCached } from '@/lib/cache';
-import { UserProfile } from '@/lib/types';
+import { getUserProfile, getAllUsers, getPendingRequests, getOrCreateDayEntry, getDayHistory } from '@/lib/firestore';
+import { getCached, getSessionCached, setSessionCached, clearSessionCached } from '@/lib/cache';
+import { UserProfile, DayEntry } from '@/lib/types';
 import { AuthGuard } from '@/components/AuthGuard';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { BottomNav } from '@/components/BottomNav';
@@ -79,23 +79,43 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
   const isTabSwitch = activeUid !== currentUser.uid && profileLoading;
   const showSkeleton = useMinDuration(isTabSwitch || (dayLoading && !dayEntry), 600);
 
+  // Prefetch friend today-entries in the background once the friends list is known.
+  // Warms the cache so the first tap on a friend tab is instant.
+  useEffect(() => {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    for (const friend of users) {
+      if (friend.uid === currentUser.uid || !friend.challengeStartDate) continue;
+      const key = `day-${friend.uid}-${today}`;
+      if (!getCached<DayEntry>(key)) {
+        getOrCreateDayEntry(friend.uid, today, friend.challengeStartDate).catch(() => {});
+      }
+    }
+  }, [users, currentUser.uid]);
+
   useEffect(() => {
     if (activeUid === currentUser.uid) {
       setActiveProfile(currentUser);
       setProfileError(false);
       return;
     }
+    // Use already-loaded allUsers list before touching Firestore
+    const found = users.find((u) => u.uid === activeUid);
+    if (found) {
+      setActiveProfile(found);
+      setProfileError(false);
+      setProfileLoading(false);
+      return;
+    }
     setProfileLoading(true);
     setProfileError(false);
-    Promise.all([getUserProfile(activeUid), getAllUsers()])
-      .then(([p, all]) => {
+    getUserProfile(activeUid)
+      .then((p) => {
         if (p) setActiveProfile(p);
         else setProfileError(true);
-        setCached('all-users', all);
       })
       .catch(() => setProfileError(true))
       .finally(() => setProfileLoading(false));
-  }, [activeUid, currentUser]);
+  }, [activeUid, currentUser, users]);
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const today = format(new Date(), 'MMMM d, yyyy').toUpperCase();
@@ -242,17 +262,19 @@ export default function TodayPage() {
       getUserProfile(user.uid)
         .then((p) => { if (p) { _memProfile = p; setSessionCached(SESSION_KEY, p); setProfile(p); } })
         .catch(() => {});
-      // getAllUsers is non-blocking — useAllUsers inside TodayInner handles it
+      // Non-blocking prefetches to warm caches for History and UserTabBar
       getAllUsers().catch(() => {});
+      getDayHistory(user.uid, 120).catch(() => {});
       return;
     }
-    // First load — only block on profile; getAllUsers runs in background
+    // First load — only block on profile; everything else runs in background
     setProfileFetching(true);
     getUserProfile(user.uid)
       .then((p) => {
         if (p) { _memProfile = p; setSessionCached(SESSION_KEY, p); setProfile(p); }
         else setError(true);
         getAllUsers().catch(() => {});
+        getDayHistory(user.uid, 120).catch(() => {});
       })
       .catch(() => setError(true))
       .finally(() => setProfileFetching(false));
