@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import { ServiceWorkerRegistrar } from '@/components/ServiceWorkerRegistrar';
+import { CookieBanner } from '@/components/CookieBanner';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -87,11 +88,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         `}</style>
       </head>
       <body className={inter.className}>
+        <a
+          href="#main-content"
+          style={{
+            position: 'absolute',
+            left: '-9999px',
+            top: 'auto',
+            width: 1,
+            height: 1,
+            overflow: 'hidden',
+          }}
+          onFocus={(e) => { (e.currentTarget as HTMLElement).style.cssText = 'position:fixed;top:8px;left:8px;z-index:9999;padding:8px 16px;background:var(--accent);color:#000;font-family:"Press Start 2P",monospace;font-size:8px;width:auto;height:auto;overflow:visible;'; }}
+          onBlur={(e) => { (e.currentTarget as HTMLElement).style.cssText = 'position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;'; }}
+        >
+          Skip to main content
+        </a>
         <AuthProvider>
           <ServiceWorkerRegistrar />
           <div style={{ maxWidth: 480, margin: '0 auto', minHeight: '100vh', position: 'relative' }}>
             {children}
           </div>
+          <CookieBanner />
         </AuthProvider>
       </body>
     </html>

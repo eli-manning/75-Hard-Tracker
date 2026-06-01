@@ -224,6 +224,11 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate }: SideMenuPr
             <LogOut size={14} />
             SIGN OUT
           </button>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 12 }}>
+            <a href="/privacy" style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)', textDecoration: 'none' }}>PRIVACY</a>
+            <span style={{ color: 'var(--border)' }}>|</span>
+            <a href="/terms" style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)', textDecoration: 'none' }}>TERMS</a>
+          </div>
         </div>
       </div>
     </>
