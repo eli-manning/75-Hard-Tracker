@@ -4,6 +4,7 @@ import {
   getDocs,
   setDoc,
   updateDoc,
+  deleteDoc,
   collection,
   query,
   orderBy,
@@ -11,6 +12,8 @@ import {
   serverTimestamp,
   Timestamp,
   writeBatch,
+  arrayUnion,
+  arrayRemove,
 } from 'firebase/firestore';
 import { getFirebaseDb } from './firebase';
 import { UserProfile, DayEntry, CustomTask } from './types';
@@ -88,6 +91,47 @@ export async function updateStreakOnProfile(uid: string): Promise<void> {
   longest = Math.max(longest, streak);
 
   await updateDoc(doc(db(), 'users', uid), { currentStreak: current, longestStreak: longest });
+}
+
+// ── Friends ───────────────────────────────────────────────────────────────────
+
+export async function sendFriendRequest(fromUid: string, toUid: string): Promise<void> {
+  await setDoc(doc(db(), 'friendRequests', toUid, 'incoming', fromUid), {
+    fromUid,
+    toUid,
+    createdAt: serverTimestamp(),
+  });
+}
+
+export async function getPendingRequests(uid: string): Promise<string[]> {
+  const ref = collection(db(), 'friendRequests', uid, 'incoming');
+  const snap = await getDocs(ref);
+  return snap.docs.map((d) => d.data().fromUid as string);
+}
+
+export async function acceptFriendRequest(currentUid: string, fromUid: string): Promise<void> {
+  const batch = writeBatch(db());
+  batch.update(doc(db(), 'users', currentUid), { friends: arrayUnion(fromUid) });
+  batch.update(doc(db(), 'users', fromUid), { friends: arrayUnion(currentUid) });
+  batch.delete(doc(db(), 'friendRequests', currentUid, 'incoming', fromUid));
+  await batch.commit();
+  invalidate(`profile-${currentUid}`);
+  invalidate(`profile-${fromUid}`);
+  invalidate('all-users');
+}
+
+export async function declineFriendRequest(currentUid: string, fromUid: string): Promise<void> {
+  await deleteDoc(doc(db(), 'friendRequests', currentUid, 'incoming', fromUid));
+}
+
+export async function removeFriend(currentUid: string, friendUid: string): Promise<void> {
+  const batch = writeBatch(db());
+  batch.update(doc(db(), 'users', currentUid), { friends: arrayRemove(friendUid) });
+  batch.update(doc(db(), 'users', friendUid), { friends: arrayRemove(currentUid) });
+  await batch.commit();
+  invalidate(`profile-${currentUid}`);
+  invalidate(`profile-${friendUid}`);
+  invalidate('all-users');
 }
 
 // ── Day Entries ───────────────────────────────────────────────────────────────

@@ -10,6 +10,7 @@ export interface UserProfile {
   isActive: boolean;
   currentStreak: number;      // Stored so the today page loads without an extra query
   longestStreak: number;
+  friends?: string[];          // UIDs of mutual friends
 }
 
 export interface DayEntry {

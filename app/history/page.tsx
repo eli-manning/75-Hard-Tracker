@@ -13,8 +13,8 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 function tileColor(entry: DayEntry | undefined, date: Date, startDate: string | null): string {
   if (isFuture(date) && !isToday(date)) return 'var(--surface)';
   if (isToday(date) && (!entry || !entry.allCoreCompleted)) return 'var(--accent-light)';
-  // Before the challenge started — just show as empty
-  if (!entry && startDate && format(date, 'yyyy-MM-dd') < startDate) return 'var(--surface)';
+  // On or before the challenge start date — show as empty
+  if (!entry && startDate && format(date, 'yyyy-MM-dd') <= startDate) return 'var(--surface)';
   if (!entry) return 'var(--red-light)';
   if (entry.allCoreCompleted) return 'var(--green-light)';
   const done = [
@@ -32,7 +32,7 @@ function tileColor(entry: DayEntry | undefined, date: Date, startDate: string | 
 function tileBorder(entry: DayEntry | undefined, date: Date, startDate: string | null): string {
   if (isFuture(date) && !isToday(date)) return 'var(--border)';
   if (isToday(date) && (!entry || !entry.allCoreCompleted)) return 'var(--accent)';
-  if (!entry && startDate && format(date, 'yyyy-MM-dd') < startDate) return 'var(--border)';
+  if (!entry && startDate && format(date, 'yyyy-MM-dd') <= startDate) return 'var(--border)';
   if (!entry) return 'var(--red)';
   if (entry.allCoreCompleted) return 'var(--green)';
   const done = [
@@ -92,7 +92,9 @@ function computeStreak(history: DayEntry[]): { current: number; longest: number 
 }
 
 function HistoryInner({ currentUser }: { currentUser: UserProfile }) {
-  const { users } = useAllUsers();
+  const { users: allUsers } = useAllUsers();
+  const friendUids = new Set(currentUser.friends ?? []);
+  const users = allUsers.filter((u) => u.uid === currentUser.uid || friendUids.has(u.uid));
   const [viewUid, setViewUid] = useState(currentUser.uid);
   const [history, setHistory] = useState<DayEntry[]>([]);
   const [month, setMonth] = useState(new Date());

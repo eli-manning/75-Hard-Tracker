@@ -51,10 +51,11 @@ function DaySkeleton({ profile }: { profile: UserProfile }) {
 
 function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile; onProfileUpdate: (p: UserProfile) => void }) {
   const { users: allUsers } = useAllUsers();
-  // Signed-in user always first, others follow
+  // Signed-in user always first, then only friends
+  const friendUids = new Set(currentUser.friends ?? []);
   const users = [
     ...allUsers.filter((u) => u.uid === currentUser.uid),
-    ...allUsers.filter((u) => u.uid !== currentUser.uid),
+    ...allUsers.filter((u) => u.uid !== currentUser.uid && friendUids.has(u.uid)),
   ];
   const [activeUid, setActiveUid] = useState(currentUser.uid);
   const [activeProfile, setActiveProfile] = useState<UserProfile>(currentUser);
@@ -150,7 +151,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
                           STARTS IN
                         </h1>
                         <h2 style={{ ...pixelFont, fontSize: '28px', color: 'var(--accent)', lineHeight: 1.1, textShadow: 'var(--glow-accent)', marginTop: 4 }}>
-                          {daysUntil} DAYS
+                          {daysUntil} {daysUntil === 1 ? 'DAY' : 'DAYS'}
                         </h2>
                       </>
                     ) : (
