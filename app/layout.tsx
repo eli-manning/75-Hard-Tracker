@@ -88,19 +88,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         `}</style>
       </head>
       <body className={inter.className}>
-        <a
-          href="#main-content"
-          style={{
-            position: 'absolute',
-            left: '-9999px',
-            top: 'auto',
-            width: 1,
-            height: 1,
-            overflow: 'hidden',
-          }}
-          onFocus={(e) => { (e.currentTarget as HTMLElement).style.cssText = 'position:fixed;top:8px;left:8px;z-index:9999;padding:8px 16px;background:var(--accent);color:#000;font-family:"Press Start 2P",monospace;font-size:8px;width:auto;height:auto;overflow:visible;'; }}
-          onBlur={(e) => { (e.currentTarget as HTMLElement).style.cssText = 'position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;'; }}
-        >
+        <a href="#main-content" className="skip-link">
           Skip to main content
         </a>
         <AuthProvider>
