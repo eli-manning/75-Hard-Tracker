@@ -8,7 +8,9 @@ import { useEffect, useState, useRef } from 'react';
  * If loading was never true, this returns false immediately.
  */
 export function useMinDuration(loading: boolean, minMs = 600): boolean {
-  const [visible, setVisible] = useState(false);
+  // Initialize from `loading` so the first render already shows the loader when needed —
+  // starting at false causes a one-frame black flash before the useEffect fires.
+  const [visible, setVisible] = useState(loading);
   const startedAt = useRef<number | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 

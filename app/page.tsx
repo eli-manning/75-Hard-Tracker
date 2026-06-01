@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { LoadingScreen } from '@/components/LoadingScreen';
 
 export default function HomePage() {
   const { user, loading } = useAuth();
@@ -14,5 +15,6 @@ export default function HomePage() {
     }
   }, [user, loading, router]);
 
-  return null;
+  // Show loader while Firebase resolves auth — prevents a black screen on new devices
+  return <LoadingScreen />;
 }
