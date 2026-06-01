@@ -6,7 +6,6 @@ export const metadata: Metadata = {
 };
 
 const pixel = { fontFamily: '"Press Start 2P", monospace' } as React.CSSProperties;
-const vt = { fontFamily: '"VT323", monospace' } as React.CSSProperties;
 
 export default function PrivacyPage() {
   return (
