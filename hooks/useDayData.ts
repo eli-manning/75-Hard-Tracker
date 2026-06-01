@@ -31,6 +31,7 @@ export function useDayData(uid: string | null, challengeStartDate: string | null
       setLoading(false);
       prevAllCore.current = existing.allCoreCompleted;
     } else {
+      setDayEntry(null); // Clear stale data from previous uid immediately
       setLoading(true);
     }
 
