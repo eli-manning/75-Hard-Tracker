@@ -219,7 +219,7 @@ export default function TodayPage() {
   const { user, loading: authLoading } = useAuth();
   // Boot from whichever cache layer has data — zero loading flash on re-navigation
   const [profile, setProfile] = useState<UserProfile | null>(getBootProfile);
-  const [profileFetching, setProfileFetching] = useState(false);
+  const [, setProfileFetching] = useState(false);
   const [error, setError] = useState(false);
 
   // Show loader while auth resolves or while we have a user but no profile yet
