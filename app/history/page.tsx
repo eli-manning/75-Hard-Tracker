@@ -104,6 +104,7 @@ function HistoryInner({ currentUser }: { currentUser: UserProfile }) {
   const pixelFont = { fontFamily: '"Press Start 2P", monospace' };
 
   useEffect(() => {
+    setHistory([]);
     getDayHistory(viewUid, 120).then(setHistory);
   }, [viewUid]);
 
