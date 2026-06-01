@@ -7,7 +7,7 @@ import { useAllUsers } from '@/hooks/useAllUsers';
 import { useDayData } from '@/hooks/useDayData';
 import { useCustomTasks } from '@/hooks/useCustomTasks';
 import { useMinDuration } from '@/hooks/useMinDuration';
-import { getUserProfile, getAllUsers } from '@/lib/firestore';
+import { getUserProfile, getAllUsers, getPendingRequests } from '@/lib/firestore';
 import { setCached, getSessionCached, setSessionCached } from '@/lib/cache';
 import { UserProfile } from '@/lib/types';
 import { AuthGuard } from '@/components/AuthGuard';
@@ -62,6 +62,13 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [pendingRequestCount, setPendingRequestCount] = useState(0);
+
+  useEffect(() => {
+    getPendingRequests(currentUser.uid)
+      .then((reqs) => setPendingRequestCount(reqs.length))
+      .catch(() => {});
+  }, [currentUser.uid]);
 
   const readOnly = activeUid !== currentUser.uid;
   const { dayEntry, loading: dayLoading, update } = useDayData(activeUid, activeProfile.challengeStartDate);
@@ -104,18 +111,32 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
         {users.length > 0 ? (
           <UserTabBar users={users} activeUid={activeUid} onSelectUser={setActiveUid} currentUserUid={currentUser.uid} />
         ) : <div />}
-        <button
-          onClick={() => setMenuOpen(true)}
-          className="cursor-pointer flex flex-col gap-1.5 p-1 ml-2 shrink-0 opacity-60 hover:opacity-100 transition-opacity"
-          aria-label="Open menu"
-        >
-          <span style={{ display: 'block', width: 20, height: 2, background: 'var(--text)' }} />
-          <span style={{ display: 'block', width: 20, height: 2, background: 'var(--text)' }} />
-          <span style={{ display: 'block', width: 20, height: 2, background: 'var(--text)' }} />
-        </button>
+        <div className="relative ml-2 shrink-0">
+          <button
+            onClick={() => setMenuOpen(true)}
+            className="cursor-pointer flex flex-col gap-1.5 p-1 opacity-60 hover:opacity-100 transition-opacity"
+            aria-label="Open menu"
+          >
+            <span style={{ display: 'block', width: 20, height: 2, background: 'var(--text)' }} />
+            <span style={{ display: 'block', width: 20, height: 2, background: 'var(--text)' }} />
+            <span style={{ display: 'block', width: 20, height: 2, background: 'var(--text)' }} />
+          </button>
+          {pendingRequestCount > 0 && (
+            <span
+              className="absolute pointer-events-none"
+              style={{
+                top: 0, right: 0,
+                width: 8, height: 8,
+                borderRadius: '50%',
+                background: 'var(--red)',
+                border: '1.5px solid var(--bg)',
+              }}
+            />
+          )}
+        </div>
       </div>
 
-      <SideMenu open={menuOpen} onClose={() => setMenuOpen(false)} profile={currentUser} onProfileUpdate={onProfileUpdate} />
+      <SideMenu open={menuOpen} onClose={() => setMenuOpen(false)} profile={currentUser} onProfileUpdate={onProfileUpdate} onRequestsSeen={() => setPendingRequestCount(0)} />
 
       {readOnly && !showSkeleton && (
         <div className="mx-4 mb-2 px-3 py-2 text-center" style={{

@@ -4,7 +4,18 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read: if request.auth != null;
+      // Owner can do anything to their own profile
       allow write: if request.auth != null && request.auth.uid == uid;
+      // Another user may update only the friends field when:
+      //   (a) accepting a request — there's a pending friendRequest from uid to them, or
+      //   (b) removing a friend — uid already lists them as a friend
+      allow update: if request.auth != null
+        && request.auth.uid != uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['friends'])
+        && (
+          exists(/databases/$(database)/documents/friendRequests/$(request.auth.uid)/incoming/$(uid))
+          || resource.data.get('friends', []).hasAll([request.auth.uid])
+        );
     }
 
     match /days/{uid}/entries/{date} {

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { signOut } from '@/lib/auth';
 import {
   updateUserProfile,
+  getUserProfile,
   getAllUsers,
   getPendingRequests,
   sendFriendRequest,
@@ -23,9 +24,10 @@ interface SideMenuProps {
   onClose: () => void;
   profile: UserProfile;
   onProfileUpdate: (updated: UserProfile) => void;
+  onRequestsSeen?: () => void;
 }
 
-export function SideMenu({ open, onClose, profile, onProfileUpdate }: SideMenuProps) {
+export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSeen }: SideMenuProps) {
   const router = useRouter();
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(profile.displayName);
@@ -59,12 +61,23 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate }: SideMenuPr
   // Load friends data when menu opens
   useEffect(() => {
     if (!open) { setSentRequests(new Set()); setFriendSearch(''); return; }
+
+    // Always fetch fresh profile — another user may have accepted our request and written
+    // to our friends array in Firestore. That update lives in their browser's cache, not ours,
+    // so we must bypass our local cache to see it.
+    invalidate(`profile-${profile.uid}`);
+    getUserProfile(profile.uid).then((fresh) => {
+      if (fresh) onProfileUpdate(fresh);
+    }).catch(() => {});
+
     // Users: usually cached and instant — refresh in background without blocking
+    invalidate('all-users');
     getAllUsers().then(setAllUsers).catch(() => {});
+
     // Pending requests: always a network call, show a small spinner just for that section
     setRequestsLoading(true);
     getPendingRequests(profile.uid)
-      .then(setPendingRequests)
+      .then((reqs) => { setPendingRequests(reqs); if (reqs.length === 0) onRequestsSeen?.(); })
       .catch(() => setPendingRequests([]))
       .finally(() => setRequestsLoading(false));
   }, [open, profile.uid]);
@@ -273,6 +286,17 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate }: SideMenuPr
             <div className="flex items-center gap-2">
               <Users size={14} color="var(--text-muted)" />
               <span style={{ ...pixelFont, fontSize: '7px', color: 'var(--text-muted)' }}>FRIENDS</span>
+              {!requestsLoading && requesters.length > 0 && (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  minWidth: 16, height: 16, borderRadius: 8,
+                  background: 'var(--red)', color: '#fff',
+                  fontFamily: 'Inter, sans-serif', fontSize: '10px', fontWeight: 700,
+                  paddingInline: 4,
+                }}>
+                  {requesters.length}
+                </span>
+              )}
             </div>
 
             <div className="space-y-3">
@@ -284,26 +308,26 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate }: SideMenuPr
                 <div className="space-y-2">
                   <p style={{ ...pixelFont, fontSize: '6px', color: 'var(--accent)' }}>REQUESTS</p>
                   {requesters.map((u) => (
-                    <div key={u.uid} className="flex items-center gap-2">
-                      <div style={{ width: 28, height: 28, border: '2px solid var(--border)', overflow: 'hidden', flexShrink: 0 }}>
-                        <Image src={u.avatarUrl} alt={u.displayName} width={28} height={28}
+                    <div key={u.uid} className="flex items-center gap-3 py-1">
+                      <div style={{ width: 40, height: 40, border: '2px solid var(--accent)', overflow: 'hidden', flexShrink: 0 }}>
+                        <Image src={u.avatarUrl} alt={u.displayName} width={40} height={40}
                           className="w-full h-full object-cover object-top"
                           onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/avatars/default.png'; }} />
                       </div>
-                      <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: 'var(--text)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', fontWeight: 600, color: 'var(--text)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {u.displayName}
                       </span>
                       <button
-                        onClick={() => handleAccept(u.uid)}
+                        onClick={() => { handleAccept(u.uid); onRequestsSeen?.(); }}
                         disabled={friendsActionUid === u.uid}
                         className="cursor-pointer"
-                        style={{ ...pixelFont, fontSize: '6px', padding: '3px 6px', border: '2px solid var(--green)', background: 'var(--green-light)', color: 'var(--green)', opacity: friendsActionUid === u.uid ? 0.5 : 1 }}
+                        style={{ fontFamily: 'Inter, sans-serif', fontSize: '16px', fontWeight: 700, padding: '4px 10px', border: '2px solid var(--green)', background: 'var(--green-light)', color: 'var(--green)', opacity: friendsActionUid === u.uid ? 0.5 : 1 }}
                       >✓</button>
                       <button
                         onClick={() => handleDecline(u.uid)}
                         disabled={friendsActionUid === u.uid}
                         className="cursor-pointer"
-                        style={{ ...pixelFont, fontSize: '6px', padding: '3px 6px', border: '2px solid var(--red)', background: 'var(--red-light)', color: 'var(--red)', opacity: friendsActionUid === u.uid ? 0.5 : 1 }}
+                        style={{ fontFamily: 'Inter, sans-serif', fontSize: '16px', fontWeight: 700, padding: '4px 10px', border: '2px solid var(--red)', background: 'var(--red-light)', color: 'var(--red)', opacity: friendsActionUid === u.uid ? 0.5 : 1 }}
                       >✕</button>
                     </div>
                   ))}
