@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { format, differenceInDays, parseISO } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 import { useAllUsers } from '@/hooks/useAllUsers';
@@ -51,12 +51,14 @@ function DaySkeleton({ profile }: { profile: UserProfile }) {
 
 function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile; onProfileUpdate: (p: UserProfile) => void }) {
   const { users: allUsers } = useAllUsers();
-  // Signed-in user always first, then only friends
-  const friendUids = new Set(currentUser.friends ?? []);
-  const users = [
-    ...allUsers.filter((u) => u.uid === currentUser.uid),
-    ...allUsers.filter((u) => u.uid !== currentUser.uid && friendUids.has(u.uid)),
-  ];
+  // Signed-in user always first, then only friends. Memoized so effects don't re-run every render.
+  const users = useMemo(() => {
+    const friendSet = new Set(currentUser.friends ?? []);
+    return [
+      ...allUsers.filter((u) => u.uid === currentUser.uid),
+      ...allUsers.filter((u) => u.uid !== currentUser.uid && friendSet.has(u.uid)),
+    ];
+  }, [allUsers, currentUser.uid, currentUser.friends]);
   const [activeUid, setActiveUid] = useState(currentUser.uid);
   const [activeProfile, setActiveProfile] = useState<UserProfile>(currentUser);
   const [profileLoading, setProfileLoading] = useState(false);

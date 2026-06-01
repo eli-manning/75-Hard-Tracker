@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { signOut } from '@/lib/auth';
@@ -43,6 +43,13 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSe
   const [friendsActionUid, setFriendsActionUid] = useState<string | null>(null);
   const [friendSearch, setFriendSearch] = useState('');
 
+  // Always-current refs for callbacks so the open-menu effect doesn't need them as deps
+  // (adding them would cause refetches on every parent re-render since they're inline functions)
+  const onProfileUpdateRef = useRef(onProfileUpdate);
+  onProfileUpdateRef.current = onProfileUpdate;
+  const onRequestsSeenRef = useRef(onRequestsSeen);
+  onRequestsSeenRef.current = onRequestsSeen;
+
   const pixelFont = { fontFamily: '"Press Start 2P", monospace' };
   const vt323 = { fontFamily: '"VT323", monospace' };
 
@@ -67,7 +74,7 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSe
     // so we must bypass our local cache to see it.
     invalidate(`profile-${profile.uid}`);
     getUserProfile(profile.uid).then((fresh) => {
-      if (fresh) onProfileUpdate(fresh);
+      if (fresh) onProfileUpdateRef.current(fresh);
     }).catch(() => {});
 
     // Users: usually cached and instant — refresh in background without blocking
@@ -77,7 +84,7 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSe
     // Pending requests: always a network call, show a small spinner just for that section
     setRequestsLoading(true);
     getPendingRequests(profile.uid)
-      .then((reqs) => { setPendingRequests(reqs); if (reqs.length === 0) onRequestsSeen?.(); })
+      .then((reqs) => { setPendingRequests(reqs); if (reqs.length === 0) onRequestsSeenRef.current?.(); })
       .catch(() => setPendingRequests([]))
       .finally(() => setRequestsLoading(false));
   }, [open, profile.uid]);
