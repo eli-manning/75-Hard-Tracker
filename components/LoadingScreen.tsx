@@ -10,7 +10,8 @@ export function LoadingScreen() {
 
   useEffect(() => {
     const d = setInterval(() => setDots((n) => (n + 1) % 4), 500);
-    const b = setInterval(() => setFill((n) => Math.min(n + 1, 100)), 12);
+    // Reaches 100% in ~600ms so the bar completes before data arrives on most connections
+    const b = setInterval(() => setFill((n) => Math.min(n + 2, 100)), 12);
     return () => { clearInterval(d); clearInterval(b); };
   }, []);
 

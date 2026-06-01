@@ -7,7 +7,7 @@ import { useEffect, useState, useRef } from 'react';
  * Prevents flash-of-loading-screen when data arrives very quickly.
  * If loading was never true, this returns false immediately.
  */
-export function useMinDuration(loading: boolean, minMs = 1500): boolean {
+export function useMinDuration(loading: boolean, minMs = 600): boolean {
   const [visible, setVisible] = useState(false);
   const startedAt = useRef<number | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);

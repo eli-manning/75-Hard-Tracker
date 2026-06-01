@@ -34,8 +34,12 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 }
 
 export async function getAllUsers(): Promise<UserProfile[]> {
+  const cached = getCached<UserProfile[]>('all-users');
+  if (cached) return cached;
   const snap = await getDocs(collection(db(), 'users'));
-  return snap.docs.map((d) => d.data() as UserProfile);
+  const users = snap.docs.map((d) => d.data() as UserProfile);
+  setCached('all-users', users);
+  return users;
 }
 
 export async function createUserProfile(

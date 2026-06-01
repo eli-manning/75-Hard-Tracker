@@ -69,7 +69,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
   // Only enforce the min-duration when switching to a different user tab (no cached data).
   // For your own data (already loaded), show immediately.
   const isTabSwitch = activeUid !== currentUser.uid && profileLoading;
-  const showSkeleton = useMinDuration(isTabSwitch || (dayLoading && !dayEntry), 1500);
+  const showSkeleton = useMinDuration(isTabSwitch || (dayLoading && !dayEntry), 600);
 
   useEffect(() => {
     if (activeUid === currentUser.uid) {
@@ -203,35 +203,29 @@ export default function TodayPage() {
   // Only show the loader when we genuinely have no profile data yet
   const showLoader = useMinDuration(
     (authLoading || profileFetching) && !profile,
-    1500
+    600
   );
 
   useEffect(() => {
     if (!user) return;
     const boot = getBootProfile();
     if (boot) {
-      // Have cached profile — show it, refresh silently in background
+      // Have cached profile — show it immediately, refresh silently in background
       setProfile(boot);
       getUserProfile(user.uid)
-        .then((p) => {
-          if (p) { _memProfile = p; setSessionCached(SESSION_KEY, p); setProfile(p); }
-        })
+        .then((p) => { if (p) { _memProfile = p; setSessionCached(SESSION_KEY, p); setProfile(p); } })
         .catch(() => {});
-      getAllUsers().then((all) => setCached('all-users', all)).catch(() => {});
+      // getAllUsers is non-blocking — useAllUsers inside TodayInner handles it
+      getAllUsers().catch(() => {});
       return;
     }
-    // First ever load — fetch everything
+    // First load — only block on profile; getAllUsers runs in background
     setProfileFetching(true);
-    Promise.all([getUserProfile(user.uid), getAllUsers()])
-      .then(([p, all]) => {
-        if (p) {
-          _memProfile = p;
-          setSessionCached(SESSION_KEY, p);
-          setProfile(p);
-        } else {
-          setError(true);
-        }
-        setCached('all-users', all);
+    getUserProfile(user.uid)
+      .then((p) => {
+        if (p) { _memProfile = p; setSessionCached(SESSION_KEY, p); setProfile(p); }
+        else setError(true);
+        getAllUsers().catch(() => {});
       })
       .catch(() => setError(true))
       .finally(() => setProfileFetching(false));

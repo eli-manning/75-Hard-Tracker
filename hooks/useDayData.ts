@@ -5,16 +5,16 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { getFirebaseDb } from '@/lib/firebase';
 import { DayEntry } from '@/lib/types';
 import { getOrCreateDayEntry, updateDayEntry, updateStreakOnProfile } from '@/lib/firestore';
-import { getCached, setCached } from '@/lib/cache';
+import { getCached, setCached, getSessionCached, setSessionCached } from '@/lib/cache';
 import { format } from 'date-fns';
 
 export function useDayData(uid: string | null, challengeStartDate: string | null) {
   const today = format(new Date(), 'yyyy-MM-dd');
   const cacheKey = uid ? `day-${uid}-${today}` : null;
+  const sessionKey = uid ? `75hard-day-${uid}-${today}` : null;
 
-  const cached = cacheKey ? getCached<DayEntry>(cacheKey) : null;
+  const cached = cacheKey ? (getCached<DayEntry>(cacheKey) ?? getSessionCached<DayEntry>(sessionKey!)) : null;
   const [dayEntry, setDayEntry] = useState<DayEntry | null>(cached);
-  // Only show loading if we have no cached data for this uid
   const [loading, setLoading] = useState(!cached);
   const prevAllCore = useRef<boolean | null>(null);
   const activeUid = useRef<string | null>(null);
@@ -37,9 +37,9 @@ export function useDayData(uid: string | null, challengeStartDate: string | null
     let unsub: (() => void) | undefined;
 
     getOrCreateDayEntry(uid, today, challengeStartDate).then((entry) => {
-      // Only update if this uid is still active
       if (activeUid.current !== uid) return;
       if (cacheKey) setCached(cacheKey, entry);
+      if (sessionKey) setSessionCached(sessionKey, entry);
       setDayEntry(entry);
       setLoading(false);
       prevAllCore.current = entry.allCoreCompleted;
@@ -50,6 +50,7 @@ export function useDayData(uid: string | null, challengeStartDate: string | null
           if (!snap.exists() || activeUid.current !== uid) return;
           const data = snap.data() as DayEntry;
           if (cacheKey) setCached(cacheKey, data);
+          if (sessionKey) setSessionCached(sessionKey, data);
           setDayEntry(data);
 
           if (prevAllCore.current !== data.allCoreCompleted) {
