@@ -85,7 +85,7 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate }: ChallengeCheck
       <ChallengeItem label="Workout #2 — Outdoor" icon="/images/workout2.png"
         completed={entry.workoutTwoCompleted && entry.workoutTwoOutdoor} readOnly={readOnly}
         onToggle={() => { if (!entry.workoutTwoOutdoor) return; patch({ workoutTwoCompleted: !entry.workoutTwoCompleted }); }}
-        disabled={!entry.workoutTwoOutdoor && !readOnly} disabledReason="Confirm outdoor first">
+        disabled={!entry.workoutTwoOutdoor && !readOnly} disabledReason="Tap 'OUTDOOR' first">
         <div className="flex flex-wrap items-center gap-2 mt-1" onClick={(e) => e.stopPropagation()}>
           {!readOnly && (
             <div className="flex items-center gap-2">
@@ -96,19 +96,22 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate }: ChallengeCheck
               <span style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>min</span>
             </div>
           )}
-          <button onClick={readOnly ? undefined : () => patch({
-            workoutTwoOutdoor: !entry.workoutTwoOutdoor,
-            workoutTwoCompleted: entry.workoutTwoCompleted && entry.workoutTwoOutdoor ? false : entry.workoutTwoCompleted,
-          })} style={{
-            ...pixelFont, fontSize: '7px', padding: '3px 10px',
-            border: '2px solid', cursor: readOnly ? 'not-allowed' : 'pointer',
-            borderColor: entry.workoutTwoOutdoor ? 'var(--green)' : 'var(--border)',
-            boxShadow: entry.workoutTwoOutdoor ? 'var(--glow-green), 2px 2px 0 #000' : '2px 2px 0 #000',
-            background: entry.workoutTwoOutdoor ? 'var(--green-light)' : 'var(--surface-2)',
-            color: entry.workoutTwoOutdoor ? 'var(--green)' : 'var(--text-muted)',
-          }}>
-            {entry.workoutTwoOutdoor ? 'OUTDOOR ✓' : 'INDOOR'}
-          </button>
+          {!readOnly && (
+            <button onClick={() => patch({
+              workoutTwoOutdoor: !entry.workoutTwoOutdoor,
+              workoutTwoCompleted: entry.workoutTwoCompleted && entry.workoutTwoOutdoor ? false : entry.workoutTwoCompleted,
+            })} style={{
+              ...pixelFont, fontSize: '7px', padding: '5px 12px',
+              border: '2px solid',
+              cursor: 'pointer',
+              borderColor: entry.workoutTwoOutdoor ? 'var(--green)' : 'var(--accent)',
+              boxShadow: entry.workoutTwoOutdoor ? 'var(--glow-green), 2px 2px 0 #000' : 'var(--glow-accent), 2px 2px 0 #000',
+              background: entry.workoutTwoOutdoor ? 'var(--green-light)' : 'var(--accent-light)',
+              color: entry.workoutTwoOutdoor ? 'var(--green)' : 'var(--accent)',
+            }}>
+              {entry.workoutTwoOutdoor ? 'OUTDOOR ✓' : '? OUTDOOR ?'}
+            </button>
+          )}
         </div>
       </ChallengeItem>
 
