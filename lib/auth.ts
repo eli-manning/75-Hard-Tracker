@@ -38,6 +38,7 @@ export async function signUp(
     isActive: true,
     currentStreak: 0,
     longestStreak: 0,
+    onboardingComplete: false,
   };
   // Pre-populate caches before the Firestore write so the today page has the
   // profile immediately — onAuthStateChanged fires before createUserProfile resolves.

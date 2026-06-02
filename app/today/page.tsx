@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format, differenceInDays, parseISO } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
+import { useRouter } from 'next/navigation';
 import { useAllUsers } from '@/hooks/useAllUsers';
 import { useDayData } from '@/hooks/useDayData';
 import { useCustomTasks } from '@/hooks/useCustomTasks';
@@ -213,7 +214,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
 
           <div>
             <h2 style={{ ...pixelFont, fontSize: '9px', color: 'var(--text-muted)', marginBottom: 10 }}>CORE TASKS</h2>
-            {dayEntry && <ChallengeChecklist entry={dayEntry} readOnly={readOnly} onUpdate={update} />}
+            {dayEntry && <ChallengeChecklist entry={dayEntry} readOnly={readOnly} onUpdate={update} weightUnit={currentUser.weightUnit ?? 'lbs'} />}
           </div>
 
           {dayEntry && (
@@ -239,6 +240,7 @@ function getBootProfile(): UserProfile | null {
 
 export default function TodayPage() {
   const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
   // Boot from whichever cache layer has data — zero loading flash on re-navigation
   const [profile, setProfile] = useState<UserProfile | null>(getBootProfile);
   const [, setProfileFetching] = useState(false);
@@ -259,6 +261,7 @@ export default function TodayPage() {
     }
     const boot = getBootProfile();
     if (boot) {
+      if (boot.onboardingComplete === false) { router.replace('/onboarding'); return; }
       // Have cached profile — show it immediately, refresh silently in background
       setProfile(boot);
       getUserProfile(user.uid)
@@ -273,7 +276,10 @@ export default function TodayPage() {
     setProfileFetching(true);
     getUserProfile(user.uid)
       .then((p) => {
-        if (p) { _memProfile = p; setSessionCached(SESSION_KEY, p); setProfile(p); }
+        if (p) {
+          if (p.onboardingComplete === false) { router.replace('/onboarding'); return; }
+          _memProfile = p; setSessionCached(SESSION_KEY, p); setProfile(p);
+        }
         else setError(true);
         getAllUsers().catch(() => {});
         getDayHistory(user.uid, 120).catch(() => {});

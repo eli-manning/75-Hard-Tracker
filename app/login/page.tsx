@@ -47,6 +47,8 @@ export default function LoginPage() {
       if (mode === 'signup') {
         if (!displayName.trim()) { setError('Enter your name.'); setSubmitting(false); return; }
         await signUp(email, password, displayName);
+        router.replace('/onboarding');
+        return;
       } else {
         await signIn(email, password);
       }
