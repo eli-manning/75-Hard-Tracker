@@ -29,7 +29,7 @@ function ProfileInner({ currentUser }: { currentUser: UserProfile }) {
   const vt323 = { fontFamily: '"VT323", monospace' };
 
   async function handleSaveName() {
-    const trimmed = nameInput.trim();
+    const trimmed = nameInput.trim().slice(0, 100);
     if (!trimmed || trimmed === profile.displayName) { setEditingName(false); return; }
     setSaving(true);
     await updateUserProfile(profile.uid, { displayName: trimmed });
@@ -128,6 +128,7 @@ function ProfileInner({ currentUser }: { currentUser: UserProfile }) {
                 onChange={(e) => setNameInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(false); }}
                 autoFocus
+                maxLength={100}
                 className="flex-1 px-2 py-1 min-w-0"
                 style={{ ...vt323, fontSize: '22px', border: '2px solid var(--accent)', background: 'var(--bg)', color: 'var(--text)', outline: 'none' }}
               />

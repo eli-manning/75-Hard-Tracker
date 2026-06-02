@@ -11,7 +11,7 @@ import {
 import { getFirebaseAuth } from './firebase';
 import { createUserProfile } from './firestore';
 import { generateSeed } from './avatar';
-import { setCached, setSessionCached } from './cache';
+import { setCached, setSessionCached, clearAll } from './cache';
 import { format } from 'date-fns';
 
 const CUSTOM_AVATAR_EMAILS = new Set([
@@ -30,7 +30,7 @@ export async function signUp(
   const isCustom = CUSTOM_AVATAR_EMAILS.has(emailKey);
   const newProfile = {
     uid,
-    displayName: displayName.trim(),
+    displayName: displayName.trim().slice(0, 100),
     avatarUrl: '/avatars/default.png',
     ...(isCustom ? {} : { dicebearSeed: generateSeed() }),
     email,
@@ -60,6 +60,8 @@ export async function signIn(
 }
 
 export async function signOut(): Promise<void> {
+  clearAll();
+  if (typeof window !== 'undefined') sessionStorage.clear();
   return firebaseSignOut(getFirebaseAuth());
 }
 

@@ -17,6 +17,10 @@ export function invalidate(key: string): void {
   store.delete(key);
 }
 
+export function clearAll(): void {
+  store.clear();
+}
+
 // sessionStorage-backed cache — survives iOS PWA background kills within the same browser session
 const SESSION_TTL = 10 * 60 * 1000; // 10 minutes
 

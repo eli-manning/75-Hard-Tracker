@@ -11,6 +11,7 @@ import { invalidate, getSessionCached, setSessionCached } from '@/lib/cache';
 import { AuthGuard } from '@/components/AuthGuard';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { RefreshCw, ChevronRight, ChevronLeft, Check, TrendingDown, Dumbbell, Heart, Brain } from 'lucide-react';
+import { InstallPrompt } from '@/components/InstallPrompt';
 import { format } from 'date-fns';
 
 const GOALS = [
@@ -66,11 +67,13 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
   async function handleStep3Next() {
     setSaving(true);
     const updates: Partial<UserProfile> = { weightUnit };
-    if (startingWeight && !isNaN(Number(startingWeight))) {
-      updates.startingWeight = Number(startingWeight);
+    const w = Number(startingWeight);
+    if (startingWeight && !isNaN(w) && w >= 10 && w <= 999) {
+      updates.startingWeight = w;
     }
-    if (height && !isNaN(Number(height))) {
-      updates.height = Number(height);
+    const h = Number(height);
+    if (height && !isNaN(h) && h >= 20 && h <= 300) {
+      updates.height = h;
     }
     if (fitnessGoal) {
       updates.fitnessGoal = fitnessGoal as UserProfile['fitnessGoal'];
@@ -90,13 +93,14 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
     invalidate(`profile-${profile.uid}`);
     const updated = { ...profile, onboardingComplete: true };
     setSessionCached('75hard-profile', updated);
-    router.replace('/today');
+    setSaving(false);
+    setStep(5);
   }
 
 
   const progressDots = (
     <div className="flex gap-2 justify-center mb-8">
-      {[1, 2, 3, 4].map((n) => (
+      {[1, 2, 3, 4, 5].map((n) => (
         <div key={n} style={{
           width: 8, height: 8,
           background: n === step ? 'var(--accent)' : n < step ? 'var(--green)' : 'var(--border)',
@@ -261,6 +265,8 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
                 value={startingWeight}
                 onChange={(e) => setStartingWeight(e.target.value)}
                 placeholder={`enter ${weightUnit}`}
+                min={10}
+                max={999}
                 style={{ ...inputStyle, flex: 1 }}
                 onFocus={(e) => (e.target.style.borderColor = 'var(--accent)')}
                 onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
@@ -288,6 +294,8 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
               value={height}
               onChange={(e) => setHeight(e.target.value)}
               placeholder={weightUnit === 'lbs' ? 'enter inches' : 'enter cm'}
+              min={20}
+              max={300}
               style={inputStyle}
               onFocus={(e) => (e.target.style.borderColor = 'var(--accent)')}
               onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
@@ -381,6 +389,36 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
         </button>
         <button onClick={() => setStep(3)} style={btnSecondary} className="flex items-center justify-center gap-2 transition-all active:translate-y-px">
           <ChevronLeft size={12} /> BACK
+        </button>
+      </div>
+    </div>
+  );
+
+  // ── Step 5: Add to Home Screen ────────────────────────────────────────────
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ background: 'var(--bg)' }}>
+      {progressDots}
+      <div className="w-full max-w-sm space-y-6">
+        <div className="text-center space-y-2">
+          <p style={{ ...pixelFont, fontSize: '7px', color: 'var(--text-muted)', letterSpacing: '0.2em' }}>LAST STEP</p>
+          <h2 style={{ ...pixelFont, fontSize: '14px', color: 'var(--accent)', textShadow: 'var(--glow-accent)', lineHeight: 1.6 }}>
+            INSTALL APP
+          </h2>
+        </div>
+
+        <div style={cardStyle} className="p-5 space-y-4">
+          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+            Add 75 Hard Tracker to your home screen for the best experience — works offline and feels like a native app.
+          </p>
+          <InstallPrompt />
+        </div>
+
+        <button
+          onClick={() => router.replace('/today')}
+          style={btnPrimary}
+          className="flex items-center justify-center gap-2 transition-all active:translate-y-px"
+        >
+          GO TO MY CHALLENGE <ChevronRight size={14} />
         </button>
       </div>
     </div>

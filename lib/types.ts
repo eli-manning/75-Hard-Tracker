@@ -57,4 +57,5 @@ export interface CustomTask {
   createdAt: Timestamp;
   completedAt?: Timestamp;
   archived: boolean;
+  visible?: boolean; // whether friends can see this task (defaults to true)
 }

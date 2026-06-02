@@ -16,6 +16,7 @@ import {
 import { UserProfile } from '@/lib/types';
 import { getAvatarUrl } from '@/lib/avatar';
 import { LogOut, X, ChevronRight, UserPlus, UserMinus, Users } from 'lucide-react';
+import { InstallPrompt } from '@/components/InstallPrompt';
 import { getCached, invalidate } from '@/lib/cache';
 
 interface SideMenuProps {
@@ -275,6 +276,11 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSe
                 });
               })()}
             </div>
+          </div>
+
+          {/* Install prompt */}
+          <div className="px-4 py-3 shrink-0" >
+            <InstallPrompt compact />
           </div>
 
           {/* Sign out + legal */}

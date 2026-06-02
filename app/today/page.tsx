@@ -9,7 +9,7 @@ import { useDayData } from '@/hooks/useDayData';
 import { useCustomTasks } from '@/hooks/useCustomTasks';
 import { useMinDuration } from '@/hooks/useMinDuration';
 import { getUserProfile, getAllUsers, getPendingRequests, getOrCreateDayEntry, getDayHistory } from '@/lib/firestore';
-import { getCached, getSessionCached, setSessionCached, clearSessionCached } from '@/lib/cache';
+import { getCached, getSessionCached, setSessionCached, clearAll } from '@/lib/cache';
 import { UserProfile, DayEntry } from '@/lib/types';
 import { AuthGuard } from '@/components/AuthGuard';
 import { LoadingScreen } from '@/components/LoadingScreen';
@@ -254,9 +254,9 @@ export default function TodayPage() {
 
   useEffect(() => {
     if (!user) {
-      // Clear stale profile so the next login doesn't boot from old data
       _memProfile = null;
-      clearSessionCached(SESSION_KEY);
+      clearAll();
+      if (typeof window !== 'undefined') sessionStorage.clear();
       return;
     }
     const boot = getBootProfile();

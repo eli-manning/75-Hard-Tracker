@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { CustomTask } from '@/lib/types';
-import { X } from 'lucide-react';
+import { X, Eye, EyeOff } from 'lucide-react';
 
 interface TaskEditorProps {
   task?: CustomTask;
@@ -14,13 +14,14 @@ interface TaskEditorProps {
 export function TaskEditor({ task, defaultType = 'daily', onSave, onClose }: TaskEditorProps) {
   const [label, setLabel] = useState(task?.label ?? '');
   const [type, setType] = useState<'daily' | 'backlog'>(task?.type ?? defaultType);
+  const [visible, setVisible] = useState(task?.visible ?? true);
 
   const pixelFont = { fontFamily: '"Press Start 2P", monospace' };
   const vt323 = { fontFamily: '"VT323", monospace' };
 
   function handleSave() {
     if (!label.trim()) return;
-    onSave({ label: label.trim(), type });
+    onSave({ label: label.trim().slice(0, 200), type, visible });
   }
 
   return (
@@ -57,6 +58,7 @@ export function TaskEditor({ task, defaultType = 'daily', onSave, onClose }: Tas
             onChange={(e) => setLabel(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSave()}
             autoFocus
+            maxLength={200}
             className="w-full px-3 py-2"
             style={{
               ...vt323,
@@ -94,6 +96,20 @@ export function TaskEditor({ task, defaultType = 'daily', onSave, onClose }: Tas
             ))}
           </div>
         </div>
+
+        <button
+          onClick={() => setVisible((v) => !v)}
+          type="button"
+          className="flex items-center gap-2 cursor-pointer transition-opacity hover:opacity-80"
+          style={{ background: 'none', border: 'none', padding: 0 }}
+        >
+          {visible
+            ? <Eye size={14} color="var(--accent)" />
+            : <EyeOff size={14} color="var(--text-muted)" />}
+          <span style={{ ...pixelFont, fontSize: '7px', color: visible ? 'var(--accent)' : 'var(--text-muted)' }}>
+            {visible ? 'VISIBLE TO FRIENDS' : 'HIDDEN FROM FRIENDS'}
+          </span>
+        </button>
 
         <button
           onClick={handleSave}
