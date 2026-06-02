@@ -11,6 +11,7 @@ import {
 import { getFirebaseAuth } from './firebase';
 import { createUserProfile } from './firestore';
 import { generateSeed } from './avatar';
+import { setCached, setSessionCached } from './cache';
 import { format } from 'date-fns';
 
 const CUSTOM_AVATAR_EMAILS = new Set([
@@ -27,7 +28,7 @@ export async function signUp(
   const { uid } = credential.user;
   const emailKey = email.toLowerCase();
   const isCustom = CUSTOM_AVATAR_EMAILS.has(emailKey);
-  await createUserProfile({
+  const newProfile = {
     uid,
     displayName: displayName.trim(),
     avatarUrl: '/avatars/default.png',
@@ -37,7 +38,12 @@ export async function signUp(
     isActive: true,
     currentStreak: 0,
     longestStreak: 0,
-  });
+  };
+  // Pre-populate caches before the Firestore write so the today page has the
+  // profile immediately — onAuthStateChanged fires before createUserProfile resolves.
+  setCached(`profile-${uid}`, newProfile);
+  setSessionCached('75hard-profile', newProfile);
+  await createUserProfile(newProfile);
   return credential;
 }
 
