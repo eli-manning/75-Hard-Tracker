@@ -14,7 +14,6 @@ interface ChallengeChecklistProps {
 export function ChallengeChecklist({ entry, readOnly, onUpdate }: ChallengeChecklistProps) {
   const [w1Duration, setW1Duration] = useState(entry.workoutOneDuration);
   const [w2Duration, setW2Duration] = useState(entry.workoutTwoDuration);
-  const [pagesInput, setPagesInput] = useState('');
 
   const pixelFont = { fontFamily: '"Press Start 2P", monospace' };
   const vt323 = { fontFamily: '"VT323", monospace' };
@@ -46,12 +45,6 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate }: ChallengeCheck
     patch({ pagesRead, readingCompleted: pagesRead >= 10 });
   }
 
-  function submitPages(e: React.FormEvent) {
-    e.preventDefault();
-    const val = parseInt(pagesInput);
-    if (!isNaN(val) && val > 0) { addPages(val); setPagesInput(''); }
-  }
-
   const btnBase: React.CSSProperties = {
     ...pixelFont,
     fontSize: '7px',
@@ -61,12 +54,6 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate }: ChallengeCheck
     background: 'var(--surface-2)',
     color: 'var(--text)',
     cursor: 'pointer',
-  };
-
-  const subBtn: React.CSSProperties = {
-    ...btnBase,
-    color: 'var(--red)',
-    borderColor: 'var(--red-light)',
   };
 
   const inputStyle: React.CSSProperties = {
@@ -154,7 +141,7 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate }: ChallengeCheck
 
           {!readOnly && (
             <>
-              {/* Add pages */}
+              {/* Add + Reset pages */}
               <div className="flex gap-1.5 flex-wrap">
                 <span style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)', alignSelf: 'center' }}>+</span>
                 {[1, 5, 10].map((n) => (
@@ -162,29 +149,14 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate }: ChallengeCheck
                     {n}pg
                   </button>
                 ))}
-                <form onSubmit={submitPages} className="flex gap-1">
-                  <input type="number" value={pagesInput} onChange={(e) => setPagesInput(e.target.value)}
-                    placeholder="pg" className="w-12 px-2 py-1" style={inputStyle} />
-                  <button type="submit" style={btnBase}>ADD</button>
-                </form>
-              </div>
-
-              {/* Subtract pages */}
-              {entry.pagesRead > 0 && (
-                <div className="flex gap-1.5 flex-wrap">
-                  <span style={{ ...pixelFont, fontSize: '6px', color: 'var(--red)', alignSelf: 'center', opacity: 0.6 }}>−</span>
-                  {[1, 5].map((n) => (
-                    <button key={n} onClick={() => addPages(-n)} disabled={entry.pagesRead <= 0}
-                      style={subBtn} className="active:translate-y-px transition-transform disabled:opacity-30 disabled:cursor-not-allowed">
-                      {n}pg
-                    </button>
-                  ))}
+                {entry.pagesRead > 0 && (
                   <button onClick={() => patch({ pagesRead: 0, readingCompleted: false })}
-                    style={{ ...subBtn, borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+                    style={{ ...btnBase, color: 'var(--text-muted)' }}
+                    className="active:translate-y-px transition-transform">
                     RESET
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </>
           )}
         </div>

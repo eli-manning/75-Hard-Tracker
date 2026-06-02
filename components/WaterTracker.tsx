@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 
 interface WaterTrackerProps {
   ozLogged: number;
@@ -11,18 +10,11 @@ interface WaterTrackerProps {
 }
 
 export function WaterTracker({ ozLogged, goal = 128, readOnly, onAdd, onSetCustom }: WaterTrackerProps) {
-  const [customInput, setCustomInput] = useState('');
   const pct = Math.min(100, (ozLogged / goal) * 100);
   const done = ozLogged >= goal;
 
   const barColor = done ? 'var(--green)' : pct > 60 ? '#3b9ede' : '#1e6ea8';
   const barGlow = done ? 'var(--glow-green)' : '0 0 6px #3b9ede66';
-
-  function handleCustomSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const val = parseInt(customInput);
-    if (!isNaN(val) && val > 0) { onSetCustom(val); setCustomInput(''); }
-  }
 
   const pixelFont = { fontFamily: '"Press Start 2P", monospace' };
   const vt323 = { fontFamily: '"VT323", monospace' };
@@ -36,13 +28,6 @@ export function WaterTracker({ ozLogged, goal = 128, readOnly, onAdd, onSetCusto
     background: 'var(--surface-2)',
     color: 'var(--text)',
     cursor: 'pointer',
-  };
-
-  const subtractBtn: React.CSSProperties = {
-    ...btnBase,
-    color: 'var(--red)',
-    borderColor: 'var(--red-light)',
-    opacity: ozLogged <= 0 ? 0.3 : 1,
   };
 
   function stop(e: React.MouseEvent) { e.stopPropagation(); }
@@ -65,7 +50,7 @@ export function WaterTracker({ ozLogged, goal = 128, readOnly, onAdd, onSetCusto
 
       {!readOnly && (
         <>
-          {/* Add row */}
+          {/* Add + Reset row */}
           <div className="flex gap-1.5 flex-wrap">
             <span style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)', alignSelf: 'center' }}>+</span>
             {[8, 16, 32].map((oz) => (
@@ -73,33 +58,13 @@ export function WaterTracker({ ozLogged, goal = 128, readOnly, onAdd, onSetCusto
                 {oz}oz
               </button>
             ))}
-          </div>
-
-          {/* Subtract row */}
-          <div className="flex gap-1.5 flex-wrap">
-            <span style={{ ...pixelFont, fontSize: '6px', color: 'var(--red)', alignSelf: 'center', opacity: 0.6 }}>−</span>
-            {[8, 16, 32].map((oz) => (
-              <button key={oz} onClick={() => onAdd(-oz)}
-                disabled={ozLogged <= 0}
-                style={subtractBtn} className="active:translate-y-px transition-transform disabled:cursor-not-allowed">
-                {oz}oz
-              </button>
-            ))}
             <button onClick={() => onSetCustom(0)} disabled={ozLogged <= 0}
-              style={{ ...subtractBtn, borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+              style={{ ...btnBase, color: 'var(--text-muted)', opacity: ozLogged <= 0 ? 0.3 : 1 }}
               className="active:translate-y-px transition-transform disabled:cursor-not-allowed">
               RESET
             </button>
           </div>
 
-          {/* Custom input */}
-          <form onSubmit={handleCustomSubmit} className="flex gap-1 items-center">
-            <span style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>SET:</span>
-            <input type="number" value={customInput} onChange={(e) => setCustomInput(e.target.value)}
-              placeholder="oz" className="w-16 px-2 py-1"
-              style={{ ...pixelFont, fontSize: '7px', border: '2px solid var(--border)', background: 'var(--surface-2)', outline: 'none', color: 'var(--text)' }} />
-            <button type="submit" style={btnBase}>GO</button>
-          </form>
         </>
       )}
     </div>
