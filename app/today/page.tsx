@@ -265,7 +265,14 @@ export default function TodayPage() {
       // Have cached profile — show it immediately, refresh silently in background
       setProfile(boot);
       getUserProfile(user.uid)
-        .then((p) => { if (p) { _memProfile = p; setSessionCached(SESSION_KEY, p); setProfile(p); } })
+        .then((p) => {
+          if (p) {
+            // Never write a stale onboarding:false into the module cache — it would
+            // cause a redirect loop on the next navigation after finishing onboarding.
+            if (p.onboardingComplete === false) return;
+            _memProfile = p; setSessionCached(SESSION_KEY, p); setProfile(p);
+          }
+        })
         .catch(() => {});
       // Non-blocking prefetches to warm caches for History and UserTabBar
       getAllUsers().catch(() => {});

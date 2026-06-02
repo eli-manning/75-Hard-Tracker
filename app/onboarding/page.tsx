@@ -22,7 +22,6 @@ const GOALS = [
 ] as const;
 
 function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) {
-  const router = useRouter();
   const [step, setStep] = useState(1);
   const [profile, setProfile] = useState(initialProfile);
   const [saving, setSaving] = useState(false);
@@ -414,7 +413,7 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
         </div>
 
         <button
-          onClick={() => router.replace('/today')}
+          onClick={() => { window.location.replace('/today'); }}
           style={btnPrimary}
           className="flex items-center justify-center gap-2 transition-all active:translate-y-px"
         >
