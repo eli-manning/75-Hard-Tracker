@@ -4,6 +4,7 @@ export interface UserProfile {
   uid: string;
   displayName: string;
   avatarUrl: string;
+  dicebearSeed?: string;
   email: string;
   createdAt: Timestamp;
   challengeStartDate: string; // "YYYY-MM-DD"
