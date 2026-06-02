@@ -9,9 +9,15 @@ export interface UserProfile {
   createdAt: Timestamp;
   challengeStartDate: string; // "YYYY-MM-DD"
   isActive: boolean;
-  currentStreak: number;      // Stored so the today page loads without an extra query
+  currentStreak: number;
   longestStreak: number;
-  friends?: string[];          // UIDs of mutual friends
+  friends?: string[];
+  // Fitness profile (set during onboarding, all optional)
+  startingWeight?: number;
+  weightUnit?: 'lbs' | 'kg';
+  height?: number;             // inches when lbs, cm when kg
+  fitnessGoal?: 'lose_weight' | 'build_muscle' | 'general_fitness' | 'mental_toughness';
+  onboardingComplete?: boolean;
 }
 
 export interface DayEntry {
@@ -31,6 +37,11 @@ export interface DayEntry {
   pagesRead: number;
 
   customTasksCompleted: string[];
+
+  // Optional daily metrics
+  bodyWeight?: number;
+  mood?: number;        // 1–5
+  energyLevel?: number; // 1–5
 
   dayNumber: number;
   allCoreCompleted: boolean;
