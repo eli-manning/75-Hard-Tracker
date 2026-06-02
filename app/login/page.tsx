@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { signIn, signUp } from '@/lib/auth';
+import { signIn, signUp, sendPasswordReset } from '@/lib/auth';
 import { useAuth } from '@/hooks/useAuth';
 import { LoadingScreen } from '@/components/LoadingScreen';
 
@@ -27,6 +27,8 @@ export default function LoginPage() {
   const [displayName, setDisplayName] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [resetMode, setResetMode] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
 
   const pixelFont = { fontFamily: '"Press Start 2P", monospace' };
 
@@ -49,6 +51,21 @@ export default function LoginPage() {
         await signIn(email, password);
       }
       router.replace('/today');
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code ?? '';
+      setError(ERROR_MAP[code] ?? 'Something went wrong. Try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handlePasswordReset(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    setSubmitting(true);
+    try {
+      await sendPasswordReset(email);
+      setResetSent(true);
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? '';
       setError(ERROR_MAP[code] ?? 'Something went wrong. Try again.');
@@ -91,104 +108,225 @@ export default function LoginPage() {
           border: '2px solid var(--border)',
           boxShadow: '4px 4px 0 #000',
         }}>
-          {/* Mode tabs */}
-          <div className="flex" style={{ borderBottom: '2px solid var(--border)' }}>
-            {(['login', 'signup'] as Mode[]).map((m) => (
-              <button
-                key={m}
-                onClick={() => { setMode(m); setError(''); }}
-                className="flex-1 py-3 cursor-pointer transition-all duration-150"
-                style={{
-                  ...pixelFont,
-                  fontSize: '7px',
-                  background: mode === m ? 'var(--accent-light)' : 'transparent',
-                  color: mode === m ? 'var(--accent)' : 'var(--text-muted)',
-                  borderRight: m === 'login' ? '1px solid var(--border)' : 'none',
-                }}
-              >
-                {m === 'login' ? 'SIGN IN' : 'SIGN UP'}
-              </button>
-            ))}
-          </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="p-5 space-y-4">
-            {mode === 'signup' && (
-              <div className="space-y-1">
-                <label style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>NAME</label>
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="First Last"
-                  required
-                  style={inputStyle}
-                  onFocus={(e) => (e.target.style.borderColor = 'var(--accent)')}
-                  onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
-                />
+          {resetMode ? (
+            /* ── Forgot Password ── */
+            <div>
+              <div className="flex items-center p-4" style={{ borderBottom: '2px solid var(--border)' }}>
+                <span style={{ ...pixelFont, fontSize: '7px', color: 'var(--accent)' }}>RESET PASSWORD</span>
               </div>
-            )}
-
-            <div className="space-y-1">
-              <label style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>EMAIL</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                required
-                autoComplete="email"
-                style={inputStyle}
-                onFocus={(e) => (e.target.style.borderColor = 'var(--accent)')}
-                onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
-              />
+              {resetSent ? (
+                <div className="p-5 space-y-4">
+                  <p style={{
+                    fontFamily: 'Inter, sans-serif',
+                    fontSize: '13px',
+                    color: 'var(--green)',
+                    background: 'var(--green-light)',
+                    border: '2px solid var(--green)',
+                    padding: '10px',
+                    lineHeight: 1.5,
+                  }}>
+                    Check your email for a reset link.
+                  </p>
+                  <button
+                    onClick={() => { setResetMode(false); setResetSent(false); setError(''); }}
+                    className="w-full py-3 cursor-pointer"
+                    style={{
+                      ...pixelFont,
+                      fontSize: '7px',
+                      border: '2px solid var(--border)',
+                      background: 'var(--surface)',
+                      color: 'var(--text)',
+                    }}
+                  >
+                    BACK TO SIGN IN
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handlePasswordReset} className="p-5 space-y-4">
+                  <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                    Enter your email and we&apos;ll send a reset link.
+                  </p>
+                  <div className="space-y-1">
+                    <label style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>EMAIL</label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      required
+                      autoComplete="email"
+                      style={inputStyle}
+                      onFocus={(e) => (e.target.style.borderColor = 'var(--accent)')}
+                      onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
+                    />
+                  </div>
+                  {error && (
+                    <p style={{
+                      fontFamily: 'Inter, sans-serif',
+                      fontSize: '13px',
+                      color: 'var(--red)',
+                      background: 'var(--red-light)',
+                      border: '2px solid var(--red)',
+                      padding: '10px',
+                      lineHeight: 1.5,
+                    }}>
+                      {error}
+                    </p>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full py-3 cursor-pointer transition-all duration-150 active:translate-y-px disabled:opacity-50"
+                    style={{
+                      ...pixelFont,
+                      fontSize: '9px',
+                      border: '2px solid var(--accent)',
+                      boxShadow: '3px 3px 0 #000',
+                      background: 'var(--accent)',
+                      color: '#fff',
+                    }}
+                  >
+                    {submitting ? 'SENDING...' : 'SEND RESET LINK'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setResetMode(false); setError(''); }}
+                    className="w-full py-2 cursor-pointer"
+                    style={{
+                      ...pixelFont,
+                      fontSize: '6px',
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--text-muted)',
+                    }}
+                  >
+                    BACK TO SIGN IN
+                  </button>
+                </form>
+              )}
             </div>
+          ) : (
+            /* ── Login / Signup ── */
+            <div>
+              {/* Mode tabs */}
+              <div className="flex" style={{ borderBottom: '2px solid var(--border)' }}>
+                {(['login', 'signup'] as Mode[]).map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => { setMode(m); setError(''); }}
+                    className="flex-1 py-3 cursor-pointer transition-all duration-150"
+                    style={{
+                      ...pixelFont,
+                      fontSize: '7px',
+                      background: mode === m ? 'var(--accent-light)' : 'transparent',
+                      color: mode === m ? 'var(--accent)' : 'var(--text-muted)',
+                      borderRight: m === 'login' ? '1px solid var(--border)' : 'none',
+                    }}
+                  >
+                    {m === 'login' ? 'SIGN IN' : 'SIGN UP'}
+                  </button>
+                ))}
+              </div>
 
-            <div className="space-y-1">
-              <label style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>PASSWORD</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-                style={inputStyle}
-                onFocus={(e) => (e.target.style.borderColor = 'var(--accent)')}
-                onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
-              />
+              {/* Form */}
+              <form onSubmit={handleSubmit} className="p-5 space-y-4">
+                {mode === 'signup' && (
+                  <div className="space-y-1">
+                    <label style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>NAME</label>
+                    <input
+                      type="text"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      placeholder="First Last"
+                      required
+                      style={inputStyle}
+                      onFocus={(e) => (e.target.style.borderColor = 'var(--accent)')}
+                      onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <label style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>EMAIL</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    required
+                    autoComplete="email"
+                    style={inputStyle}
+                    onFocus={(e) => (e.target.style.borderColor = 'var(--accent)')}
+                    onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>PASSWORD</label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                    style={inputStyle}
+                    onFocus={(e) => (e.target.style.borderColor = 'var(--accent)')}
+                    onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
+                  />
+                  {mode === 'login' && (
+                    <button
+                      type="button"
+                      onClick={() => { setResetMode(true); setError(''); }}
+                      className="cursor-pointer"
+                      style={{
+                        ...pixelFont,
+                        fontSize: '6px',
+                        color: 'var(--text-muted)',
+                        background: 'none',
+                        border: 'none',
+                        padding: '4px 0',
+                        display: 'block',
+                      }}
+                    >
+                      FORGOT PASSWORD?
+                    </button>
+                  )}
+                </div>
+
+                {error && (
+                  <p style={{
+                    fontFamily: 'Inter, sans-serif',
+                    fontSize: '13px',
+                    color: 'var(--red)',
+                    background: 'var(--red-light)',
+                    border: '2px solid var(--red)',
+                    padding: '10px',
+                    lineHeight: 1.5,
+                  }}>
+                    {error}
+                  </p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full py-3 cursor-pointer transition-all duration-150 active:translate-y-px disabled:opacity-50"
+                  style={{
+                    ...pixelFont,
+                    fontSize: '9px',
+                    border: '2px solid var(--accent)',
+                    boxShadow: '3px 3px 0 #000',
+                    background: 'var(--accent)',
+                    color: '#fff',
+                  }}
+                >
+                  {submitting ? 'LOADING...' : mode === 'login' ? 'SIGN IN' : 'CREATE ACCOUNT'}
+                </button>
+              </form>
             </div>
-
-            {error && (
-              <p style={{
-                fontFamily: 'Inter, sans-serif',
-                fontSize: '13px',
-                color: 'var(--red)',
-                background: 'var(--red-light)',
-                border: '2px solid var(--red)',
-                padding: '10px',
-                lineHeight: 1.5,
-              }}>
-                {error}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full py-3 cursor-pointer transition-all duration-150 active:translate-y-px disabled:opacity-50"
-              style={{
-                ...pixelFont,
-                fontSize: '9px',
-                border: '2px solid var(--accent)',
-                boxShadow: '3px 3px 0 #000',
-                background: 'var(--accent)',
-                color: '#fff',
-              }}
-            >
-              {submitting ? 'LOADING...' : mode === 'login' ? 'SIGN IN' : 'CREATE ACCOUNT'}
-            </button>
-          </form>
+          )}
         </div>
       </div>
     </div>
