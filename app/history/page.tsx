@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, parseISO, isToday, isFuture } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, parseISO, isToday, isFuture, subDays } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 import { useAllUsers } from '@/hooks/useAllUsers';
 import { getDayHistory, getUserProfile } from '@/lib/firestore';
@@ -56,7 +56,8 @@ function computeStreak(history: DayEntry[]): { current: number; longest: number 
   let current = 0;
   let longest = 0;
   let streak = 0;
-  let expected = today;
+  const hasTodayComplete = sorted.some((e) => e.date === today && e.allCoreCompleted);
+  let expected = hasTodayComplete ? today : format(subDays(new Date(), 1), 'yyyy-MM-dd');
 
   for (const entry of sorted) {
     if (entry.date > today) continue;
@@ -115,8 +116,12 @@ function HistoryInner({ currentUser }: { currentUser: UserProfile }) {
   const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
   const startPad = getDay(monthStart); // 0 = Sunday
 
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
   const completed = history.filter((e) => e.allCoreCompleted).length;
-  const total = history.filter((e) => !isFuture(parseISO(e.date))).length;
+  const total = history.filter((e) => {
+    if (e.date === todayStr) return e.allCoreCompleted;
+    return !isFuture(parseISO(e.date));
+  }).length;
   // Use stored values from profile for instant display; fall back to computed if not set
   const viewProfile = users.find((u) => u.uid === viewUid);
   const currentStreak = viewProfile?.currentStreak ?? computeStreak(history).current;

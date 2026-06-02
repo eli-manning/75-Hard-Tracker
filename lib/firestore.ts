@@ -18,7 +18,7 @@ import {
 import { getFirebaseDb } from './firebase';
 import { UserProfile, DayEntry, CustomTask } from './types';
 import { getCached, setCached, invalidate } from './cache';
-import { differenceInDays, parseISO } from 'date-fns';
+import { differenceInDays, parseISO, subDays } from 'date-fns';
 
 function db() {
   return getFirebaseDb();
@@ -71,7 +71,8 @@ export async function updateStreakOnProfile(uid: string): Promise<void> {
   let current = 0;
   let longest = 0;
   let streak = 0;
-  let expected = today;
+  const hasTodayComplete = sorted.some((e) => e.date === today && e.allCoreCompleted);
+  let expected = hasTodayComplete ? today : format(subDays(new Date(), 1), 'yyyy-MM-dd');
 
   for (const entry of sorted) {
     if (entry.date > today) continue;
