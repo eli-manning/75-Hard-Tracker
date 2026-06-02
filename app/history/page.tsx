@@ -10,7 +10,7 @@ import { AuthGuard } from '@/components/AuthGuard';
 import { BottomNav } from '@/components/BottomNav';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { getSessionCached } from '@/lib/cache';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Droplets, BookOpen, Timer, Camera, Trophy, Dumbbell, CalendarDays, Scale } from 'lucide-react';
 import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar, AreaChart, Area,
   XAxis, YAxis, Tooltip, ReferenceLine, CartesianGrid,
@@ -98,7 +98,7 @@ function SectionHeader({ title }: { title: string }) {
 
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="p-4 mb-4" style={{ background: 'var(--surface)', border: '2px solid var(--border)', boxShadow: '3px 3px 0 var(--text)' }}>
+    <div className="p-4 mb-4" style={{ background: 'var(--surface)', border: '2px solid var(--border)', boxShadow: '2px 2px 0 var(--border)' }}>
       <SectionHeader title={title} />
       {children}
     </div>
@@ -220,17 +220,18 @@ function InsightsDashboard({ history, viewProfile }: { history: DayEntry[]; view
   }, 0);
   const bestDayLabel = sorted.length > 0 ? DAY_LABELS[bestDayIdx] : '—';
 
-  const summaryCards = [
-    { emoji: '💧', label: 'TOTAL WATER', value: `${totalGallons}gal` },
-    { emoji: '📚', label: 'TOTAL PAGES', value: String(totalPages) },
-    { emoji: '⏱', label: 'WORKOUT MINS', value: String(totalWorkoutMins) },
-    { emoji: '📸', label: 'PHOTOS TAKEN', value: String(totalPhotos) },
-    { emoji: '🏆', label: 'PERFECT DAYS', value: String(perfectDays) },
-    { emoji: '💪', label: 'AVG WORKOUT', value: `${avgWorkoutMins}min` },
-    { emoji: '📅', label: 'BEST DAY', value: bestDayLabel },
+  const summaryCards: { Icon: React.ElementType; label: string; value: string; color?: string }[] = [
+    { Icon: Droplets, label: 'TOTAL WATER', value: `${totalGallons}gal` },
+    { Icon: BookOpen, label: 'TOTAL PAGES', value: String(totalPages) },
+    { Icon: Timer, label: 'WORKOUT MINS', value: String(totalWorkoutMins) },
+    { Icon: Camera, label: 'PHOTOS TAKEN', value: String(totalPhotos) },
+    { Icon: Trophy, label: 'PERFECT DAYS', value: String(perfectDays) },
+    { Icon: Dumbbell, label: 'AVG WORKOUT', value: `${avgWorkoutMins}min` },
+    { Icon: CalendarDays, label: 'BEST DAY', value: bestDayLabel },
     ...(weightChange != null ? [{
-      emoji: '⚖️', label: 'WEIGHT CHANGE',
+      Icon: Scale, label: 'WEIGHT CHANGE',
       value: `${weightChange >= 0 ? '+' : ''}${weightChange.toFixed(1)}${weightUnit}`,
+      color: weightChange <= 0 ? 'var(--green)' : 'var(--red)',
     }] : []),
   ];
 
@@ -252,7 +253,7 @@ function InsightsDashboard({ history, viewProfile }: { history: DayEntry[]; view
           }} />
           {challengeDay >= 75 && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <span style={{ ...pixelFont, fontSize: '7px', color: '#fff' }}>🏆 COMPLETE!</span>
+              <span style={{ ...pixelFont, fontSize: '7px', color: '#fff', display: 'flex', alignItems: 'center', gap: 4 }}><Trophy size={10} /> COMPLETE!</span>
             </div>
           )}
         </div>
@@ -267,10 +268,10 @@ function InsightsDashboard({ history, viewProfile }: { history: DayEntry[]; view
       <div>
         <SectionHeader title="LIFETIME STATS" />
         <div className="flex gap-3 overflow-x-auto pb-2">
-          {summaryCards.map(({ emoji, label, value }) => (
+          {summaryCards.map(({ Icon, label, value, color }) => (
             <div key={label} className="shrink-0 p-3 text-center" style={{ background: 'var(--surface)', border: '2px solid var(--border)', boxShadow: '2px 2px 0 #000', minWidth: 90 }}>
-              <div style={{ fontSize: '20px', marginBottom: 6 }}>{emoji}</div>
-              <div style={{ ...pixelFont, fontSize: '12px', color: 'var(--accent)', marginBottom: 4 }}>{value}</div>
+              <div className="flex justify-center mb-2"><Icon size={18} color="var(--text-muted)" /></div>
+              <div style={{ ...pixelFont, fontSize: '12px', color: color ?? 'var(--accent)', marginBottom: 4 }}>{value}</div>
               <div style={{ ...pixelFont, fontSize: '5px', color: 'var(--text-muted)', lineHeight: 1.6 }}>{label}</div>
             </div>
           ))}
@@ -398,12 +399,12 @@ function InsightsDashboard({ history, viewProfile }: { history: DayEntry[]; view
               <div key={name}>
                 <div className="flex justify-between mb-1">
                   <span style={{ ...pixelFont, fontSize: '6px', color: 'var(--text)' }}>{name}</span>
-                  <span style={{ ...pixelFont, fontSize: '6px', color: pct >= 90 ? 'var(--green)' : pct >= 60 ? 'var(--yellow)' : 'var(--red)' }}>{pct}%</span>
+                  <span style={{ ...pixelFont, fontSize: '6px', color: pct >= 90 ? '#3a8f52' : pct >= 60 ? 'var(--yellow)' : 'var(--red)' }}>{pct}%</span>
                 </div>
                 <div className="h-3" style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
                   <div style={{
                     height: '100%', width: `${pct}%`,
-                    background: pct >= 90 ? 'var(--green)' : pct >= 60 ? 'var(--yellow)' : 'var(--red)',
+                    background: pct >= 90 ? '#3a8f52' : pct >= 60 ? 'var(--yellow)' : 'var(--red)',
                     transition: 'width 500ms ease',
                   }} />
                 </div>
@@ -466,8 +467,8 @@ function HistoryInner({ currentUser }: { currentUser: UserProfile }) {
               <button key={u.uid} onClick={() => setViewUid(u.uid)}
                 style={{
                   ...pixelFont, fontSize: '8px', padding: '6px 12px',
-                  border: '2px solid var(--text)',
-                  boxShadow: viewUid === u.uid ? '2px 2px 0 var(--text)' : '1px 1px 0 var(--text)',
+                  border: '2px solid var(--border)',
+                  boxShadow: viewUid === u.uid ? '2px 2px 0 var(--border)' : 'none',
                   background: viewUid === u.uid ? 'var(--accent)' : 'var(--surface)',
                   color: viewUid === u.uid ? '#fff' : 'var(--text)', whiteSpace: 'nowrap',
                 }}>
@@ -484,7 +485,7 @@ function HistoryInner({ currentUser }: { currentUser: UserProfile }) {
         )}
 
         {/* Calendar */}
-        <div className="p-4 mb-6" style={{ background: 'var(--surface)', border: '2px solid var(--text)', boxShadow: '3px 3px 0 var(--text)' }}>
+        <div className="p-4 mb-6" style={{ background: 'var(--surface)', border: '2px solid var(--border)', boxShadow: '2px 2px 0 var(--border)' }}>
           <div className="flex items-center justify-between mb-4">
             <button onClick={() => setMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1))} className="p-1">
               <ChevronLeft size={16} />

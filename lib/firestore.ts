@@ -207,10 +207,13 @@ export async function updateDayEntry(
   date: string,
   updates: Partial<DayEntry>
 ): Promise<void> {
-  await updateDoc(doc(db(), 'days', uid, 'entries', date), {
-    ...updates,
-    updatedAt: serverTimestamp(),
-  });
+  const { deleteField } = await import('firebase/firestore');
+  // Firestore rejects undefined — convert to deleteField() to remove the field
+  const safe: Record<string, unknown> = { updatedAt: serverTimestamp() };
+  for (const [k, v] of Object.entries(updates)) {
+    safe[k] = v === undefined ? deleteField() : v;
+  }
+  await updateDoc(doc(db(), 'days', uid, 'entries', date), safe);
   invalidate(`history-${uid}`);
 }
 

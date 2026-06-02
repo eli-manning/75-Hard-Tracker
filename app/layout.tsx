@@ -62,7 +62,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             --surface-2: #1e1b14;
             --border: #2a2620;
             --text: #ede0c4;
-            --text-muted: #4a4438;
+            --text-muted: #a89880;
             --accent: #e8643a;
             --accent-light: #2a1408;
             --green: #4ecb6a;

@@ -16,6 +16,7 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate, weightUnit = 'lb
   const [w1Duration, setW1Duration] = useState(entry.workoutOneDuration);
   const [w2Duration, setW2Duration] = useState(entry.workoutTwoDuration);
   const [weightInput, setWeightInput] = useState(entry.bodyWeight ? String(entry.bodyWeight) : '');
+  const [logExpanded, setLogExpanded] = useState(!!(entry.bodyWeight || entry.mood || entry.energyLevel));
 
   const pixelFont = { fontFamily: '"Press Start 2P", monospace' };
   const vt323 = { fontFamily: '"VT323", monospace' };
@@ -170,71 +171,95 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate, weightUnit = 'lb
       {/* Photo */}
       <ChallengeItem label="Progress photo" icon="/images/camera.png" completed={entry.photoCompleted} readOnly={readOnly}
         onToggle={() => patch({ photoCompleted: !entry.photoCompleted })}>
-        {entry.photoCompleted && !readOnly && (
-          <div className="mt-2 flex gap-2 items-center" onClick={(e) => e.stopPropagation()}>
-            <input
-              type="number"
-              value={weightInput}
-              onChange={(e) => setWeightInput(e.target.value)}
-              onBlur={() => {
-                const val = parseFloat(weightInput);
-                if (!isNaN(val) && val > 0) patch({ bodyWeight: val });
-              }}
-              placeholder={`Weight (${weightUnit})`}
-              style={{ ...inputStyle, width: 130 }}
-              className="px-2 py-1"
-            />
-            <span style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>{weightUnit} (opt)</span>
+        {!readOnly && (
+          <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setLogExpanded((v) => !v)}
+              className="flex items-center gap-2 cursor-pointer transition-opacity hover:opacity-80"
+              style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)', background: 'none', border: 'none', padding: '2px 0' }}
+            >
+              {logExpanded ? '▼' : '▶'} LOG DAILY STATS (opt)
+            </button>
+
+            {logExpanded && (
+              <div className="mt-3 space-y-4 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+
+                {/* Weight */}
+                <div className="space-y-1">
+                  <p style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>WEIGHT ({weightUnit})</p>
+                  <input
+                    type="number"
+                    value={weightInput}
+                    onChange={(e) => setWeightInput(e.target.value)}
+                    onBlur={() => {
+                      const val = parseFloat(weightInput);
+                      if (!isNaN(val) && val > 0) patch({ bodyWeight: val });
+                    }}
+                    placeholder={`enter ${weightUnit}`}
+                    style={{ ...inputStyle, width: 120 }}
+                    className="px-2 py-1"
+                  />
+                </div>
+
+                {/* Mood */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>MOOD</p>
+                    {entry.mood != null && (
+                      <p style={{ ...pixelFont, fontSize: '6px', color: 'var(--accent)' }}>
+                        {['LOW', 'MEH', 'OK', 'GOOD', 'GREAT'][entry.mood - 1]}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-1.5">
+                    {[1, 2, 3, 4, 5].map((val) => (
+                      <button key={val} onClick={() => patch({ mood: entry.mood === val ? undefined : val })}
+                        style={{
+                          ...pixelFont, fontSize: '8px', padding: '5px 0', border: '2px solid', flex: 1,
+                          borderColor: entry.mood === val ? 'var(--accent)' : 'var(--border)',
+                          background: entry.mood === val ? 'var(--accent-light)' : 'var(--bg)',
+                          boxShadow: entry.mood === val ? 'var(--glow-accent)' : 'none',
+                          color: entry.mood === val ? 'var(--accent)' : 'var(--text-muted)',
+                          cursor: 'pointer', transition: 'all 150ms',
+                        }}>
+                        {val}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Energy */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>ENERGY</p>
+                    {entry.energyLevel != null && (
+                      <p style={{ ...pixelFont, fontSize: '6px', color: 'var(--green)' }}>
+                        {['DRAINED', 'LOW', 'NORMAL', 'HIGH', 'PEAK'][entry.energyLevel - 1]}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-1.5">
+                    {[1, 2, 3, 4, 5].map((val) => (
+                      <button key={val} onClick={() => patch({ energyLevel: entry.energyLevel === val ? undefined : val })}
+                        style={{
+                          ...pixelFont, fontSize: '8px', padding: '5px 0', border: '2px solid', flex: 1,
+                          borderColor: entry.energyLevel !== undefined && entry.energyLevel >= val ? 'var(--green)' : 'var(--border)',
+                          background: entry.energyLevel !== undefined && entry.energyLevel >= val ? 'var(--green-light)' : 'var(--bg)',
+                          boxShadow: entry.energyLevel !== undefined && entry.energyLevel >= val ? 'var(--glow-green)' : 'none',
+                          color: entry.energyLevel !== undefined && entry.energyLevel >= val ? 'var(--green)' : 'var(--text-muted)',
+                          cursor: 'pointer', transition: 'all 150ms',
+                        }}>
+                        {val}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            )}
           </div>
         )}
       </ChallengeItem>
-
-      {/* Mood & Energy */}
-      {!readOnly && (
-        <div className="p-3 space-y-3" style={{ border: '2px solid var(--border)', background: 'var(--surface)' }}>
-          <p style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>HOW ARE YOU FEELING? (optional)</p>
-
-          <div className="space-y-2">
-            <p style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>MOOD</p>
-            <div className="flex gap-2">
-              {(['😫', '😕', '😐', '🙂', '🤩'] as const).map((emoji, i) => {
-                const val = i + 1;
-                return (
-                  <button key={val} onClick={(e) => { e.stopPropagation(); patch({ mood: entry.mood === val ? undefined : val }); }}
-                    style={{
-                      fontSize: '22px', padding: '4px 6px', border: '2px solid',
-                      borderColor: entry.mood === val ? 'var(--accent)' : 'var(--border)',
-                      background: entry.mood === val ? 'var(--accent-light)' : 'var(--bg)',
-                      boxShadow: entry.mood === val ? 'var(--glow-accent)' : 'none',
-                      cursor: 'pointer', transition: 'all 150ms',
-                    }}>
-                    {emoji}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <p style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>ENERGY</p>
-            <div className="flex gap-2">
-              {[1, 2, 3, 4, 5].map((val) => (
-                <button key={val} onClick={(e) => { e.stopPropagation(); patch({ energyLevel: entry.energyLevel === val ? undefined : val }); }}
-                  style={{
-                    ...pixelFont, fontSize: '8px', padding: '4px 8px', border: '2px solid',
-                    borderColor: entry.energyLevel !== undefined && entry.energyLevel >= val ? 'var(--green)' : 'var(--border)',
-                    background: entry.energyLevel !== undefined && entry.energyLevel >= val ? 'var(--green-light)' : 'var(--bg)',
-                    boxShadow: entry.energyLevel !== undefined && entry.energyLevel >= val ? 'var(--glow-green)' : 'none',
-                    color: entry.energyLevel !== undefined && entry.energyLevel >= val ? 'var(--green)' : 'var(--text-muted)',
-                    cursor: 'pointer', transition: 'all 150ms',
-                  }}>
-                  {'▮'.repeat(val)}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

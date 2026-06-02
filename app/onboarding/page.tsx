@@ -10,14 +10,14 @@ import { getAvatarUrl, generateSeed, hasCustomAvatar } from '@/lib/avatar';
 import { invalidate, getSessionCached, setSessionCached } from '@/lib/cache';
 import { AuthGuard } from '@/components/AuthGuard';
 import { LoadingScreen } from '@/components/LoadingScreen';
-import { RefreshCw, ChevronRight, ChevronLeft, Check } from 'lucide-react';
+import { RefreshCw, ChevronRight, ChevronLeft, Check, TrendingDown, Dumbbell, Heart, Brain } from 'lucide-react';
 import { format } from 'date-fns';
 
 const GOALS = [
-  { value: 'lose_weight', emoji: '🔥', label: 'LOSE WEIGHT' },
-  { value: 'build_muscle', emoji: '💪', label: 'BUILD MUSCLE' },
-  { value: 'general_fitness', emoji: '❤️', label: 'GENERAL FITNESS' },
-  { value: 'mental_toughness', emoji: '🧠', label: 'MENTAL TOUGHNESS' },
+  { value: 'lose_weight', Icon: TrendingDown, label: 'LOSE WEIGHT' },
+  { value: 'build_muscle', Icon: Dumbbell, label: 'BUILD MUSCLE' },
+  { value: 'general_fitness', Icon: Heart, label: 'GENERAL FITNESS' },
+  { value: 'mental_toughness', Icon: Brain, label: 'MENTAL TOUGHNESS' },
 ] as const;
 
 function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) {
@@ -209,7 +209,7 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
         <div className="text-center">
           <h2 style={{ ...pixelFont, fontSize: '12px', color: 'var(--accent)', lineHeight: 1.8 }}>YOUR CHALLENGE</h2>
           <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', color: 'var(--text-muted)', marginTop: 8 }}>
-            When did you start 75 Hard?
+            Pick a Start Date
           </p>
         </div>
 
@@ -260,7 +260,7 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
                 type="number"
                 value={startingWeight}
                 onChange={(e) => setStartingWeight(e.target.value)}
-                placeholder={weightUnit === 'lbs' ? '165' : '75'}
+                placeholder={`enter ${weightUnit}`}
                 style={{ ...inputStyle, flex: 1 }}
                 onFocus={(e) => (e.target.style.borderColor = 'var(--accent)')}
                 onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
@@ -287,7 +287,7 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
               type="number"
               value={height}
               onChange={(e) => setHeight(e.target.value)}
-              placeholder={weightUnit === 'lbs' ? '70' : '178'}
+              placeholder={weightUnit === 'lbs' ? 'enter inches' : 'enter cm'}
               style={inputStyle}
               onFocus={(e) => (e.target.style.borderColor = 'var(--accent)')}
               onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
@@ -309,7 +309,7 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
                     color: fitnessGoal === g.value ? 'var(--accent)' : 'var(--text-muted)',
                     cursor: 'pointer', lineHeight: 1.8, textAlign: 'center',
                   }}>
-                  <div style={{ fontSize: '18px', marginBottom: 4 }}>{g.emoji}</div>
+                  <div className="flex justify-center mb-2"><g.Icon size={18} /></div>
                   {g.label}
                 </button>
               ))}
