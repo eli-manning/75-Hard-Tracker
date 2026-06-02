@@ -76,6 +76,7 @@ export function subscribeToProfile(
 }
 
 export async function updateStreakOnProfile(uid: string): Promise<void> {
+  invalidate(`history-${uid}`);
   const history = await getDayHistory(uid, 120);
   const sorted = [...history].sort((a, b) => b.date.localeCompare(a.date));
   const { format } = await import('date-fns');
@@ -106,6 +107,7 @@ export async function updateStreakOnProfile(uid: string): Promise<void> {
 
   await updateDoc(doc(db(), 'users', uid), { currentStreak: current, longestStreak: longest });
   invalidate(`profile-${uid}`);
+  invalidate('all-users');
 }
 
 // ── Friends ───────────────────────────────────────────────────────────────────
