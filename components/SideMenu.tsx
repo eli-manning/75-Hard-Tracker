@@ -15,6 +15,7 @@ import {
   removeFriend,
 } from '@/lib/firestore';
 import { UserProfile } from '@/lib/types';
+import { getAvatarUrl } from '@/lib/avatar';
 import { LogOut, X, Calendar, Target, Edit2, Check, UserPlus, UserMinus, Users } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { getCached, invalidate } from '@/lib/cache';
@@ -202,14 +203,18 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSe
           {/* Avatar + name */}
           <div className="p-4 space-y-3 shrink-0" style={{ borderBottom: '2px solid var(--border)' }}>
             <div className="flex items-center gap-3">
-              <div style={{
-                width: 56, height: 56, border: '2px solid var(--accent)',
-                boxShadow: 'var(--glow-accent)', overflow: 'hidden', flexShrink: 0,
-              }}>
-                <Image src={profile.avatarUrl} alt={profile.displayName} width={56} height={56}
+              <button
+                onClick={() => { router.push('/profile'); onClose(); }}
+                style={{
+                  width: 56, height: 56, border: '2px solid var(--accent)',
+                  boxShadow: 'var(--glow-accent)', overflow: 'hidden', flexShrink: 0,
+                  padding: 0, cursor: 'pointer', background: 'none',
+                }}
+              >
+                <Image src={getAvatarUrl(profile)} alt={profile.displayName} width={56} height={56}
                   className="w-full h-full object-cover object-top"
                   onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/avatars/default.png'; }} />
-              </div>
+              </button>
               <div className="flex-1 min-w-0">
                 {editingName ? (
                   <div className="flex gap-1">

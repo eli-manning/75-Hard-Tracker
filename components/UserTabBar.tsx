@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { UserProfile } from '@/lib/types';
+import { getAvatarUrl } from '@/lib/avatar';
 
 interface UserTabBarProps {
   users: UserProfile[];
@@ -36,7 +37,7 @@ export function UserTabBar({ users, activeUid, onSelectUser, currentUserUid }: U
               }}
             >
               <Image
-                src={u.avatarUrl}
+                src={getAvatarUrl(u)}
                 alt={u.displayName}
                 width={64}
                 height={64}
