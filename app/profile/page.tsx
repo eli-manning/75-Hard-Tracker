@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { getUserProfile, updateUserProfile } from '@/lib/firestore';
+import { subscribeToProfile, updateUserProfile } from '@/lib/firestore';
 import { UserProfile } from '@/lib/types';
 import { getAvatarUrl, generateSeed, hasCustomAvatar } from '@/lib/avatar';
 import { invalidate, getSessionCached } from '@/lib/cache';
@@ -220,7 +220,8 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(() => getSessionCached<UserProfile>('75hard-profile'));
 
   useEffect(() => {
-    if (user) getUserProfile(user.uid).then(setProfile);
+    if (!user) return;
+    return subscribeToProfile(user.uid, setProfile);
   }, [user]);
 
   return (

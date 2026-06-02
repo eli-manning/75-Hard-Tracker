@@ -9,6 +9,7 @@ import {
   query,
   orderBy,
   limit,
+  onSnapshot,
   serverTimestamp,
   Timestamp,
   writeBatch,
@@ -62,6 +63,18 @@ export async function updateUserProfile(
   invalidate(`profile-${uid}`);
 }
 
+export function subscribeToProfile(
+  uid: string,
+  onChange: (profile: UserProfile) => void
+): () => void {
+  return onSnapshot(doc(db(), 'users', uid), (snap) => {
+    if (!snap.exists()) return;
+    const profile = snap.data() as UserProfile;
+    setCached(`profile-${uid}`, profile);
+    onChange(profile);
+  });
+}
+
 export async function updateStreakOnProfile(uid: string): Promise<void> {
   const history = await getDayHistory(uid, 120);
   const sorted = [...history].sort((a, b) => b.date.localeCompare(a.date));
@@ -92,6 +105,7 @@ export async function updateStreakOnProfile(uid: string): Promise<void> {
   longest = Math.max(longest, streak);
 
   await updateDoc(doc(db(), 'users', uid), { currentStreak: current, longestStreak: longest });
+  invalidate(`profile-${uid}`);
 }
 
 // ── Friends ───────────────────────────────────────────────────────────────────
