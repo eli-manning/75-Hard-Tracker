@@ -12,6 +12,7 @@ export default function TabsLayout() {
         screenOptions={{
           headerShown: false,
           // sceneStyle: { paddingBottom: TAB_BAR_CONTENT_HEIGHT },
+          sceneStyle: { backgroundColor: 'red' },
         }}
       >
         <Tabs.Screen name="today" />
