@@ -82,15 +82,29 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: '#0c0b08',
+    ...Platform.select({
+      web: {
+        // Cast as any to prevent StyleSheet from rejecting web-only viewport units
+        height: '100dvh' as any,
+      },
+    }),
   },
   webCenter: {
     flex: 1,
     alignItems: 'center',
     backgroundColor: '#0c0b08',
+    width: '100%',
   },
   webFrame: {
     flex: 1,
     width: '100%',
     maxWidth: 480,
+    position: 'relative',
+    ...Platform.select({
+      web: {
+        // Cast as any to prevent StyleSheet from rejecting CSS env values
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)' as any,
+      },
+    }),
   },
 });

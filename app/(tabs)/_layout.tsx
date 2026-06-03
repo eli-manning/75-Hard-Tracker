@@ -11,8 +11,7 @@ export default function TabsLayout() {
         tabBar={Platform.OS === 'web' ? () => null : () => <BottomNav />}
         screenOptions={{
           headerShown: false,
-          // sceneStyle: { paddingBottom: TAB_BAR_CONTENT_HEIGHT },
-          sceneStyle: { backgroundColor: 'red' },
+          sceneStyle: { paddingBottom: TAB_BAR_CONTENT_HEIGHT, backgroundColor: "red"},
         }}
       >
         <Tabs.Screen name="today" />

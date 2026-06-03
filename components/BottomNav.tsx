@@ -15,10 +15,17 @@ export function BottomNav() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const navInsetStyle = { 
-    bottom: 0, 
-    paddingBottom: Math.min(insets.bottom, 12) // Fallback to 12 if inset is 0
-  };
+  // On Web/PWA, we want bottom: 0 relative to the padded frame, but we also 
+  // ensure the component layout has enough internal padding to mask the home bar area.
+  const navInsetStyle = Platform.OS === 'web'
+    ? { 
+        bottom: 0, 
+        paddingBottom: Math.max(insets.bottom, 12),
+      }
+    : { 
+        bottom: 0, 
+        paddingBottom: Math.max(insets.bottom, 12),
+      };
 
   return (
     <View style={[styles.nav, navInsetStyle]}>
