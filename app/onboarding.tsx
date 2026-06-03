@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Platform } from 'react-native';
 import {
   View, Text, Image, TextInput, TouchableOpacity,
   ScrollView, KeyboardAvoidingView, Platform, StyleSheet,
@@ -12,6 +13,7 @@ import { getAvatarUrl, generateSeed, hasCustomAvatar } from '../lib/avatar';
 import { getAvatarSource } from '../lib/avatarMap';
 import { invalidate, getSessionCached, setSessionCached } from '../lib/cache';
 import { LoadingScreen } from '../components/LoadingScreen';
+import { InstallPrompt } from '../components/InstallPrompt';
 import { colors, fonts, shadows } from '../lib/theme';
 import { format } from 'date-fns';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -198,9 +200,10 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
     router.replace('/(tabs)/today');
   }
 
+  const totalSteps = Platform.OS === 'web' ? 5 : 4;
   const ProgressDots = () => (
     <View style={styles.dots}>
-      {[1, 2, 3, 4].map((n) => (
+      {Array.from({ length: totalSteps }, (_, i) => i + 1).map((n) => (
         <View
           key={n}
           style={[
@@ -380,10 +383,31 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
           ))}
         </View>
 
-        <TouchableOpacity onPress={handleFinish} style={styles.primaryBtn}>
+        <TouchableOpacity onPress={Platform.OS === 'web' ? () => setStep(5) : handleFinish} style={styles.primaryBtn}>
           <Text style={styles.primaryBtnText}>LET'S GO! →</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => setStep(3)}>
+          <Text style={styles.ghostBtnText}>← BACK</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  );
+
+  // Step 5: Install prompt (web only)
+  if (step === 5) return (
+    <ScrollView contentContainerStyle={[styles.screen, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}>
+      <ProgressDots />
+      <Text style={styles.stepTitle}>ONE MORE THING</Text>
+      <View style={styles.card}>
+        <Text style={styles.cardLabel}>ADD TO YOUR HOME SCREEN</Text>
+        <Text style={styles.installHint}>
+          Install the app for the best experience — works offline and feels just like a native app.
+        </Text>
+        <InstallPrompt />
+        <TouchableOpacity onPress={handleFinish} style={[styles.primaryBtn, { marginTop: 8 }]}>
+          <Text style={styles.primaryBtnText}>START CHALLENGE →</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setStep(4)}>
           <Text style={styles.ghostBtnText}>← BACK</Text>
         </TouchableOpacity>
       </View>
@@ -427,6 +451,7 @@ const styles = StyleSheet.create({
   welcomeLabel: { fontFamily: fonts.pixel, fontSize: 7, color: colors.textMuted, letterSpacing: 2 },
   title: { fontFamily: fonts.pixel, fontSize: 20, color: colors.accent, lineHeight: 30, textShadowColor: 'rgba(232, 100, 58, 0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 },
   stepTitle: { fontFamily: fonts.pixel, fontSize: 12, color: colors.accent, textAlign: 'center' },
+  installHint: { fontFamily: fonts.inter, fontSize: 13, color: colors.textMuted, textAlign: 'center', lineHeight: 20 },
   card: {
     width: '100%',
     padding: 24,

@@ -16,6 +16,7 @@ import { getAvatarUrl } from '../lib/avatar';
 import { getAvatarSource, AVATAR_PORTRAIT_RATIO } from '../lib/avatarMap';
 import { getCached, invalidate } from '../lib/cache';
 import { colors, fonts, shadows } from '../lib/theme';
+import { InstallPrompt } from './InstallPrompt';
 
 interface SideMenuProps {
   open: boolean;
@@ -284,6 +285,11 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSe
             </View>
           </View>
 
+          {/* Install prompt */}
+          <View style={styles.installSection}>
+            <InstallPrompt />
+          </View>
+
           {/* Sign out + legal */}
           <View style={styles.footer}>
             <TouchableOpacity onPress={handleSignOut} style={styles.signOutBtn}>
@@ -384,6 +390,7 @@ const styles = StyleSheet.create({
   },
   sentLabel: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
   footer: { padding: 16, gap: 12, marginTop: 'auto' },
+  installSection: { paddingHorizontal: 16, paddingVertical: 8 },
   signOutBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 8, paddingVertical: 12,
