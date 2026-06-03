@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,8 +15,12 @@ export function BottomNav() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
+  const navStyle = Platform.OS === 'web'
+    ? [styles.nav, { position: 'fixed' as any, paddingBottom: 'env(safe-area-inset-bottom)' as any }]
+    : [styles.nav, { paddingBottom: insets.bottom }];
+
   return (
-    <View style={[styles.nav, { paddingBottom: insets.bottom }]}>
+    <View style={navStyle}>
       {NAV.map(({ href, label, icon }) => {
         const active = pathname.includes(label.toLowerCase());
         return (
