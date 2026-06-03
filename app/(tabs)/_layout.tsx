@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { Tabs } from 'expo-router';
 import { AuthGuard } from '../../components/AuthGuard';
 import { BottomNav } from '../../components/BottomNav';
@@ -7,7 +8,7 @@ export default function TabsLayout() {
   return (
     <AuthGuard>
       <Tabs
-        tabBar={() => <BottomNav />}
+        tabBar={Platform.OS === 'web' ? () => null : () => <BottomNav />}
         screenOptions={{
           headerShown: false,
           // sceneStyle: { paddingBottom: TAB_BAR_CONTENT_HEIGHT },

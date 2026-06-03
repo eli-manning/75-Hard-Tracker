@@ -16,7 +16,10 @@ export function BottomNav() {
   const insets = useSafeAreaInsets();
 
   const navInsetStyle = Platform.OS === 'web'
-    ? { position: 'fixed' as any, bottom: 0, paddingBottom: 'env(safe-area-inset-bottom)' as any }
+    // position:'absolute' relative to webFrame — avoids both React Navigation's
+    // overflow:hidden clipping and the iOS Safari body-overflow:hidden + position:fixed bug.
+    // paddingBottom with env() handles PWA/iPhone safe-area notch.
+    ? { bottom: 0, paddingBottom: 'env(safe-area-inset-bottom)' as any }
     : { bottom: -insets.bottom, paddingBottom: insets.bottom };
 
   return (

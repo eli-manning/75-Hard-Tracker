@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
@@ -10,11 +10,13 @@ import { Inter_400Regular, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from '../context/AuthContext';
 import { useAuthContext } from '../context/AuthContext';
+import { BottomNav } from '../components/BottomNav';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function AppShell() {
   const { loading: authLoading } = useAuthContext();
+  const pathname = usePathname();
   const [fontsLoaded] = useFonts({
     PressStart2P_400Regular,
     VT323_400Regular,
@@ -46,11 +48,18 @@ function AppShell() {
     </Stack>
   );
 
+  // On web, show BottomNav as a sibling inside webFrame (avoids React Navigation
+  // overflow:hidden clipping AND the body overflow:hidden + position:fixed iOS Safari bug).
+  const showWebNav = Platform.OS === 'web' && pathname.includes('/(tabs)');
+
   return (
     <View style={styles.root}>
       {Platform.OS === 'web' ? (
         <View style={styles.webCenter}>
-          <View style={styles.webFrame}>{screens}</View>
+          <View style={styles.webFrame}>
+            {screens}
+            {showWebNav && <BottomNav />}
+          </View>
         </View>
       ) : screens}
     </View>
