@@ -43,7 +43,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "export:web": "expo export --platform web",
-    "build": "expo export --platform web"
+    "build": "expo export --platform web && node scripts/inject-pwa-meta.js"
   },
   "private": true
 }
