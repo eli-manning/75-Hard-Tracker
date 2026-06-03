@@ -17,10 +17,11 @@ html = html.replace(
   '#root {\n        display: flex;\n        flex-direction: column;\n        height: 100%;\n        flex: 1;\n      }'
 );
 
-// Add -webkit-fill-available for iOS PWA full-screen
+// Add -webkit-fill-available for iOS PWA full-screen + fix bottom nav to viewport bottom
 const extraCss = `  <style>
     html { height: -webkit-fill-available; background-color: #0c0b08; }
     body { display: flex; flex-direction: column; background-color: #0c0b08; min-height: -webkit-fill-available; }
+    #bottom-nav { position: fixed !important; bottom: 0 !important; left: 0 !important; right: 0 !important; padding-bottom: env(safe-area-inset-bottom) !important; }
   </style>`;
 
 // Inject PWA tags + service worker before </head>

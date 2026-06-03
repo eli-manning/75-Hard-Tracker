@@ -8,7 +8,12 @@ const TAB_BAR_CONTENT_HEIGHT = 58; // icon + label + vertical padding
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
-  const tabBarHeight = TAB_BAR_CONTENT_HEIGHT + insets.bottom;
+  // On native the nav extends below the safe area boundary so content only
+  // needs to clear the 58px bar height. On web the nav is viewport-fixed and
+  // includes env(safe-area-inset-bottom), so we add that too.
+  const scenePadding = Platform.OS === 'web'
+    ? TAB_BAR_CONTENT_HEIGHT + insets.bottom
+    : TAB_BAR_CONTENT_HEIGHT;
 
   return (
     <AuthGuard>
@@ -16,9 +21,7 @@ export default function TabsLayout() {
         tabBar={() => <BottomNav />}
         screenOptions={{
           headerShown: false,
-          sceneStyle: Platform.OS === 'web'
-            ? { paddingBottom: 'calc(58px + env(safe-area-inset-bottom))' as any }
-            : { paddingBottom: tabBarHeight },
+          sceneStyle: { paddingBottom: scenePadding },
         }}
       >
         <Tabs.Screen name="today" />

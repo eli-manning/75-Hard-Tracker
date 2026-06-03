@@ -15,12 +15,14 @@ export function BottomNav() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const navStyle = Platform.OS === 'web'
-    ? [styles.nav, { position: 'fixed' as any, paddingBottom: 'env(safe-area-inset-bottom)' as any }]
-    : [styles.nav, { paddingBottom: insets.bottom }];
+  // On native, the Tabs container stops at the safe area boundary, so we shift
+  // the nav down by insets.bottom to cover the home indicator zone visually.
+  const extraStyle = Platform.OS !== 'web'
+    ? { bottom: -insets.bottom, paddingBottom: insets.bottom }
+    : { paddingBottom: insets.bottom };
 
   return (
-    <View style={navStyle}>
+    <View nativeID="bottom-nav" style={[styles.nav, extraStyle]}>
       {NAV.map(({ href, label, icon }) => {
         const active = pathname.includes(label.toLowerCase());
         return (
