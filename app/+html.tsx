@@ -30,18 +30,28 @@ export default function Root({ children }: PropsWithChildren) {
         <ScrollViewStyleReset />
 
         <style>{`
-          html, body, #root {
+          html {
+            height: 100%;
+            height: -webkit-fill-available;
+            background-color: #0c0b08;
+          }
+          body, #root {
             height: 100%;
             background-color: #0c0b08;
           }
           body {
             display: flex;
+            flex-direction: column;
             margin: 0;
             padding: 0;
+            overflow: hidden;
+            min-height: -webkit-fill-available;
           }
           #root {
             display: flex;
+            flex-direction: column;
             flex: 1;
+            overflow: hidden;
           }
         `}</style>
 
