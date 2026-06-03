@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Platform } from 'react-native';
 import {
   View, Text, Image, TextInput, TouchableOpacity,
   ScrollView, KeyboardAvoidingView, Platform, StyleSheet,
