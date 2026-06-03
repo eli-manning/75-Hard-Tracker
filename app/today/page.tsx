@@ -254,30 +254,39 @@ export default function TodayPage() {
 
   useEffect(() => {
     if (!user) {
+      // Only clear in-memory caches here. sessionStorage is cleared by signOut()
+      // so we don't wipe it during the brief auth-null phase that fires on every
+      // page load while Firebase re-initialises its persistent auth state.
       _memProfile = null;
       clearAll();
-      if (typeof window !== 'undefined') sessionStorage.clear();
       return;
     }
     const boot = getBootProfile();
     if (boot) {
-      if (boot.onboardingComplete === false) { router.replace('/onboarding'); return; }
-      // Have cached profile — show it immediately, refresh silently in background
-      setProfile(boot);
-      getUserProfile(user.uid)
-        .then((p) => {
-          if (p) {
-            // Never write a stale onboarding:false into the module cache — it would
-            // cause a redirect loop on the next navigation after finishing onboarding.
-            if (p.onboardingComplete === false) return;
-            _memProfile = p; setSessionCached(SESSION_KEY, p); setProfile(p);
-          }
-        })
-        .catch(() => {});
-      // Non-blocking prefetches to warm caches for History and UserTabBar
-      getAllUsers().catch(() => {});
-      getDayHistory(user.uid, 120).catch(() => {});
-      return;
+      // Discard a cached profile that belongs to a different user (e.g. shared device)
+      // or that still has onboardingComplete:false (stale from signup flow).
+      if (boot.uid !== user.uid || boot.onboardingComplete === false) {
+        _memProfile = null;
+        clearAll();
+        if (typeof window !== 'undefined') sessionStorage.clear();
+        // Fall through to fresh Firestore fetch below
+      } else {
+        // Have a valid cached profile — show it immediately, refresh silently
+        setProfile(boot);
+        getUserProfile(user.uid)
+          .then((p) => {
+            if (p) {
+              // Never write a stale onboarding:false into the module cache — it would
+              // cause a redirect loop on the next client-side navigation.
+              if (p.onboardingComplete === false) return;
+              _memProfile = p; setSessionCached(SESSION_KEY, p); setProfile(p);
+            }
+          })
+          .catch(() => {});
+        getAllUsers().catch(() => {});
+        getDayHistory(user.uid, 120).catch(() => {});
+        return;
+      }
     }
     // First load — only block on profile; everything else runs in background
     setProfileFetching(true);
