@@ -10,7 +10,7 @@ export default function TabsLayout() {
         tabBar={() => <BottomNav />}
         screenOptions={{
           headerShown: false,
-          sceneStyle: { paddingBottom: TAB_BAR_CONTENT_HEIGHT },
+          // sceneStyle: { paddingBottom: TAB_BAR_CONTENT_HEIGHT },
         }}
       >
         <Tabs.Screen name="today" />

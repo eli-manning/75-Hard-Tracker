@@ -24,6 +24,7 @@ export function BottomNav() {
         background: 'var(--surface)',
         borderTop: '2px solid var(--border)',
         boxShadow: '0 -4px 0 #000',
+        paddingBottom: 'env(safe-area-inset-bottom)',
       }}
     >
       {NAV.map(({ href, label, Icon }) => {
