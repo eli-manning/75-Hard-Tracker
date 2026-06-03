@@ -16,7 +16,7 @@ export function BottomNav() {
   const insets = useSafeAreaInsets();
 
   const navInsetStyle = Platform.OS === 'web'
-    ? { paddingBottom: 'env(safe-area-inset-bottom)' as unknown as number }
+    ? { position: 'fixed' as any, bottom: 0, paddingBottom: 'env(safe-area-inset-bottom)' as any }
     : { bottom: -insets.bottom, paddingBottom: insets.bottom };
 
   return (
