@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,14 +15,8 @@ export function BottomNav() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  // On native, the Tabs container stops at the safe area boundary, so we shift
-  // the nav down by insets.bottom to cover the home indicator zone visually.
-  const extraStyle = Platform.OS !== 'web'
-    ? { bottom: -insets.bottom, paddingBottom: insets.bottom }
-    : { paddingBottom: insets.bottom };
-
   return (
-    <View nativeID="bottom-nav" style={[styles.nav, extraStyle]}>
+    <View style={[styles.nav, { bottom: -insets.bottom, paddingBottom: insets.bottom }]}>
       {NAV.map(({ href, label, icon }) => {
         const active = pathname.includes(label.toLowerCase());
         return (
