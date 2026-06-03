@@ -50,7 +50,8 @@ function AppShell() {
 
   // On web, show BottomNav as a sibling inside webFrame (avoids React Navigation
   // overflow:hidden clipping AND the body overflow:hidden + position:fixed iOS Safari bug).
-  const showWebNav = Platform.OS === 'web' && pathname.includes('/(tabs)');
+  const showWebNav = Platform.OS === 'web' &&
+    ['/today', '/tasks', '/history'].some(p => pathname.startsWith(p));
 
   return (
     <View style={styles.root}>
