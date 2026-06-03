@@ -79,7 +79,7 @@ const spinStyles = StyleSheet.create({
     width: '100%', paddingVertical: 8, alignItems: 'center',
     borderWidth: 2, borderColor: colors.accent, backgroundColor: colors.accentLight,
   },
-  val: { fontFamily: fonts.vt323, fontSize: 22, color: colors.accent },
+  val: { fontFamily: fonts.vt323, fontSize: 22, color: colors.accent, width: '100%', textAlign: 'center' },
 });
 
 function DateSpinPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
@@ -101,7 +101,7 @@ function DateSpinPicker({ value, onChange }: { value: string; onChange: (v: stri
         display={MONTHS[month - 1]}
         onInc={() => update(year, month === 12 ? 1 : month + 1, day)}
         onDec={() => update(year, month === 1 ? 12 : month - 1, day)}
-        keyboardType="numeric"
+        keyboardType="default"
         onCommit={(raw) => {
           const n = parseInt(raw);
           if (!isNaN(n) && n >= 1 && n <= 12) { update(year, n, day); return; }
@@ -358,7 +358,7 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
   );
 
   // Step 4: Review + Finish
-  return (
+  if (step === 4) return (
     <ScrollView contentContainerStyle={[styles.screen, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}>
       <ProgressDots />
       <Text style={styles.stepTitle}>READY TO START</Text>
@@ -412,6 +412,8 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
       </View>
     </ScrollView>
   );
+
+  return null;
 }
 
 export default function OnboardingPage() {
@@ -492,7 +494,7 @@ const styles = StyleSheet.create({
   },
   secondaryBtnText: { fontFamily: fonts.pixel, fontSize: 8, color: colors.textMuted },
   ghostBtnText: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted, paddingVertical: 8 },
-  btnRow: { flexDirection: 'row', gap: 8, width: '100%' },
+  btnRow: { flexDirection: 'row', gap: 8, alignSelf: 'stretch' },
   field: { width: '100%', gap: 8 },
   fieldLabel: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
   input: {
