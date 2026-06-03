@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, Image, TextInput, TouchableOpacity,
   ScrollView, KeyboardAvoidingView, Platform, StyleSheet,
@@ -12,7 +12,7 @@ import { getAvatarUrl, generateSeed, hasCustomAvatar } from '../lib/avatar';
 import { getAvatarSource } from '../lib/avatarMap';
 import { invalidate, getSessionCached, setSessionCached } from '../lib/cache';
 import { LoadingScreen } from '../components/LoadingScreen';
-import { InstallPrompt } from '../components/InstallPrompt';
+import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import { colors, fonts, shadows } from '../lib/theme';
 import { format } from 'date-fns';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -133,6 +133,73 @@ function DateSpinPicker({ value, onChange }: { value: string; onChange: (v: stri
         }}
       />
     </View>
+  );
+}
+
+function InstallStep({ onFinish, onBack, ProgressDots, insets }: {
+  onFinish: () => void;
+  onBack: () => void;
+  ProgressDots: () => React.JSX.Element;
+  insets: { top: number; bottom: number };
+}) {
+  const { isIOS, canInstall, triggerInstall } = useInstallPrompt();
+  const isAndroid = Platform.OS === 'web' && !isIOS;
+
+  return (
+    <ScrollView contentContainerStyle={[styles.screen, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}>
+      <ProgressDots />
+      <Text style={styles.stepTitle}>ONE MORE THING</Text>
+      <View style={styles.card}>
+        <Text style={styles.cardLabel}>ADD TO HOME SCREEN</Text>
+
+        {isIOS && (
+          <View style={styles.installInstructions}>
+            <View style={styles.installNotice}>
+              <Ionicons name="information-circle-outline" size={14} color={colors.accent} />
+              <Text style={styles.installNoticeText}>Must be opened in <Text style={styles.installNoticeBold}>Safari</Text> on iPhone/iPad</Text>
+            </View>
+            <View style={styles.installSteps}>
+              {[
+                { icon: 'share-outline' as const, text: 'Tap the Share button at the bottom of Safari' },
+                { icon: 'add-circle-outline' as const, text: 'Scroll down and tap "Add to Home Screen"' },
+                { icon: 'checkmark-circle-outline' as const, text: 'Tap "Add" in the top right corner' },
+              ].map(({ icon, text }, i) => (
+                <View key={i} style={styles.installStep}>
+                  <View style={styles.installStepNum}><Text style={styles.installStepNumText}>{i + 1}</Text></View>
+                  <Ionicons name={icon} size={16} color={colors.textMuted} style={{ marginRight: 8 }} />
+                  <Text style={styles.installStepText}>{text}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {isAndroid && canInstall && (
+          <View style={styles.installInstructions}>
+            <Text style={styles.installHint}>Install the app for the best experience — offline support and push notifications.</Text>
+            <TouchableOpacity style={styles.installBtn} onPress={triggerInstall} activeOpacity={0.8}>
+              <Ionicons name="download-outline" size={13} color={colors.accent} />
+              <Text style={styles.installBtnText}>INSTALL APP</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {isAndroid && !canInstall && (
+          <View style={styles.installInstructions}>
+            <Text style={styles.installHint}>To install: tap the browser menu and select "Add to Home Screen" or "Install app".</Text>
+          </View>
+        )}
+
+        <Text style={styles.installSkipHint}>Push notifications require the app to be installed.</Text>
+
+        <TouchableOpacity onPress={onFinish} style={[styles.primaryBtn, { marginTop: 8 }]}>
+          <Text style={styles.primaryBtnText}>START CHALLENGE →</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={onBack}>
+          <Text style={styles.ghostBtnText}>BACK</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
   );
 }
 
@@ -261,8 +328,8 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
           <DateSpinPicker value={startDate} onChange={setStartDate} />
           <Text style={styles.helperText}>You can change this later in your profile.</Text>
           <View style={styles.btnRow}>
-            <TouchableOpacity onPress={() => setStep(1)} style={[styles.secondaryBtn, { flex: 0, paddingHorizontal: 16 }]}>
-              <Text style={styles.secondaryBtnText}>← BACK</Text>
+            <TouchableOpacity onPress={() => setStep(1)} style={[styles.secondaryBtn, styles.backBtn]}>
+              <Text style={styles.secondaryBtnText}>BACK</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleStep2Next}
@@ -341,8 +408,8 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
           </View>
 
           <View style={styles.btnRow}>
-            <TouchableOpacity onPress={() => setStep(2)} style={[styles.secondaryBtn, { flex: 0, paddingHorizontal: 16 }]}>
-              <Text style={styles.secondaryBtnText}>← BACK</Text>
+            <TouchableOpacity onPress={() => setStep(2)} style={[styles.secondaryBtn, styles.backBtn]}>
+              <Text style={styles.secondaryBtnText}>BACK</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleStep3Next}
@@ -394,23 +461,7 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
 
   // Step 5: Install prompt (web only)
   if (step === 5) return (
-    <ScrollView contentContainerStyle={[styles.screen, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}>
-      <ProgressDots />
-      <Text style={styles.stepTitle}>ONE MORE THING</Text>
-      <View style={styles.card}>
-        <Text style={styles.cardLabel}>ADD TO YOUR HOME SCREEN</Text>
-        <Text style={styles.installHint}>
-          Install the app for the best experience — works offline and feels just like a native app.
-        </Text>
-        <InstallPrompt />
-        <TouchableOpacity onPress={handleFinish} style={[styles.primaryBtn, { marginTop: 8 }]}>
-          <Text style={styles.primaryBtnText}>START CHALLENGE →</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => setStep(4)}>
-          <Text style={styles.ghostBtnText}>← BACK</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+    <InstallStep onFinish={handleFinish} onBack={() => setStep(4)} ProgressDots={ProgressDots} insets={insets} />
   );
 
   return null;
@@ -453,6 +504,18 @@ const styles = StyleSheet.create({
   title: { fontFamily: fonts.pixel, fontSize: 20, color: colors.accent, lineHeight: 30, textShadowColor: 'rgba(232, 100, 58, 0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 },
   stepTitle: { fontFamily: fonts.pixel, fontSize: 12, color: colors.accent, textAlign: 'center' },
   installHint: { fontFamily: fonts.inter, fontSize: 13, color: colors.textMuted, textAlign: 'center', lineHeight: 20 },
+  installInstructions: { alignSelf: 'stretch', gap: 12 },
+  installNotice: { flexDirection: 'row', alignItems: 'center', gap: 6, padding: 10, borderWidth: 1, borderColor: colors.accent, backgroundColor: colors.accentLight },
+  installNoticeText: { fontFamily: fonts.inter, fontSize: 12, color: colors.textMuted, flex: 1, lineHeight: 18 },
+  installNoticeBold: { color: colors.accent, fontFamily: fonts.interSemiBold },
+  installSteps: { gap: 10 },
+  installStep: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  installStepNum: { width: 20, height: 20, borderWidth: 1, borderColor: colors.accent, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accentLight },
+  installStepNumText: { fontFamily: fonts.pixel, fontSize: 6, color: colors.accent },
+  installStepText: { fontFamily: fonts.inter, fontSize: 12, color: colors.textMuted, flex: 1, lineHeight: 18 },
+  installBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12, borderWidth: 2, borderColor: colors.accent, backgroundColor: colors.accentLight },
+  installBtnText: { fontFamily: fonts.pixel, fontSize: 8, color: colors.accent },
+  installSkipHint: { fontFamily: fonts.inter, fontSize: 11, color: colors.textMuted, textAlign: 'center', lineHeight: 16, opacity: 0.7 },
   card: {
     width: '100%',
     padding: 24,
@@ -495,6 +558,7 @@ const styles = StyleSheet.create({
   secondaryBtnText: { fontFamily: fonts.pixel, fontSize: 8, color: colors.textMuted },
   ghostBtnText: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted, paddingVertical: 8 },
   btnRow: { flexDirection: 'row', gap: 8, alignSelf: 'stretch' },
+  backBtn: { paddingHorizontal: 16, flexGrow: 0, flexShrink: 0, flexBasis: 'auto' },
   field: { width: '100%', gap: 8 },
   fieldLabel: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
   input: {
