@@ -1,9 +1,9 @@
-'use client';
-
 import { useState } from 'react';
-import { DayEntry } from '@/lib/types';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { DayEntry } from '../lib/types';
 import { ChallengeItem } from './ChallengeItem';
 import { WaterTracker } from './WaterTracker';
+import { colors, fonts, shadows } from '../lib/theme';
 
 interface ChallengeChecklistProps {
   entry: DayEntry;
@@ -13,13 +13,10 @@ interface ChallengeChecklistProps {
 }
 
 export function ChallengeChecklist({ entry, readOnly, onUpdate, weightUnit = 'lbs' }: ChallengeChecklistProps) {
-  const [w1Duration, setW1Duration] = useState(entry.workoutOneDuration);
-  const [w2Duration, setW2Duration] = useState(entry.workoutTwoDuration);
+  const [w1Duration, setW1Duration] = useState(String(entry.workoutOneDuration));
+  const [w2Duration, setW2Duration] = useState(String(entry.workoutTwoDuration));
   const [weightInput, setWeightInput] = useState(entry.bodyWeight ? String(entry.bodyWeight) : '');
   const [logExpanded, setLogExpanded] = useState(!!(entry.bodyWeight || entry.mood || entry.energyLevel));
-
-  const pixelFont = { fontFamily: '"Press Start 2P", monospace' };
-  const vt323 = { fontFamily: '"VT323", monospace' };
 
   function computeAllCore(updates: Partial<DayEntry> = {}): boolean {
     const e = { ...entry, ...updates };
@@ -48,218 +45,295 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate, weightUnit = 'lb
     patch({ pagesRead, readingCompleted: pagesRead >= 10 });
   }
 
-  const btnBase: React.CSSProperties = {
-    ...pixelFont,
-    fontSize: '7px',
-    padding: '3px 10px',
-    border: '2px solid var(--border)',
-    boxShadow: '2px 2px 0 #000',
-    background: 'var(--surface-2)',
-    color: 'var(--text)',
-    cursor: 'pointer',
-  };
-
-  const inputStyle: React.CSSProperties = {
-    ...pixelFont,
-    fontSize: '7px',
-    border: '2px solid var(--border)',
-    background: 'var(--surface-2)',
-    outline: 'none',
-    color: 'var(--text)',
-  };
+  const moodLabels = ['LOW', 'MEH', 'OK', 'GOOD', 'GREAT'];
+  const energyLabels = ['DRAINED', 'LOW', 'NORMAL', 'HIGH', 'PEAK'];
 
   return (
-    <div className="space-y-2">
+    <View style={styles.list}>
       {/* Workout 1 */}
-      <ChallengeItem label="Workout #1 — 45 min" icon="/images/workout1.png" completed={entry.workoutOneCompleted} readOnly={readOnly}
-        onToggle={() => patch({ workoutOneCompleted: !entry.workoutOneCompleted })}>
+      <ChallengeItem
+        label="Workout #1 — 45 min"
+        icon="/images/workout1.png"
+        completed={entry.workoutOneCompleted}
+        readOnly={readOnly}
+        onToggle={() => patch({ workoutOneCompleted: !entry.workoutOneCompleted })}
+      >
         {!readOnly && (
-          <div className="flex items-center gap-2 mt-1" onClick={(e) => e.stopPropagation()}>
-            <input type="number" value={w1Duration}
-              onChange={(e) => setW1Duration(Number(e.target.value))}
-              onBlur={() => patch({ workoutOneDuration: w1Duration })}
-              className="w-16 px-2 py-1" style={inputStyle} />
-            <span style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>min</span>
-          </div>
+          <View style={styles.durationRow}>
+            <TextInput
+              value={w1Duration}
+              onChangeText={setW1Duration}
+              onBlur={() => patch({ workoutOneDuration: Number(w1Duration) || 45 })}
+              keyboardType="numeric"
+              style={styles.durationInput}
+              placeholderTextColor={colors.textMuted}
+            />
+            <Text style={styles.durationUnit}>min</Text>
+          </View>
         )}
       </ChallengeItem>
 
       {/* Workout 2 */}
-      <ChallengeItem label="Workout #2 — Outdoor" icon="/images/workout2.png"
-        completed={entry.workoutTwoCompleted && entry.workoutTwoOutdoor} readOnly={readOnly}
+      <ChallengeItem
+        label="Workout #2 — Outdoor"
+        icon="/images/workout2.png"
+        completed={entry.workoutTwoCompleted && entry.workoutTwoOutdoor}
+        readOnly={readOnly}
         onToggle={() => { if (!entry.workoutTwoOutdoor) return; patch({ workoutTwoCompleted: !entry.workoutTwoCompleted }); }}
-        disabled={!entry.workoutTwoOutdoor && !readOnly} disabledReason="Tap 'OUTDOOR' first">
-        <div className="flex flex-wrap items-center gap-2 mt-1" onClick={(e) => e.stopPropagation()}>
-          {!readOnly && (
-            <div className="flex items-center gap-2">
-              <input type="number" value={w2Duration}
-                onChange={(e) => setW2Duration(Number(e.target.value))}
-                onBlur={() => patch({ workoutTwoDuration: w2Duration })}
-                className="w-16 px-2 py-1" style={inputStyle} />
-              <span style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>min</span>
-            </div>
-          )}
-          {!readOnly && (
-            <button onClick={() => patch({
-              workoutTwoOutdoor: !entry.workoutTwoOutdoor,
-              workoutTwoCompleted: entry.workoutTwoCompleted && entry.workoutTwoOutdoor ? false : entry.workoutTwoCompleted,
-            })} style={{
-              ...pixelFont, fontSize: '7px', padding: '5px 12px',
-              border: '2px solid',
-              cursor: 'pointer',
-              borderColor: entry.workoutTwoOutdoor ? 'var(--green)' : 'var(--accent)',
-              boxShadow: entry.workoutTwoOutdoor ? 'var(--glow-green), 2px 2px 0 #000' : 'var(--glow-accent), 2px 2px 0 #000',
-              background: entry.workoutTwoOutdoor ? 'var(--green-light)' : 'var(--accent-light)',
-              color: entry.workoutTwoOutdoor ? 'var(--green)' : 'var(--accent)',
-            }}>
-              {entry.workoutTwoOutdoor ? 'OUTDOOR ✓' : '? OUTDOOR ?'}
-            </button>
-          )}
-        </div>
+        disabled={!entry.workoutTwoOutdoor && !readOnly}
+        disabledReason="Tap 'OUTDOOR' first"
+      >
+        {!readOnly && (
+          <View style={styles.w2Controls}>
+            <View style={styles.durationRow}>
+              <TextInput
+                value={w2Duration}
+                onChangeText={setW2Duration}
+                onBlur={() => patch({ workoutTwoDuration: Number(w2Duration) || 45 })}
+                keyboardType="numeric"
+                style={styles.durationInput}
+                placeholderTextColor={colors.textMuted}
+              />
+              <Text style={styles.durationUnit}>min</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => patch({
+                workoutTwoOutdoor: !entry.workoutTwoOutdoor,
+                workoutTwoCompleted: entry.workoutTwoCompleted && entry.workoutTwoOutdoor ? false : entry.workoutTwoCompleted,
+              })}
+              style={[
+                styles.outdoorBtn,
+                entry.workoutTwoOutdoor ? styles.outdoorBtnActive : styles.outdoorBtnInactive,
+              ]}
+            >
+              <Text style={[
+                styles.outdoorBtnText,
+                entry.workoutTwoOutdoor ? styles.outdoorBtnTextGreen : styles.outdoorBtnTextAccent,
+              ]}>
+                {entry.workoutTwoOutdoor ? 'OUTDOOR ✓' : '? OUTDOOR ?'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ChallengeItem>
 
       {/* Diet */}
-      <ChallengeItem label="No cheat meals today" icon="/images/diet.png" completed={entry.dietCompleted} readOnly={readOnly}
-        onToggle={() => patch({ dietCompleted: !entry.dietCompleted })} />
+      <ChallengeItem
+        label="No cheat meals today"
+        icon="/images/diet.png"
+        completed={entry.dietCompleted}
+        readOnly={readOnly}
+        onToggle={() => patch({ dietCompleted: !entry.dietCompleted })}
+      />
 
       {/* Water */}
-      <ChallengeItem label="Drink 1 gallon of water" icon="/images/water.png" completed={entry.waterCompleted} readOnly={readOnly}>
+      <ChallengeItem
+        label="Drink 1 gallon of water"
+        icon="/images/water.png"
+        completed={entry.waterCompleted}
+        readOnly={readOnly}
+      >
         <WaterTracker ozLogged={entry.waterOzLogged} goal={128} readOnly={readOnly} onAdd={addWater} onSetCustom={setWater} />
       </ChallengeItem>
 
       {/* Reading */}
-      <ChallengeItem label="Read 10 pages" icon="/images/reading.png" completed={entry.readingCompleted} readOnly={readOnly}
-        onToggle={() => { if (entry.readingCompleted) patch({ readingCompleted: false, pagesRead: 0 }); }}>
-        <div className="mt-2 space-y-2" onClick={(e) => e.stopPropagation()}>
-          {/* Progress bar */}
-          <div className="flex items-center gap-2">
-            <div className="flex-1 h-3" style={{ border: '2px solid var(--border)', background: 'var(--bg)' }}>
-              <div className="h-full transition-all duration-300" style={{
-                width: `${Math.min(100, (entry.pagesRead / 10) * 100)}%`,
-                background: entry.readingCompleted ? 'var(--green)' : 'var(--accent)',
-                boxShadow: entry.readingCompleted ? 'var(--glow-green)' : entry.pagesRead > 0 ? 'var(--glow-accent)' : 'none',
-              }} />
-            </div>
-            <span style={{ ...vt323, fontSize: '18px', color: entry.readingCompleted ? 'var(--green)' : 'var(--text-muted)', minWidth: 55 }}>
+      <ChallengeItem
+        label="Read 10 pages"
+        icon="/images/reading.png"
+        completed={entry.readingCompleted}
+        readOnly={readOnly}
+        onToggle={() => { if (entry.readingCompleted) patch({ readingCompleted: false, pagesRead: 0 }); }}
+      >
+        <View style={styles.readingContent}>
+          <View style={styles.readingBarRow}>
+            <View style={styles.barTrack}>
+              <View style={[
+                styles.barFill,
+                { width: `${Math.min(100, (entry.pagesRead / 10) * 100)}%` as any },
+                entry.readingCompleted ? styles.barFillDone : styles.barFillAccent,
+              ]} />
+            </View>
+            <Text style={[styles.pagesLabel, entry.readingCompleted && styles.pagesLabelDone]}>
               {entry.pagesRead}/10 pg
-            </span>
-          </div>
-
+            </Text>
+          </View>
           {!readOnly && (
-            <>
-              {/* Add + Reset pages */}
-              <div className="flex gap-1.5 flex-wrap">
-                <span style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)', alignSelf: 'center' }}>+</span>
-                {[1, 5, 10].map((n) => (
-                  <button key={n} onClick={() => addPages(n)} style={btnBase} className="active:translate-y-px transition-transform">
-                    {n}pg
-                  </button>
-                ))}
-                {entry.pagesRead > 0 && (
-                  <button onClick={() => patch({ pagesRead: 0, readingCompleted: false })}
-                    style={{ ...btnBase, color: 'var(--text-muted)' }}
-                    className="active:translate-y-px transition-transform">
-                    RESET
-                  </button>
-                )}
-              </div>
-            </>
+            <View style={styles.pageBtnRow}>
+              <Text style={styles.plus}>+</Text>
+              {[1, 5, 10].map((n) => (
+                <TouchableOpacity key={n} onPress={() => addPages(n)} style={styles.pageBtn}>
+                  <Text style={styles.pageBtnText}>{n}pg</Text>
+                </TouchableOpacity>
+              ))}
+              {entry.pagesRead > 0 && (
+                <TouchableOpacity
+                  onPress={() => patch({ pagesRead: 0, readingCompleted: false })}
+                  style={styles.pageBtn}
+                >
+                  <Text style={[styles.pageBtnText, { color: colors.textMuted }]}>RESET</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           )}
-        </div>
+        </View>
       </ChallengeItem>
 
       {/* Photo */}
-      <ChallengeItem label="Progress photo" icon="/images/camera.png" completed={entry.photoCompleted} readOnly={readOnly}
-        onToggle={() => patch({ photoCompleted: !entry.photoCompleted })}>
+      <ChallengeItem
+        label="Progress photo"
+        icon="/images/camera.png"
+        completed={entry.photoCompleted}
+        readOnly={readOnly}
+        onToggle={() => patch({ photoCompleted: !entry.photoCompleted })}
+      >
         {!readOnly && (
-          <div className="mt-2" onClick={(e) => e.stopPropagation()}>
-            <button
-              onClick={() => setLogExpanded((v) => !v)}
-              className="flex items-center gap-2 cursor-pointer transition-opacity hover:opacity-80"
-              style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)', background: 'none', border: 'none', padding: '2px 0' }}
+          <View style={{ marginTop: 8 }}>
+            <TouchableOpacity
+              onPress={() => setLogExpanded((v) => !v)}
+              style={styles.logToggle}
             >
-              {logExpanded ? '▼' : '▶'} LOG DAILY STATS (opt)
-            </button>
+              <Text style={styles.logToggleText}>
+                {logExpanded ? '▼' : '▶'} LOG DAILY STATS (opt)
+              </Text>
+            </TouchableOpacity>
 
             {logExpanded && (
-              <div className="mt-3 space-y-4 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
-
+              <View style={styles.logSection}>
                 {/* Weight */}
-                <div className="space-y-1">
-                  <p style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>WEIGHT ({weightUnit})</p>
-                  <input
-                    type="number"
+                <View style={styles.logField}>
+                  <Text style={styles.logFieldLabel}>WEIGHT ({weightUnit})</Text>
+                  <TextInput
                     value={weightInput}
-                    onChange={(e) => setWeightInput(e.target.value)}
+                    onChangeText={setWeightInput}
                     onBlur={() => {
                       const val = parseFloat(weightInput);
                       if (!isNaN(val) && val > 0) patch({ bodyWeight: val });
                     }}
+                    keyboardType="decimal-pad"
                     placeholder={`enter ${weightUnit}`}
-                    style={{ ...inputStyle, width: 120 }}
-                    className="px-2 py-1"
+                    placeholderTextColor={colors.textMuted}
+                    style={[styles.durationInput, { width: 120 }]}
                   />
-                </div>
+                </View>
 
                 {/* Mood */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>MOOD</p>
+                <View style={styles.logField}>
+                  <View style={styles.logFieldHeaderRow}>
+                    <Text style={styles.logFieldLabel}>MOOD</Text>
                     {entry.mood != null && (
-                      <p style={{ ...pixelFont, fontSize: '6px', color: 'var(--accent)' }}>
-                        {['LOW', 'MEH', 'OK', 'GOOD', 'GREAT'][entry.mood - 1]}
-                      </p>
+                      <Text style={[styles.logFieldLabel, { color: colors.accent }]}>
+                        {moodLabels[entry.mood - 1]}
+                      </Text>
                     )}
-                  </div>
-                  <div className="flex gap-1.5">
+                  </View>
+                  <View style={styles.ratingRow}>
                     {[1, 2, 3, 4, 5].map((val) => (
-                      <button key={val} onClick={() => patch({ mood: entry.mood === val ? undefined : val })}
-                        style={{
-                          ...pixelFont, fontSize: '8px', padding: '5px 0', border: '2px solid', flex: 1,
-                          borderColor: entry.mood === val ? 'var(--accent)' : 'var(--border)',
-                          background: entry.mood === val ? 'var(--accent-light)' : 'var(--bg)',
-                          boxShadow: entry.mood === val ? 'var(--glow-accent)' : 'none',
-                          color: entry.mood === val ? 'var(--accent)' : 'var(--text-muted)',
-                          cursor: 'pointer', transition: 'all 150ms',
-                        }}>
-                        {val}
-                      </button>
+                      <TouchableOpacity
+                        key={val}
+                        onPress={() => patch({ mood: entry.mood === val ? undefined : val })}
+                        style={[
+                          styles.ratingBtn,
+                          entry.mood === val && styles.ratingBtnAccentActive,
+                        ]}
+                      >
+                        <Text style={[
+                          styles.ratingBtnText,
+                          entry.mood === val ? styles.ratingBtnTextAccent : styles.ratingBtnTextMuted,
+                        ]}>{val}</Text>
+                      </TouchableOpacity>
                     ))}
-                  </div>
-                </div>
+                  </View>
+                </View>
 
                 {/* Energy */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>ENERGY</p>
+                <View style={styles.logField}>
+                  <View style={styles.logFieldHeaderRow}>
+                    <Text style={styles.logFieldLabel}>ENERGY</Text>
                     {entry.energyLevel != null && (
-                      <p style={{ ...pixelFont, fontSize: '6px', color: 'var(--green)' }}>
-                        {['DRAINED', 'LOW', 'NORMAL', 'HIGH', 'PEAK'][entry.energyLevel - 1]}
-                      </p>
+                      <Text style={[styles.logFieldLabel, { color: colors.green }]}>
+                        {energyLabels[entry.energyLevel - 1]}
+                      </Text>
                     )}
-                  </div>
-                  <div className="flex gap-1.5">
-                    {[1, 2, 3, 4, 5].map((val) => (
-                      <button key={val} onClick={() => patch({ energyLevel: entry.energyLevel === val ? undefined : val })}
-                        style={{
-                          ...pixelFont, fontSize: '8px', padding: '5px 0', border: '2px solid', flex: 1,
-                          borderColor: entry.energyLevel !== undefined && entry.energyLevel >= val ? 'var(--green)' : 'var(--border)',
-                          background: entry.energyLevel !== undefined && entry.energyLevel >= val ? 'var(--green-light)' : 'var(--bg)',
-                          boxShadow: entry.energyLevel !== undefined && entry.energyLevel >= val ? 'var(--glow-green)' : 'none',
-                          color: entry.energyLevel !== undefined && entry.energyLevel >= val ? 'var(--green)' : 'var(--text-muted)',
-                          cursor: 'pointer', transition: 'all 150ms',
-                        }}>
-                        {val}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-              </div>
+                  </View>
+                  <View style={styles.ratingRow}>
+                    {[1, 2, 3, 4, 5].map((val) => {
+                      const filled = entry.energyLevel !== undefined && entry.energyLevel >= val;
+                      return (
+                        <TouchableOpacity
+                          key={val}
+                          onPress={() => patch({ energyLevel: entry.energyLevel === val ? undefined : val })}
+                          style={[
+                            styles.ratingBtn,
+                            filled && styles.ratingBtnGreenActive,
+                          ]}
+                        >
+                          <Text style={[
+                            styles.ratingBtnText,
+                            filled ? styles.ratingBtnTextGreen : styles.ratingBtnTextMuted,
+                          ]}>{val}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              </View>
             )}
-          </div>
+          </View>
         )}
       </ChallengeItem>
-    </div>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  list: { gap: 8 },
+  durationRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  durationInput: {
+    width: 64,
+    fontFamily: fonts.pixel,
+    fontSize: 7,
+    borderWidth: 2,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+    color: colors.text,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  durationUnit: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
+  w2Controls: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 4 },
+  outdoorBtn: { paddingHorizontal: 12, paddingVertical: 5, borderWidth: 2, ...shadows.pixel },
+  outdoorBtnActive: { borderColor: colors.green, backgroundColor: colors.greenLight, ...shadows.glowGreen },
+  outdoorBtnInactive: { borderColor: colors.accent, backgroundColor: colors.accentLight, ...shadows.glowAccent },
+  outdoorBtnText: { fontFamily: fonts.pixel, fontSize: 7 },
+  outdoorBtnTextGreen: { color: colors.green },
+  outdoorBtnTextAccent: { color: colors.accent },
+  readingContent: { gap: 8 },
+  readingBarRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  barTrack: { flex: 1, height: 12, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.bg },
+  barFill: { height: '100%' },
+  barFillAccent: { backgroundColor: colors.accent },
+  barFillDone: { backgroundColor: colors.green },
+  pagesLabel: { fontFamily: fonts.vt323, fontSize: 18, color: colors.textMuted, minWidth: 55 },
+  pagesLabelDone: { color: colors.green },
+  pageBtnRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
+  plus: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
+  pageBtn: { paddingHorizontal: 10, paddingVertical: 3, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surface2, ...shadows.pixel },
+  pageBtnText: { fontFamily: fonts.pixel, fontSize: 7, color: colors.text },
+  logToggle: { padding: 0 },
+  logToggleText: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
+  logSection: { marginTop: 12, gap: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border },
+  logField: { gap: 8 },
+  logFieldHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  logFieldLabel: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
+  ratingRow: { flexDirection: 'row', gap: 6 },
+  ratingBtn: {
+    flex: 1, paddingVertical: 5, borderWidth: 2, borderColor: colors.border,
+    backgroundColor: colors.bg, alignItems: 'center',
+  },
+  ratingBtnAccentActive: { borderColor: colors.accent, backgroundColor: colors.accentLight, ...shadows.glowAccent },
+  ratingBtnGreenActive: { borderColor: colors.green, backgroundColor: colors.greenLight, ...shadows.glowGreen },
+  ratingBtnText: { fontFamily: fonts.pixel, fontSize: 8 },
+  ratingBtnTextMuted: { color: colors.textMuted },
+  ratingBtnTextAccent: { color: colors.accent },
+  ratingBtnTextGreen: { color: colors.green },
+});

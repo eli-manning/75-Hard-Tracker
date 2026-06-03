@@ -1,11 +1,9 @@
-'use client';
-
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { getFirebaseDb } from '@/lib/firebase';
-import { DayEntry } from '@/lib/types';
-import { getOrCreateDayEntry, updateDayEntry, updateStreakOnProfile } from '@/lib/firestore';
-import { getCached, setCached, getSessionCached, setSessionCached } from '@/lib/cache';
+import { getFirebaseDb } from '../lib/firebase';
+import { DayEntry } from '../lib/types';
+import { getOrCreateDayEntry, updateDayEntry, updateStreakOnProfile } from '../lib/firestore';
+import { getCached, setCached, getSessionCached, setSessionCached } from '../lib/cache';
 import { format } from 'date-fns';
 
 export function useDayData(uid: string | null, challengeStartDate: string | null) {
@@ -24,14 +22,13 @@ export function useDayData(uid: string | null, challengeStartDate: string | null
 
     activeUid.current = uid;
 
-    // If cached, show immediately and don't show loading state
     const existing = cacheKey ? getCached<DayEntry>(cacheKey) : null;
     if (existing) {
       setDayEntry(existing);
       setLoading(false);
       prevAllCore.current = existing.allCoreCompleted;
     } else {
-      setDayEntry(null); // Clear stale data from previous uid immediately
+      setDayEntry(null);
       setLoading(true);
     }
 
@@ -58,6 +55,9 @@ export function useDayData(uid: string | null, challengeStartDate: string | null
             prevAllCore.current = data.allCoreCompleted;
             updateStreakOnProfile(uid).catch(() => {});
           }
+        },
+        (err) => {
+          if (err.code !== 'permission-denied') console.error(err);
         }
       );
     }).catch(() => {

@@ -1,11 +1,11 @@
-'use client';
-
 import { useState } from 'react';
-import { CustomTask, DayEntry } from '@/lib/types';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { CustomTask, DayEntry } from '../lib/types';
 import { CustomTaskItem } from './CustomTaskItem';
 import { TaskEditor } from './TaskEditor';
-import { createCustomTask, updateCustomTask, archiveCustomTask } from '@/lib/firestore';
-import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
+import { createCustomTask, updateCustomTask, archiveCustomTask } from '../lib/firestore';
+import { colors, fonts } from '../lib/theme';
 
 interface CustomTaskListProps {
   tasks: CustomTask[];
@@ -23,8 +23,6 @@ export function CustomTaskList({ tasks, dayEntry, uid, readOnly, onDayUpdate }: 
 
   const dailyTasks = tasks.filter((t) => t.type === 'daily' && !t.archived);
   const backlogTasks = tasks.filter((t) => t.type === 'backlog' && !t.archived);
-
-  const pixelFont = { fontFamily: '"Press Start 2P", monospace' };
 
   function toggleDailyTask(taskId: string) {
     const current = dayEntry.customTasksCompleted;
@@ -63,83 +61,76 @@ export function CustomTaskList({ tasks, dayEntry, uid, readOnly, onDayUpdate }: 
   return (
     <>
       {/* Daily Tasks */}
-      <div className="space-y-1">
-        <div className="flex items-center justify-between mb-2">
-          <span style={{ ...pixelFont, fontSize: '10px' }}>YOUR TASKS</span>
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>YOUR TASKS</Text>
           {!readOnly && (
-            <button
-              onClick={() => openEditor('daily')}
-              className="flex items-center gap-1"
-              style={{ ...pixelFont, fontSize: '8px', color: 'var(--accent)' }}
-            >
-              <Plus size={12} /> ADD
-            </button>
+            <TouchableOpacity onPress={() => openEditor('daily')} style={styles.addBtn}>
+              <Ionicons name="add" size={12} color={colors.accent} />
+              <Text style={styles.addText}>ADD</Text>
+            </TouchableOpacity>
           )}
-        </div>
+        </View>
 
         {dailyTasks.length === 0 ? (
-          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: 'var(--text-muted)' }}>
-            No daily tasks yet
-          </p>
+          <Text style={styles.empty}>No daily tasks yet</Text>
         ) : (
-          dailyTasks.map((task) => (
-            <CustomTaskItem
-              key={task.id}
-              task={task}
-              completed={dayEntry.customTasksCompleted.includes(task.id)}
-              readOnly={readOnly}
-              onToggle={() => toggleDailyTask(task.id)}
-              onEdit={() => openEditor('daily', task)}
-              onDelete={() => archiveCustomTask(uid, task.id)}
-            />
-          ))
-        )}
-      </div>
-
-      {/* Backlog */}
-      <div className="space-y-1 mt-4">
-        <div className="flex items-center justify-between mb-2">
-          <button
-            onClick={() => setBacklogOpen((o) => !o)}
-            className="flex items-center gap-1"
-            style={{ ...pixelFont, fontSize: '10px' }}
-          >
-            {backlogOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-            BACKLOG
-          </button>
-          {!readOnly && (
-            <button
-              onClick={() => openEditor('backlog')}
-              className="flex items-center gap-1"
-              style={{ ...pixelFont, fontSize: '8px', color: 'var(--accent)' }}
-            >
-              <Plus size={12} /> ADD
-            </button>
-          )}
-        </div>
-
-        {backlogOpen && (
-          backlogTasks.length === 0 ? (
-            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: 'var(--text-muted)' }}>
-              Backlog is empty
-            </p>
-          ) : (
-            backlogTasks.map((task) => (
+          <View style={styles.taskList}>
+            {dailyTasks.map((task) => (
               <CustomTaskItem
                 key={task.id}
                 task={task}
-                completed={false}
+                completed={dayEntry.customTasksCompleted.includes(task.id)}
                 readOnly={readOnly}
-                onToggle={() => toggleBacklogTask(task)}
-                onEdit={() => openEditor('backlog', task)}
+                onToggle={() => toggleDailyTask(task.id)}
+                onEdit={() => openEditor('daily', task)}
                 onDelete={() => archiveCustomTask(uid, task.id)}
               />
-            ))
+            ))}
+          </View>
+        )}
+      </View>
+
+      {/* Backlog */}
+      <View style={[styles.section, { marginTop: 16 }]}>
+        <View style={styles.sectionHeader}>
+          <TouchableOpacity onPress={() => setBacklogOpen((o) => !o)} style={styles.backlogToggle}>
+            <Ionicons
+              name={backlogOpen ? 'chevron-down' : 'chevron-forward'}
+              size={12}
+              color={colors.text}
+            />
+            <Text style={styles.sectionTitle}>BACKLOG</Text>
+          </TouchableOpacity>
+          {!readOnly && (
+            <TouchableOpacity onPress={() => openEditor('backlog')} style={styles.addBtn}>
+              <Ionicons name="add" size={12} color={colors.accent} />
+              <Text style={styles.addText}>ADD</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {backlogOpen && (
+          backlogTasks.length === 0 ? (
+            <Text style={styles.empty}>Backlog is empty</Text>
+          ) : (
+            <View style={styles.taskList}>
+              {backlogTasks.map((task) => (
+                <CustomTaskItem
+                  key={task.id}
+                  task={task}
+                  completed={false}
+                  readOnly={readOnly}
+                  onToggle={() => toggleBacklogTask(task)}
+                  onEdit={() => openEditor('backlog', task)}
+                  onDelete={() => archiveCustomTask(uid, task.id)}
+                />
+              ))}
+            </View>
           )
         )}
-      </div>
+      </View>
 
-      {/* Editor drawer */}
       {editorOpen && (
         <TaskEditor
           task={editingTask}
@@ -151,3 +142,41 @@ export function CustomTaskList({ tasks, dayEntry, uid, readOnly, onDayUpdate }: 
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  section: {},
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  sectionTitle: {
+    fontFamily: fonts.pixel,
+    fontSize: 10,
+    color: colors.text,
+  },
+  addBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  addText: {
+    fontFamily: fonts.pixel,
+    fontSize: 8,
+    color: colors.accent,
+  },
+  empty: {
+    fontFamily: fonts.inter,
+    fontSize: 13,
+    color: colors.textMuted,
+  },
+  taskList: {
+    gap: 4,
+  },
+  backlogToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+});

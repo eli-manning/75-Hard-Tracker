@@ -1,39 +1,73 @@
-'use client';
+import { useEffect, useState, useRef } from 'react';
+import { View, Text, Animated, StyleSheet, Platform } from 'react-native';
+import { colors, fonts } from '../lib/theme';
 
-import { useEffect, useState } from 'react';
-
-const pixelFont = { fontFamily: '"Press Start 2P", monospace' };
+const barFillGlow = Platform.OS === 'web'
+  ? ({ boxShadow: `0 0 8px ${colors.accent}` } as any)
+  : {
+      shadowColor: colors.accent,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.6,
+      shadowRadius: 8,
+    };
 
 export function LoadingScreen() {
   const [dots, setDots] = useState(0);
-  const [fill, setFill] = useState(0);
+  const fillAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const d = setInterval(() => setDots((n) => (n + 1) % 4), 500);
-    // Reaches 100% in ~600ms so the bar completes before data arrives on most connections
-    const b = setInterval(() => setFill((n) => Math.min(n + 2, 100)), 12);
-    return () => { clearInterval(d); clearInterval(b); };
+    Animated.timing(fillAnim, {
+      toValue: 100,
+      duration: 600,
+      useNativeDriver: false,
+    }).start();
+    return () => clearInterval(d);
   }, []);
 
+  const widthInterpolated = fillAnim.interpolate({
+    inputRange: [0, 100],
+    outputRange: ['0%', '100%'],
+  });
+
   return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center gap-8" style={{ background: 'var(--bg)', zIndex: 100 }}>
-      <div style={{ ...pixelFont, fontSize: '20px', color: 'var(--accent)', textShadow: 'var(--glow-accent)', lineHeight: 1.6 }}>
-        75 HARD
-      </div>
-      <div style={{ width: 220 }}>
-        <div style={{ border: '2px solid var(--border)', background: 'var(--bg)', height: 20 }}>
-          <div style={{
-            height: '100%',
-            width: `${fill}%`,
-            background: 'var(--accent)',
-            boxShadow: 'var(--glow-accent)',
-            transition: 'width 80ms linear',
-          }} />
-        </div>
-        <p style={{ ...pixelFont, fontSize: '8px', color: 'var(--text-muted)', textAlign: 'center', marginTop: 10 }}>
-          LOADING{'.'.repeat(dots)}
-        </p>
-      </div>
-    </div>
+    <View style={styles.container}>
+      <View style={styles.barWrap}>
+        <View style={styles.barTrack}>
+          <Animated.View style={[styles.barFill, barFillGlow, { width: widthInterpolated }]} />
+        </View>
+        <Text style={styles.loadingText}>{'LOADING' + '.'.repeat(dots)}</Text>
+      </View>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 32,
+  },
+  barWrap: {
+    width: 220,
+    gap: 10,
+  },
+  barTrack: {
+    borderWidth: 2,
+    borderColor: colors.border,
+    backgroundColor: colors.bg,
+    height: 20,
+  },
+  barFill: {
+    height: '100%',
+    backgroundColor: colors.accent,
+  },
+  loadingText: {
+    fontFamily: fonts.pixel,
+    fontSize: 8,
+    color: colors.textMuted,
+    textAlign: 'center',
+  },
+});

@@ -10,8 +10,8 @@ import { getAvatarUrl, generateSeed, hasCustomAvatar } from '@/lib/avatar';
 import { invalidate, getSessionCached, setSessionCached } from '@/lib/cache';
 import { AuthGuard } from '@/components/AuthGuard';
 import { LoadingScreen } from '@/components/LoadingScreen';
-import { RefreshCw, ChevronRight, ChevronLeft, Check, TrendingDown, Dumbbell, Heart, Brain } from 'lucide-react';
-import { InstallPrompt } from '@/components/InstallPrompt';
+import { RefreshCw, ChevronRight, ChevronLeft, Check, TrendingDown, Dumbbell, Heart, Brain, Download, Share2, Smartphone, Monitor } from 'lucide-react';
+import { useInstallPrompt } from '@/hooks/useInstallPrompt';
 import { format } from 'date-fns';
 
 const GOALS = [
@@ -35,6 +35,8 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
   const [startingWeight, setStartingWeight] = useState(initialProfile.startingWeight ? String(initialProfile.startingWeight) : '');
   const [height, setHeight] = useState(initialProfile.height ? String(initialProfile.height) : '');
   const [fitnessGoal, setFitnessGoal] = useState<string>(initialProfile.fitnessGoal ?? '');
+
+  const { canInstall, isIOS, isInstalled, triggerInstall } = useInstallPrompt();
 
   const pixelFont = { fontFamily: '"Press Start 2P", monospace' };
   const vt323 = { fontFamily: '"VT323", monospace' };
@@ -86,13 +88,15 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
     setStep(4);
   }
 
-  async function handleFinish() {
-    setSaving(true);
-    await updateUserProfile(profile.uid, { onboardingComplete: true });
+  function handleFinish() {
+    // Fire the write without awaiting — a slow first-write for new users was
+    // causing setSaving(true) to lock the button indefinitely. The session
+    // cache is updated synchronously so today/page.tsx can proceed correctly
+    // even if the Firestore write is still in-flight.
+    updateUserProfile(profile.uid, { onboardingComplete: true }).catch(() => {});
     invalidate(`profile-${profile.uid}`);
     const updated = { ...profile, onboardingComplete: true };
     setSessionCached('75hard-profile', updated);
-    setSaving(false);
     setStep(5);
   }
 
@@ -338,7 +342,7 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
   );
 
   // ── Step 4: Ready ─────────────────────────────────────────────────────────
-  return (
+  if (step === 4) return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ background: 'var(--bg)' }}>
       {progressDots}
       <div className="w-full max-w-sm space-y-6">
@@ -401,15 +405,79 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
         <div className="text-center space-y-2">
           <p style={{ ...pixelFont, fontSize: '7px', color: 'var(--text-muted)', letterSpacing: '0.2em' }}>LAST STEP</p>
           <h2 style={{ ...pixelFont, fontSize: '14px', color: 'var(--accent)', textShadow: 'var(--glow-accent)', lineHeight: 1.6 }}>
-            INSTALL APP
+            {isInstalled ? 'APP INSTALLED' : 'INSTALL APP'}
           </h2>
         </div>
 
         <div style={cardStyle} className="p-5 space-y-4">
-          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-            Add 75 Hard Tracker to your home screen for the best experience — works offline and feels like a native app.
-          </p>
-          <InstallPrompt />
+          {isInstalled ? (
+            <div className="flex flex-col items-center gap-3 py-2">
+              <Check size={32} color="var(--green)" />
+              <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', color: 'var(--text)', textAlign: 'center', lineHeight: 1.5 }}>
+                You&apos;re already set up. The app is on your home screen.
+              </p>
+            </div>
+          ) : isIOS ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Smartphone size={14} color="var(--accent)" />
+                <span style={{ ...pixelFont, fontSize: '6px', color: 'var(--accent)' }}>SAFARI ON IPHONE / IPAD</span>
+              </div>
+              {[
+                { icon: <Share2 size={14} />, text: 'Tap the Share button at the bottom of Safari (the box with an arrow)' },
+                { icon: <span style={{ ...pixelFont, fontSize: '8px' }}>+</span>, text: 'Scroll down and tap "Add to Home Screen"' },
+                { icon: <Check size={14} />, text: 'Tap "Add" in the top-right corner to confirm' },
+              ].map((item, i) => (
+                <div key={i} className="flex gap-3 items-start">
+                  <div style={{
+                    width: 28, height: 28, flexShrink: 0,
+                    border: '2px solid var(--border)',
+                    background: 'var(--surface-2)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'var(--text-muted)',
+                  }}>
+                    {item.icon}
+                  </div>
+                  <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.5, paddingTop: 4 }}>
+                    {item.text}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : canInstall ? (
+            <div className="space-y-4">
+              <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                Install the app for instant access, offline support, and a native feel — no App Store needed.
+              </p>
+              <button
+                onClick={triggerInstall}
+                className="w-full flex items-center justify-center gap-2 cursor-pointer transition-all active:translate-y-px"
+                style={{
+                  ...pixelFont, fontSize: '8px', padding: '12px 14px',
+                  border: '2px solid var(--accent)',
+                  boxShadow: 'var(--glow-accent), 2px 2px 0 #000',
+                  background: 'var(--accent-light)',
+                  color: 'var(--accent)',
+                }}
+              >
+                <Download size={13} />
+                ADD TO HOME SCREEN
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Monitor size={14} color="var(--text-muted)" />
+                <span style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>LOOKS LIKE YOU&apos;RE ON DESKTOP</span>
+              </div>
+              <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                To add the app to your phone&apos;s home screen, open this page on your mobile browser and follow the install prompt.
+              </p>
+              <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                You can also skip this — the web app works great in any browser.
+              </p>
+            </div>
+          )}
         </div>
 
         <button

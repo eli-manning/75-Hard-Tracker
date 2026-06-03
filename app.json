@@ -1,0 +1,51 @@
+{
+  "expo": {
+    "name": "75 Hard Tracker",
+    "slug": "75-hard-tracker",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/75_logo.png",
+    "splash": {
+      "image": "./assets/images/75_logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0c0b08"
+    },
+    "scheme": "sevenfivehard",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.elimanning.75hardtracker"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0c0b08",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png"
+      },
+      "package": "com.elimanning.sevenfivehard"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png",
+      "name": "75 Hard Tracker",
+      "shortName": "75 HARD",
+      "description": "Track your 75 Hard challenge",
+      "themeColor": "#0c0b08",
+      "backgroundColor": "#0c0b08",
+      "lang": "en",
+      "scope": "/",
+      "startUrl": "/",
+      "display": "standalone",
+      "orientation": "portrait"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-splash-screen"
+    ],
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}

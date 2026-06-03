@@ -1,6 +1,6 @@
-'use client';
-
-import { DayEntry } from '@/lib/types';
+import { View, Text, StyleSheet } from 'react-native';
+import { DayEntry } from '../lib/types';
+import { colors, fonts } from '../lib/theme';
 
 interface DailyProgressProps {
   entry: DayEntry;
@@ -24,43 +24,74 @@ export function DailyProgress({ entry }: DailyProgressProps) {
   const allDone = done === total;
 
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between">
-        <span
-          style={{
-            fontFamily: '"Press Start 2P", monospace',
-            fontSize: '7px',
-            color: allDone ? 'var(--green)' : 'var(--text-muted)',
-          }}
-        >
+    <View style={styles.container}>
+      <View style={styles.row}>
+        <Text style={[styles.label, allDone && styles.labelDone]}>
           {done}/{total} CORE TASKS
-        </span>
+        </Text>
         {allDone && (
-          <span
-            style={{
-              fontFamily: '"Press Start 2P", monospace',
-              fontSize: '7px',
-              color: 'var(--green)',
-              textShadow: '0 0 8px var(--green)',
-            }}
-          >
-            COMPLETE ✓
-          </span>
+          <Text style={styles.complete}>COMPLETE ✓</Text>
         )}
-      </div>
-      <div
-        className="h-5"
-        style={{ border: '2px solid var(--border)', background: 'var(--bg)' }}
-      >
-        <div
-          className="h-full transition-all duration-500"
-          style={{
-            width: `${pct}%`,
-            background: allDone ? 'var(--green)' : 'var(--accent)',
-            boxShadow: allDone ? 'var(--glow-green)' : pct > 0 ? 'var(--glow-accent)' : 'none',
-          }}
+      </View>
+      <View style={styles.track}>
+        <View
+          style={[
+            styles.fill,
+            { width: `${pct}%` as any },
+            allDone ? styles.fillDone : styles.fillAccent,
+          ]}
         />
-      </div>
-    </div>
+      </View>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    gap: 6,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  label: {
+    fontFamily: fonts.pixel,
+    fontSize: 7,
+    color: colors.textMuted,
+  },
+  labelDone: {
+    color: colors.green,
+  },
+  complete: {
+    fontFamily: fonts.pixel,
+    fontSize: 7,
+    color: colors.green,
+    textShadowColor: 'rgba(78, 203, 106, 0.6)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
+  },
+  track: {
+    height: 20,
+    borderWidth: 2,
+    borderColor: colors.border,
+    backgroundColor: colors.bg,
+  },
+  fill: {
+    height: '100%',
+  },
+  fillAccent: {
+    backgroundColor: colors.accent,
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+  },
+  fillDone: {
+    backgroundColor: colors.green,
+    shadowColor: colors.green,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+  },
+});

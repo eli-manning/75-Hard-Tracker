@@ -1,4 +1,5 @@
-'use client';
+import { View, Text, StyleSheet } from 'react-native';
+import { colors, fonts, shadows } from '../lib/theme';
 
 interface StreakBadgeProps {
   streak: number;
@@ -7,19 +8,25 @@ interface StreakBadgeProps {
 export function StreakBadge({ streak }: StreakBadgeProps) {
   if (streak === 0) return null;
   return (
-    <div
-      className="inline-block px-3 py-1.5"
-      style={{
-        fontFamily: '"Press Start 2P", monospace',
-        fontSize: '7px',
-        background: 'var(--accent-light)',
-        color: 'var(--accent)',
-        border: '2px solid var(--accent)',
-        boxShadow: 'var(--glow-accent), 2px 2px 0 #000',
-        letterSpacing: '0.05em',
-      }}
-    >
-      {streak} DAY STREAK
-    </div>
+    <View style={styles.badge}>
+      <Text style={styles.text}>{streak} DAY STREAK</Text>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  badge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: colors.accentLight,
+    borderWidth: 2,
+    borderColor: colors.accent,
+    ...shadows.glowAccent,
+  },
+  text: {
+    fontFamily: fonts.pixel,
+    fontSize: 7,
+    color: colors.accent,
+    letterSpacing: 0.5,
+  },
+});

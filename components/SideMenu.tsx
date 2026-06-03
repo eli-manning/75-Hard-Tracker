@@ -1,23 +1,21 @@
-'use client';
-
 import { useEffect, useRef, useState } from 'react';
-import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import { signOut } from '@/lib/auth';
 import {
-  getUserProfile,
-  getAllUsers,
-  getPendingRequests,
-  sendFriendRequest,
-  acceptFriendRequest,
-  declineFriendRequest,
-  removeFriend,
-} from '@/lib/firestore';
-import { UserProfile } from '@/lib/types';
-import { getAvatarUrl } from '@/lib/avatar';
-import { LogOut, X, ChevronRight, UserPlus, UserMinus, Users } from 'lucide-react';
-import { InstallPrompt } from '@/components/InstallPrompt';
-import { getCached, invalidate } from '@/lib/cache';
+  View, Text, Image, TextInput, TouchableOpacity,
+  ScrollView, Animated, StyleSheet, Dimensions,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { signOut } from '../lib/auth';
+import {
+  getUserProfile, getAllUsers, getPendingRequests,
+  sendFriendRequest, acceptFriendRequest, declineFriendRequest, removeFriend,
+} from '../lib/firestore';
+import { UserProfile } from '../lib/types';
+import { getAvatarUrl } from '../lib/avatar';
+import { getAvatarSource, AVATAR_PORTRAIT_RATIO } from '../lib/avatarMap';
+import { getCached, invalidate } from '../lib/cache';
+import { colors, fonts, shadows } from '../lib/theme';
 
 interface SideMenuProps {
   open: boolean;
@@ -27,8 +25,27 @@ interface SideMenuProps {
   onRequestsSeen?: () => void;
 }
 
+const DRAWER_WIDTH = 280;
+const SCREEN_WIDTH = Dimensions.get('window').width;
+
+function AvatarImg({ url, size }: { url: string; size: number }) {
+  const source = getAvatarSource(url);
+  const ratio = AVATAR_PORTRAIT_RATIO[url];
+  // Portrait sprites: render taller than the container so the head (top) fills the frame
+  return (
+    <Image
+      source={source}
+      style={{ width: size, height: ratio ? size / ratio : size }}
+      resizeMode={ratio ? 'stretch' : 'cover'}
+    />
+  );
+}
+
 export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSeen }: SideMenuProps) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const drawerAnim = useRef(new Animated.Value(DRAWER_WIDTH)).current;
+  const backdropAnim = useRef(new Animated.Value(0)).current;
 
   const [allUsers, setAllUsers] = useState<UserProfile[]>(() => getCached<UserProfile[]>('all-users') ?? []);
   const [pendingRequests, setPendingRequests] = useState<string[]>([]);
@@ -42,12 +59,19 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSe
   const onRequestsSeenRef = useRef(onRequestsSeen);
   onRequestsSeenRef.current = onRequestsSeen;
 
-  const pixelFont = { fontFamily: '"Press Start 2P", monospace' };
-  const vt323 = { fontFamily: '"VT323", monospace' };
-
   useEffect(() => {
-    document.body.style.overflow = open ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
+    Animated.parallel([
+      Animated.timing(drawerAnim, {
+        toValue: open ? 0 : DRAWER_WIDTH,
+        duration: 280,
+        useNativeDriver: true,
+      }),
+      Animated.timing(backdropAnim, {
+        toValue: open ? 1 : 0,
+        duration: 280,
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, [open]);
 
   useEffect(() => {
@@ -113,195 +137,262 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSe
     (u) => u.uid !== profile.uid && !friendUids.has(u.uid) && !pendingRequests.includes(u.uid)
   );
 
+  const q = friendSearch.trim().toLowerCase();
+  const searchResults = q
+    ? addCandidates.filter((u) => u.displayName.toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
+    : [];
+
   return (
     <>
       {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-40 transition-opacity duration-300"
-        style={{ background: 'rgba(0,0,0,0.7)', opacity: open ? 1 : 0, pointerEvents: open ? 'auto' : 'none' }}
-        onClick={onClose}
-      />
+      <Animated.View
+        pointerEvents={open ? 'auto' : 'none'}
+        style={[styles.backdrop, { opacity: backdropAnim }]}
+      >
+        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} />
+      </Animated.View>
 
       {/* Drawer */}
-      <div
-        className="fixed top-0 right-0 bottom-0 z-50 flex flex-col"
-        style={{
-          width: 280,
-          background: 'var(--surface)',
-          borderLeft: '2px solid var(--border)',
-          boxShadow: open ? '-4px 0 0 #000' : 'none',
-          transform: open ? 'translateX(0)' : 'translateX(100%)',
-          transition: 'transform 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-        }}
-      >
+      <Animated.View style={[styles.drawer, { transform: [{ translateX: drawerAnim }] }]}>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 shrink-0" style={{ borderBottom: '2px solid var(--border)' }}>
-          <span style={{ ...pixelFont, fontSize: '8px', color: 'var(--accent)' }}>MENU</span>
-          <button onClick={onClose} className="cursor-pointer opacity-60 hover:opacity-100 transition-opacity">
-            <X size={18} color="var(--text)" />
-          </button>
-        </div>
+        <View style={[styles.drawerHeader, { paddingTop: Math.max(insets.top, 16) }]}>
+          <Text style={styles.drawerTitle}>MENU</Text>
+          <TouchableOpacity onPress={onClose} style={{ opacity: 0.6 }}>
+            <Ionicons name="close" size={18} color={colors.text} />
+          </TouchableOpacity>
+        </View>
 
-        <div className="flex-1 overflow-y-auto flex flex-col">
-
-          {/* Profile link — prominent CTA */}
-          <button
-            onClick={() => { router.push('/profile'); onClose(); }}
-            className="flex items-center gap-3 p-4 cursor-pointer transition-all hover:opacity-80 active:opacity-60 shrink-0"
-            style={{ borderBottom: '2px solid var(--border)', background: 'var(--surface)', textAlign: 'left' }}
+        <ScrollView style={styles.scrollArea}>
+          {/* Profile link */}
+          <TouchableOpacity
+            onPress={() => { router.push('/profile' as any); onClose(); }}
+            style={styles.profileBtn}
           >
-            <div style={{
-              width: 48, height: 48, border: '2px solid var(--accent)',
-              boxShadow: 'var(--glow-accent)', overflow: 'hidden', flexShrink: 0,
-            }}>
-              <Image src={getAvatarUrl(profile)} alt={profile.displayName} width={48} height={48}
-                className="w-full h-full object-cover object-top"
-                onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/avatars/default.png'; }} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div style={{ ...vt323, fontSize: '22px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {profile.displayName}
-              </div>
-              <div style={{ ...pixelFont, fontSize: '6px', color: 'var(--accent)', marginTop: 2 }}>VIEW PROFILE</div>
-            </div>
-            <ChevronRight size={16} color="var(--accent)" style={{ flexShrink: 0 }} />
-          </button>
+            <View style={styles.avatarFrameAccent}>
+              <AvatarImg url={getAvatarUrl(profile)} size={48} />
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={styles.profileName} numberOfLines={1}>{profile.displayName}</Text>
+              <Text style={styles.profileCta}>VIEW PROFILE</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.accent} />
+          </TouchableOpacity>
 
-          {/* Friends */}
-          <div className="p-4 space-y-3 shrink-0" style={{ borderBottom: '2px solid var(--border)' }}>
-            <div className="flex items-center gap-2">
-              <Users size={14} color="var(--text-muted)" />
-              <span style={{ ...pixelFont, fontSize: '7px', color: 'var(--text-muted)' }}>FRIENDS</span>
+          {/* Friends section */}
+          <View style={styles.friendsSection}>
+            <View style={styles.friendsHeader}>
+              <Ionicons name="people-outline" size={14} color={colors.textMuted} />
+              <Text style={styles.friendsTitle}>FRIENDS</Text>
               {!requestsLoading && requesters.length > 0 && (
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  minWidth: 16, height: 16, borderRadius: 8,
-                  background: 'var(--red)', color: '#fff',
-                  fontFamily: 'Inter, sans-serif', fontSize: '10px', fontWeight: 700,
-                  paddingInline: 4,
-                }}>
-                  {requesters.length}
-                </span>
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{requesters.length}</Text>
+                </View>
               )}
-            </div>
+            </View>
 
             {/* Incoming requests */}
             {requestsLoading ? (
-              <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '11px', color: 'var(--text-muted)' }}>Checking requests…</p>
+              <Text style={styles.bodyText}>Checking requests…</Text>
             ) : requesters.length > 0 && (
-              <div className="space-y-2">
-                <p style={{ ...pixelFont, fontSize: '6px', color: 'var(--accent)' }}>REQUESTS</p>
+              <View style={styles.subSection}>
+                <Text style={styles.subSectionLabel}>REQUESTS</Text>
                 {requesters.map((u) => (
-                  <div key={u.uid} className="flex items-center gap-3 py-1">
-                    <div style={{ width: 36, height: 36, border: '2px solid var(--accent)', overflow: 'hidden', flexShrink: 0 }}>
-                      <Image src={getAvatarUrl(u)} alt={u.displayName} width={36} height={36}
-                        className="w-full h-full object-cover object-top"
-                        onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/avatars/default.png'; }} />
-                    </div>
-                    <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', fontWeight: 600, color: 'var(--text)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {u.displayName}
-                    </span>
-                    <button onClick={() => { handleAccept(u.uid); onRequestsSeen?.(); }} disabled={friendsActionUid === u.uid} className="cursor-pointer"
-                      style={{ fontFamily: 'Inter, sans-serif', fontSize: '15px', fontWeight: 700, padding: '3px 9px', border: '2px solid var(--green)', background: 'var(--green-light)', color: 'var(--green)', opacity: friendsActionUid === u.uid ? 0.5 : 1 }}>✓</button>
-                    <button onClick={() => handleDecline(u.uid)} disabled={friendsActionUid === u.uid} className="cursor-pointer"
-                      style={{ fontFamily: 'Inter, sans-serif', fontSize: '15px', fontWeight: 700, padding: '3px 9px', border: '2px solid var(--red)', background: 'var(--red-light)', color: 'var(--red)', opacity: friendsActionUid === u.uid ? 0.5 : 1 }}>✕</button>
-                  </div>
+                  <View key={u.uid} style={styles.userRow}>
+                    <View style={styles.avatarFrameSmall}>
+                      <AvatarImg url={getAvatarUrl(u)} size={36} />
+                    </View>
+                    <Text style={styles.userName} numberOfLines={1}>{u.displayName}</Text>
+                    <TouchableOpacity
+                      onPress={() => { handleAccept(u.uid); onRequestsSeen?.(); }}
+                      disabled={friendsActionUid === u.uid}
+                      style={[styles.actionBtnGreen, friendsActionUid === u.uid && { opacity: 0.5 }]}
+                    >
+                      <Text style={styles.actionBtnGreenText}>✓</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => handleDecline(u.uid)}
+                      disabled={friendsActionUid === u.uid}
+                      style={[styles.actionBtnRed, friendsActionUid === u.uid && { opacity: 0.5 }]}
+                    >
+                      <Text style={styles.actionBtnRedText}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
                 ))}
-              </div>
+              </View>
             )}
 
             {/* Current friends */}
             {friends.length > 0 && (
-              <div className="space-y-2">
-                <p style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>YOUR FRIENDS</p>
+              <View style={styles.subSection}>
+                <Text style={styles.subSectionLabel}>YOUR FRIENDS</Text>
                 {friends.map((u) => (
-                  <div key={u.uid} className="flex items-center gap-2">
-                    <div style={{ width: 28, height: 28, border: '2px solid var(--border)', overflow: 'hidden', flexShrink: 0 }}>
-                      <Image src={getAvatarUrl(u)} alt={u.displayName} width={28} height={28}
-                        className="w-full h-full object-cover object-top"
-                        onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/avatars/default.png'; }} />
-                    </div>
-                    <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: 'var(--text)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {u.displayName}
-                    </span>
-                    <button onClick={() => handleRemoveFriend(u.uid)} disabled={friendsActionUid === u.uid}
-                      className="cursor-pointer opacity-40 hover:opacity-100 transition-opacity" title="Remove friend">
-                      <UserMinus size={14} color="var(--red)" />
-                    </button>
-                  </div>
+                  <View key={u.uid} style={styles.userRow}>
+                    <View style={styles.avatarFrameTiny}>
+                      <AvatarImg url={getAvatarUrl(u)} size={28} />
+                    </View>
+                    <Text style={[styles.bodyText, { flex: 1 }]} numberOfLines={1}>{u.displayName}</Text>
+                    <TouchableOpacity
+                      onPress={() => handleRemoveFriend(u.uid)}
+                      disabled={friendsActionUid === u.uid}
+                      style={{ opacity: friendsActionUid === u.uid ? 0.3 : 0.4 }}
+                    >
+                      <Ionicons name="person-remove-outline" size={14} color={colors.red} />
+                    </TouchableOpacity>
+                  </View>
                 ))}
-              </div>
+              </View>
             )}
 
             {/* Add friends */}
-            <div className="space-y-2">
-              <p style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>ADD FRIENDS</p>
-              <input
+            <View style={styles.subSection}>
+              <Text style={styles.subSectionLabel}>ADD FRIENDS</Text>
+              <TextInput
                 value={friendSearch}
-                onChange={(e) => setFriendSearch(e.target.value)}
+                onChangeText={setFriendSearch}
                 placeholder="Search by name or email…"
-                style={{ width: '100%', fontFamily: 'Inter, sans-serif', fontSize: '12px', padding: '6px 8px', border: '2px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', outline: 'none' }}
+                placeholderTextColor={colors.textMuted}
+                style={styles.searchInput}
               />
-              {(() => {
-                const q = friendSearch.trim().toLowerCase();
-                if (!q) return null;
-                const results = addCandidates.filter(
-                  (u) => u.displayName.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+              {searchResults.length === 0 && q.length > 0 && (
+                <Text style={styles.bodyText}>No users found.</Text>
+              )}
+              {searchResults.map((u) => {
+                const sent = sentRequests.has(u.uid);
+                return (
+                  <View key={u.uid} style={styles.userRow}>
+                    <View style={styles.avatarFrameTiny}>
+                      <AvatarImg url={getAvatarUrl(u)} size={28} />
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={styles.bodyText} numberOfLines={1}>{u.displayName}</Text>
+                      <Text style={[styles.bodyText, { fontSize: 10, color: colors.textMuted }]} numberOfLines={1}>{u.email}</Text>
+                    </View>
+                    {sent ? (
+                      <Text style={styles.sentLabel}>SENT</Text>
+                    ) : (
+                      <TouchableOpacity
+                        onPress={() => handleSendRequest(u.uid)}
+                        disabled={friendsActionUid === u.uid}
+                        style={{ opacity: friendsActionUid === u.uid ? 0.5 : 1 }}
+                      >
+                        <Ionicons name="person-add-outline" size={14} color={colors.accent} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 );
-                if (results.length === 0) return (
-                  <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '11px', color: 'var(--text-muted)' }}>No users found.</p>
-                );
-                return results.map((u) => {
-                  const sent = sentRequests.has(u.uid);
-                  return (
-                    <div key={u.uid} className="flex items-center gap-2">
-                      <div style={{ width: 28, height: 28, border: '2px solid var(--border)', overflow: 'hidden', flexShrink: 0 }}>
-                        <Image src={getAvatarUrl(u)} alt={u.displayName} width={28} height={28}
-                          className="w-full h-full object-cover object-top"
-                          onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/avatars/default.png'; }} />
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.displayName}</p>
-                        <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '10px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</p>
-                      </div>
-                      {sent ? (
-                        <span style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)' }}>SENT</span>
-                      ) : (
-                        <button onClick={() => handleSendRequest(u.uid)} disabled={friendsActionUid === u.uid} className="cursor-pointer" title="Send friend request">
-                          <UserPlus size={14} color="var(--accent)" style={{ opacity: friendsActionUid === u.uid ? 0.5 : 1 }} />
-                        </button>
-                      )}
-                    </div>
-                  );
-                });
-              })()}
-            </div>
-          </div>
-
-          {/* Install prompt */}
-          <div className="px-4 py-3 shrink-0" >
-            <InstallPrompt compact />
-          </div>
+              })}
+            </View>
+          </View>
 
           {/* Sign out + legal */}
-          <div className="p-4 mt-auto shrink-0">
-            <button
-              onClick={handleSignOut}
-              className="w-full flex items-center justify-center gap-2 py-3 cursor-pointer transition-all active:translate-y-px"
-              style={{ ...pixelFont, fontSize: '8px', border: '2px solid var(--border)', boxShadow: '2px 2px 0 #000', background: 'var(--surface-2)', color: 'var(--text-muted)' }}
-            >
-              <LogOut size={14} />
-              SIGN OUT
-            </button>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 12 }}>
-              <a href="/privacy" style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)', textDecoration: 'none' }}>PRIVACY</a>
-              <span style={{ color: 'var(--border)' }}>|</span>
-              <a href="/terms" style={{ ...pixelFont, fontSize: '6px', color: 'var(--text-muted)', textDecoration: 'none' }}>TERMS</a>
-            </div>
-          </div>
-
-        </div>
-      </div>
+          <View style={styles.footer}>
+            <TouchableOpacity onPress={handleSignOut} style={styles.signOutBtn}>
+              <Ionicons name="log-out-outline" size={14} color={colors.textMuted} />
+              <Text style={styles.signOutText}>SIGN OUT</Text>
+            </TouchableOpacity>
+            <View style={styles.legalRow}>
+              <TouchableOpacity onPress={() => { router.push('/privacy' as any); onClose(); }}>
+                <Text style={styles.legalLink}>PRIVACY</Text>
+              </TouchableOpacity>
+              <Text style={styles.legalSep}>|</Text>
+              <TouchableOpacity onPress={() => { router.push('/terms' as any); onClose(); }}>
+                <Text style={styles.legalLink}>TERMS</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      </Animated.View>
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  backdrop: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    zIndex: 40,
+  },
+  drawer: {
+    position: 'absolute',
+    top: 0, right: 0, bottom: 0,
+    width: DRAWER_WIDTH,
+    backgroundColor: colors.surface,
+    borderLeftWidth: 2,
+    borderLeftColor: colors.border,
+    zIndex: 50,
+    shadowColor: '#000',
+    shadowOffset: { width: -4, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 8,
+  },
+  drawerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.border,
+  },
+  drawerTitle: { fontFamily: fonts.pixel, fontSize: 8, color: colors.accent },
+  scrollArea: { flex: 1 },
+  profileBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 16,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.border,
+  },
+  avatarFrameAccent: {
+    width: 48, height: 48,
+    borderWidth: 2, borderColor: colors.accent,
+    overflow: 'hidden', flexShrink: 0,
+    shadowColor: colors.accent, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 8,
+  },
+  profileAvatar: { width: 48, height: 48 },
+  profileName: { fontFamily: fonts.vt323, fontSize: 22, color: colors.text },
+  profileCta: { fontFamily: fonts.pixel, fontSize: 6, color: colors.accent, marginTop: 2 },
+  friendsSection: {
+    padding: 16, gap: 12,
+    borderBottomWidth: 2, borderBottomColor: colors.border,
+  },
+  friendsHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  friendsTitle: { fontFamily: fonts.pixel, fontSize: 7, color: colors.textMuted },
+  badge: {
+    minWidth: 16, height: 16, borderRadius: 8,
+    backgroundColor: colors.red, paddingHorizontal: 4,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  badgeText: { fontFamily: fonts.inter, fontSize: 10, fontWeight: '700', color: colors.white },
+  subSection: { gap: 8 },
+  subSectionLabel: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
+  userRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  avatarFrameSmall: { width: 36, height: 36, borderWidth: 2, borderColor: colors.accent, overflow: 'hidden', flexShrink: 0 },
+  avatarFrameTiny: { width: 28, height: 28, borderWidth: 2, borderColor: colors.border, overflow: 'hidden', flexShrink: 0 },
+  userName: { fontFamily: fonts.interSemiBold, fontSize: 13, color: colors.text, flex: 1 },
+  bodyText: { fontFamily: fonts.inter, fontSize: 12, color: colors.text },
+  actionBtnGreen: { paddingHorizontal: 9, paddingVertical: 3, borderWidth: 2, borderColor: colors.green, backgroundColor: colors.greenLight },
+  actionBtnGreenText: { fontFamily: fonts.inter, fontSize: 15, fontWeight: '700', color: colors.green },
+  actionBtnRed: { paddingHorizontal: 9, paddingVertical: 3, borderWidth: 2, borderColor: colors.red, backgroundColor: colors.redLight },
+  actionBtnRedText: { fontFamily: fonts.inter, fontSize: 15, fontWeight: '700', color: colors.red },
+  searchInput: {
+    fontFamily: fonts.inter, fontSize: 12, padding: 8,
+    borderWidth: 2, borderColor: colors.border,
+    backgroundColor: colors.surface2, color: colors.text,
+  },
+  sentLabel: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
+  footer: { padding: 16, gap: 12, marginTop: 'auto' },
+  signOutBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, paddingVertical: 12,
+    borderWidth: 2, borderColor: colors.border,
+    backgroundColor: colors.surface2,
+    ...shadows.pixel,
+  },
+  signOutText: { fontFamily: fonts.pixel, fontSize: 8, color: colors.textMuted },
+  legalRow: { flexDirection: 'row', justifyContent: 'center', gap: 16, alignItems: 'center' },
+  legalLink: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
+  legalSep: { color: colors.border },
+});

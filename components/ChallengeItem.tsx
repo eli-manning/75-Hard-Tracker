@@ -1,11 +1,12 @@
-'use client';
-
 import { ReactNode } from 'react';
-import Image from 'next/image';
+import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
+import { colors, fonts, shadows } from '../lib/theme';
+import { getImageSource } from '../lib/imageMap';
 
 interface ChallengeItemProps {
   label: string;
-  icon?: string;        // path to /images/*.png
+  icon?: string;        // path like '/images/workout1.png'
   completed: boolean;
   readOnly: boolean;
   children?: ReactNode;
@@ -25,74 +26,146 @@ export function ChallengeItem({
   disabledReason,
 }: ChallengeItemProps) {
   const isDisabled = readOnly || disabled;
+  const iconSource = icon ? getImageSource(icon) : undefined;
 
-  return (
-    <div
-      onClick={isDisabled ? undefined : onToggle}
-      className="p-3 transition-all duration-200"
-      style={{
-        border: completed ? '2px solid var(--green)' : '2px solid var(--border)',
-        background: completed ? 'var(--green-light)' : 'var(--surface)',
-        boxShadow: completed ? 'var(--glow-green), 2px 2px 0 #000' : '2px 2px 0 #000',
-        cursor: isDisabled ? 'default' : 'pointer',
-        userSelect: 'none',
-        WebkitUserSelect: 'none',
-      }}
-    >
-      <div className="flex items-start gap-3">
+  const content = (
+    <View style={[
+      styles.card,
+      completed ? styles.cardDone : styles.cardDefault,
+    ]}>
+      <View style={styles.row}>
         {/* Pixel checkbox */}
-        <div
-          className="shrink-0 mt-0.5 transition-all duration-150"
-          style={{
-            width: 22,
-            height: 22,
-            border: completed ? '2px solid var(--green)' : '2px solid var(--text-muted)',
-            background: completed ? 'var(--green)' : 'transparent',
-            boxShadow: completed ? 'var(--glow-green)' : 'none',
-            opacity: isDisabled && !completed ? 0.4 : 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-          }}
-        >
+        <View style={[
+          styles.checkbox,
+          completed ? styles.checkboxDone : styles.checkboxEmpty,
+          isDisabled && !completed && styles.checkboxDisabled,
+        ]}>
           {completed && (
-            <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
-              <path d="M1 5l3 3 7-7" stroke="#0c0b08" strokeWidth="2.5" strokeLinecap="square" />
-            </svg>
+            <Svg width={12} height={10} viewBox="0 0 12 10" fill="none">
+              <Path d="M1 5l3 3 7-7" stroke="#0c0b08" strokeWidth={2.5} strokeLinecap="square" />
+            </Svg>
           )}
-        </div>
+        </View>
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span style={{
-              fontFamily: '"VT323", monospace',
-              fontSize: '20px',
-              color: completed ? 'var(--green)' : 'var(--text)',
-              textDecoration: completed ? 'line-through' : 'none',
-              opacity: completed ? 0.7 : 1,
-              letterSpacing: '0.02em',
-            }}>
+        <View style={styles.content}>
+          <View style={styles.labelRow}>
+            <Text style={[
+              styles.label,
+              completed && styles.labelDone,
+              completed && styles.labelStrike,
+            ]}>
               {label}
-            </span>
-            {icon && (
+            </Text>
+            {iconSource !== undefined && (
               <Image
-                src={icon}
-                alt=""
-                width={28}
-                height={28}
-                style={{ objectFit: 'contain', opacity: completed ? 0.3 : 0.8, flexShrink: 0 }}
+                source={iconSource}
+                style={[styles.icon, completed && styles.iconDone]}
+                resizeMode="contain"
               />
             )}
-          </div>
+          </View>
           {disabled && disabledReason && (
-            <p style={{ fontFamily: '"Press Start 2P", monospace', fontSize: '6px', color: 'var(--text-muted)', marginTop: 3 }}>
-              {disabledReason}
-            </p>
+            <Text style={styles.disabledReason}>{disabledReason}</Text>
           )}
-          {children && <div className="mt-2">{children}</div>}
-        </div>
-      </div>
-    </div>
+          {children && <View style={styles.children}>{children}</View>}
+        </View>
+      </View>
+    </View>
+  );
+
+  if (isDisabled || !onToggle) {
+    return content;
+  }
+
+  return (
+    <TouchableOpacity onPress={onToggle} activeOpacity={0.85}>
+      {content}
+    </TouchableOpacity>
   );
 }
+
+const styles = StyleSheet.create({
+  card: {
+    padding: 12,
+    borderWidth: 2,
+    ...shadows.pixel,
+  },
+  cardDefault: {
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  cardDone: {
+    borderColor: colors.green,
+    backgroundColor: colors.greenLight,
+    ...shadows.glowGreen,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    marginTop: 2,
+  },
+  checkboxEmpty: {
+    borderColor: colors.textMuted,
+    backgroundColor: 'transparent',
+  },
+  checkboxDone: {
+    borderColor: colors.green,
+    backgroundColor: colors.green,
+    shadowColor: colors.green,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+  },
+  checkboxDisabled: {
+    opacity: 0.4,
+  },
+  content: {
+    flex: 1,
+    minWidth: 0,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  label: {
+    fontFamily: fonts.vt323,
+    fontSize: 20,
+    color: colors.text,
+    letterSpacing: 0.4,
+  },
+  labelDone: {
+    color: colors.green,
+    opacity: 0.7,
+  },
+  labelStrike: {
+    textDecorationLine: 'line-through',
+  },
+  icon: {
+    width: 28,
+    height: 28,
+    flexShrink: 0,
+  },
+  iconDone: {
+    opacity: 0.3,
+  },
+  disabledReason: {
+    fontFamily: fonts.pixel,
+    fontSize: 6,
+    color: colors.textMuted,
+    marginTop: 3,
+  },
+  children: {
+    marginTop: 8,
+  },
+});

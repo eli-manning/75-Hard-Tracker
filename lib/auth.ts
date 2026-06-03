@@ -61,7 +61,6 @@ export async function signIn(
 
 export async function signOut(): Promise<void> {
   clearAll();
-  if (typeof window !== 'undefined') sessionStorage.clear();
   return firebaseSignOut(getFirebaseAuth());
 }
 

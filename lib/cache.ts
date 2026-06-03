@@ -19,30 +19,25 @@ export function invalidate(key: string): void {
 
 export function clearAll(): void {
   store.clear();
+  sessionStore.clear();
 }
 
-// sessionStorage-backed cache — survives iOS PWA background kills within the same browser session
+// In React Native there is no sessionStorage / PWA background kill scenario.
+// We use a second in-memory map as a synchronous drop-in replacement so all
+// call sites remain unchanged.
+const sessionStore = new Map<string, { data: unknown; ts: number }>();
 const SESSION_TTL = 10 * 60 * 1000; // 10 minutes
 
 export function getSessionCached<T>(key: string): T | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = sessionStorage.getItem(key);
-    if (!raw) return null;
-    const { data, ts } = JSON.parse(raw) as { data: T; ts: number };
-    if (Date.now() - ts > SESSION_TTL) { sessionStorage.removeItem(key); return null; }
-    return data;
-  } catch { return null; }
+  const entry = sessionStore.get(key);
+  if (!entry || Date.now() - entry.ts > SESSION_TTL) return null;
+  return entry.data as T;
 }
 
 export function setSessionCached<T>(key: string, data: T): void {
-  if (typeof window === 'undefined') return;
-  try {
-    sessionStorage.setItem(key, JSON.stringify({ data, ts: Date.now() }));
-  } catch {}
+  sessionStore.set(key, { data, ts: Date.now() });
 }
 
 export function clearSessionCached(key: string): void {
-  if (typeof window === 'undefined') return;
-  try { sessionStorage.removeItem(key); } catch {}
+  sessionStore.delete(key);
 }

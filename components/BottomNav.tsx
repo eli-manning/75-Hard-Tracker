@@ -1,60 +1,75 @@
-'use client';
-
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Sun, ListTodo, CalendarDays } from 'lucide-react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useRouter, usePathname } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors, fonts, shadows } from '../lib/theme';
 
 const NAV = [
-  { href: '/today', label: 'TODAY', Icon: Sun },
-  { href: '/tasks', label: 'TASKS', Icon: ListTodo },
-  { href: '/history', label: 'HISTORY', Icon: CalendarDays },
+  { href: '/(tabs)/today', label: 'TODAY', icon: 'sunny-outline' as const },
+  { href: '/(tabs)/tasks', label: 'TASKS', icon: 'list-outline' as const },
+  { href: '/(tabs)/history', label: 'HISTORY', icon: 'calendar-outline' as const },
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   return (
-    <nav
-      className="fixed bottom-0 z-30 flex"
-      style={{
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: '100%',
-        maxWidth: 480,
-        background: 'var(--surface)',
-        borderTop: '2px solid var(--border)',
-        boxShadow: '0 -4px 0 #000',
-      }}
-    >
-      {NAV.map(({ href, label, Icon }) => {
-        const active = pathname.startsWith(href);
+    <View style={[styles.nav, { paddingBottom: insets.bottom }]}>
+      {NAV.map(({ href, label, icon }) => {
+        const active = pathname.includes(label.toLowerCase());
         return (
-          <Link
+          <TouchableOpacity
             key={href}
-            href={href}
-            className="flex-1 flex flex-col items-center justify-center py-3 gap-1 cursor-pointer transition-all duration-150"
-            style={{
-              background: active ? 'var(--accent-light)' : 'transparent',
-              borderRight: '1px solid var(--border)',
-            }}
+            onPress={() => router.replace(href as any)}
+            style={[styles.tab, active && styles.tabActive]}
           >
-            <Icon
+            <Ionicons
+              name={icon}
               size={20}
-              style={{
-                color: active ? 'var(--accent)' : 'var(--text-muted)',
-                filter: active ? 'drop-shadow(0 0 4px var(--accent))' : 'none',
-              }}
+              color={active ? colors.accent : colors.textMuted}
             />
-            <span style={{
-              fontFamily: '"Press Start 2P", monospace',
-              fontSize: '6px',
-              color: active ? 'var(--accent)' : 'var(--text-muted)',
-            }}>
+            <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>
               {label}
-            </span>
-          </Link>
+            </Text>
+          </TouchableOpacity>
         );
       })}
-    </nav>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  nav: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderTopWidth: 2,
+    borderTopColor: colors.border,
+    ...shadows.pixelUp,
+  },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    gap: 4,
+    borderRightWidth: 1,
+    borderRightColor: colors.border,
+  },
+  tabActive: {
+    backgroundColor: colors.accentLight,
+  },
+  tabLabel: {
+    fontFamily: fonts.pixel,
+    fontSize: 6,
+    color: colors.textMuted,
+  },
+  tabLabelActive: {
+    color: colors.accent,
+  },
+});

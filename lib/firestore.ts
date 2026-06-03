@@ -72,6 +72,8 @@ export function subscribeToProfile(
     const profile = snap.data() as UserProfile;
     setCached(`profile-${uid}`, profile);
     onChange(profile);
+  }, (err) => {
+    if (err.code !== 'permission-denied') console.error(err);
   });
 }
 

@@ -1,24 +1,16 @@
-'use client';
-
 import { useEffect, useState } from 'react';
-import { getAllUsers } from '@/lib/firestore';
-import { UserProfile } from '@/lib/types';
-import { getCached, setCached } from '@/lib/cache';
-
-const CACHE_KEY = 'all-users';
+import { UserProfile } from '../lib/types';
+import { getAllUsers } from '../lib/firestore';
+import { getCached } from '../lib/cache';
 
 export function useAllUsers() {
-  const cached = getCached<UserProfile[]>(CACHE_KEY);
-  const [users, setUsers] = useState<UserProfile[]>(cached ?? []);
-  const [loading, setLoading] = useState(!cached);
+  const [users, setUsers] = useState<UserProfile[]>(() => getCached<UserProfile[]>('all-users') ?? []);
+  const [loading, setLoading] = useState(users.length === 0);
 
   useEffect(() => {
-    // If we already have cached data, show it instantly and refresh in background
-    getAllUsers().then((fresh) => {
-      setCached(CACHE_KEY, fresh);
-      setUsers(fresh);
-      setLoading(false);
-    });
+    getAllUsers()
+      .then((u) => { setUsers(u); setLoading(false); })
+      .catch(() => setLoading(false));
   }, []);
 
   return { users, loading };

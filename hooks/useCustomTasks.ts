@@ -1,9 +1,7 @@
-'use client';
-
 import { useEffect, useState } from 'react';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { getFirebaseDb } from '@/lib/firebase';
-import { CustomTask } from '@/lib/types';
+import { getFirebaseDb } from '../lib/firebase';
+import { CustomTask } from '../lib/types';
 
 export function useCustomTasks(uid: string | null) {
   const [tasks, setTasks] = useState<CustomTask[]>([]);
@@ -20,6 +18,8 @@ export function useCustomTasks(uid: string | null) {
     const unsub = onSnapshot(q, (snap) => {
       setTasks(snap.docs.map((d) => d.data() as CustomTask));
       setLoading(false);
+    }, (err) => {
+      if (err.code !== 'permission-denied') console.error(err);
     });
 
     return unsub;
