@@ -67,23 +67,24 @@ export function ChallengeItem({
                 resizeMode="contain"
               />
             )}
-            {onNudge && !completed && (
-              <TouchableOpacity
-                onPress={onNudge}
-                disabled={nudgedAlready}
-                style={[styles.nudgeBtn, nudgedAlready && styles.nudgeBtnDone]}
-              >
-                <Text style={[styles.nudgeBtnText, nudgedAlready && styles.nudgeBtnTextDone]}>
-                  {nudgedAlready ? 'NUDGED' : 'NUDGE'}
-                </Text>
-              </TouchableOpacity>
-            )}
           </View>
           {disabled && disabledReason && (
             <Text style={styles.disabledReason}>{disabledReason}</Text>
           )}
           {children && <View style={styles.children}>{children}</View>}
         </View>
+
+        {onNudge && !completed && (
+          <TouchableOpacity
+            onPress={onNudge}
+            disabled={nudgedAlready}
+            style={[styles.nudgeBtn, nudgedAlready && styles.nudgeBtnDone]}
+          >
+            <Text style={[styles.nudgeBtnText, nudgedAlready && styles.nudgeBtnTextDone]}>
+              {nudgedAlready ? 'NUDGED' : 'NUDGE'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -112,6 +113,7 @@ const styles = StyleSheet.create({
     borderColor: colors.accent,
     backgroundColor: colors.accentLight,
     flexShrink: 0,
+    alignSelf: 'flex-start',
   },
   nudgeBtnDone: {
     borderColor: colors.border,
