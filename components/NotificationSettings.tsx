@@ -130,36 +130,21 @@ export function NotificationSettings({ profile, onUpdate }: Props) {
         <View style={styles.subSection}>
           <View style={styles.divider} />
 
-          <Row
-            label="DAILY REMINDER"
-            sub={daily ? formatTime(hour, minute) : undefined}
-            value={daily}
-            onToggle={handleDailyToggle}
-            disabled={saving}
-          />
-
-          {daily && Platform.OS !== 'web' && (
-            <NativeTimePicker time={time} onChange={handleTimeChange} />
+          {Platform.OS !== 'web' && (
+            <>
+              <Row
+                label="DAILY REMINDER"
+                sub={daily ? formatTime(hour, minute) : undefined}
+                value={daily}
+                onToggle={handleDailyToggle}
+                disabled={saving}
+              />
+              {daily && (
+                <NativeTimePicker time={time} onChange={handleTimeChange} />
+              )}
+              <View style={styles.divider} />
+            </>
           )}
-          {daily && Platform.OS === 'web' && (
-            <input
-              type="time"
-              value={time}
-              onChange={(e) => handleTimeChange(e.target.value)}
-              style={{
-                backgroundColor: colors.surface2,
-                color: colors.text,
-                border: `2px solid ${colors.border}`,
-                padding: '6px 10px',
-                fontFamily: 'monospace',
-                fontSize: 13,
-                width: 120,
-                outline: 'none',
-              } as React.CSSProperties}
-            />
-          )}
-
-          <View style={styles.divider} />
           <Row label="NUDGES FROM FRIENDS" value={nudges} onToggle={async (v) => { setNudges(v); await save({ notifNudgesEnabled: v }); }} disabled={saving} />
 
           <View style={styles.divider} />
