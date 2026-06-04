@@ -23,6 +23,49 @@ function formatTime(hour: number, minute: number): string {
   return `${h}:${m} ${ampm}`;
 }
 
+function ToggleSwitch({ value, onValueChange, disabled }: { value: boolean; onValueChange: (v: boolean) => void; disabled?: boolean }) {
+  if (Platform.OS !== 'web') {
+    return (
+      <Switch
+        value={value}
+        onValueChange={onValueChange}
+        thumbColor={value ? colors.accent : colors.textMuted}
+        trackColor={{ false: colors.border, true: colors.accentLight }}
+        disabled={disabled}
+      />
+    );
+  }
+  return (
+    <button
+      onClick={() => !disabled && onValueChange(!value)}
+      disabled={disabled}
+      style={{
+        width: 44,
+        height: 24,
+        borderRadius: 0,
+        border: `2px solid ${value ? colors.accent : colors.border}`,
+        backgroundColor: value ? colors.accentLight : colors.surface2,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        position: 'relative',
+        padding: 0,
+        flexShrink: 0,
+        opacity: disabled ? 0.5 : 1,
+        WebkitTapHighlightColor: 'transparent',
+      } as React.CSSProperties}
+    >
+      <div style={{
+        position: 'absolute',
+        top: 2,
+        left: value ? 20 : 2,
+        width: 16,
+        height: 16,
+        backgroundColor: value ? colors.accent : colors.textMuted,
+        transition: 'left 0.15s',
+      }} />
+    </button>
+  );
+}
+
 export function NotificationSettings({ profile, onUpdate }: Props) {
   const { requestPermission, clearTokens } = useNotifications(profile.uid);
 
@@ -65,11 +108,8 @@ export function NotificationSettings({ profile, onUpdate }: Props) {
   }
 
   async function handleDailyToggle(val: boolean) {
-    if (val) {
-      await scheduleDaily(time);
-    } else {
-      if (Platform.OS !== 'web') await Notifications.cancelAllScheduledNotificationsAsync();
-    }
+    if (val) await scheduleDaily(time);
+    else if (Platform.OS !== 'web') await Notifications.cancelAllScheduledNotificationsAsync();
     setDaily(val);
     await save({ notifDailyEnabled: val });
   }
@@ -80,51 +120,23 @@ export function NotificationSettings({ profile, onUpdate }: Props) {
     await save({ notifDailyTime: hhmm });
   }
 
-  async function handleNudgesToggle(val: boolean) {
-    setNudges(val);
-    await save({ notifNudgesEnabled: val });
-  }
-
-  async function handleFriendReqsToggle(val: boolean) {
-    setFriendReqs(val);
-    await save({ notifFriendRequestsEnabled: val });
-  }
-
   return (
     <View style={styles.card}>
       <Text style={styles.sectionTitle}>NOTIFICATIONS</Text>
 
-      {/* Master toggle */}
-      <View style={styles.row}>
-        <Text style={styles.label}>ALL NOTIFICATIONS</Text>
-        <Switch
-          value={allEnabled}
-          onValueChange={handleAllToggle}
-          thumbColor={allEnabled ? colors.accent : colors.textMuted}
-          trackColor={{ false: colors.border, true: colors.accentLight }}
-          disabled={saving}
-        />
-      </View>
+      <Row label="ALL NOTIFICATIONS" value={allEnabled} onToggle={handleAllToggle} disabled={saving} />
 
-      {/* Sub-toggles — only shown when all is on */}
       {allEnabled && (
         <View style={styles.subSection}>
           <View style={styles.divider} />
 
-          {/* Daily reminder */}
-          <View style={styles.row}>
-            <View>
-              <Text style={styles.subLabel}>DAILY REMINDER</Text>
-              {daily && <Text style={styles.sub}>{formatTime(hour, minute)}</Text>}
-            </View>
-            <Switch
-              value={daily}
-              onValueChange={handleDailyToggle}
-              thumbColor={daily ? colors.accent : colors.textMuted}
-              trackColor={{ false: colors.border, true: colors.accentLight }}
-              disabled={saving}
-            />
-          </View>
+          <Row
+            label="DAILY REMINDER"
+            sub={daily ? formatTime(hour, minute) : undefined}
+            value={daily}
+            onToggle={handleDailyToggle}
+            disabled={saving}
+          />
 
           {daily && Platform.OS !== 'web' && (
             <NativeTimePicker time={time} onChange={handleTimeChange} />
@@ -135,48 +147,37 @@ export function NotificationSettings({ profile, onUpdate }: Props) {
               value={time}
               onChange={(e) => handleTimeChange(e.target.value)}
               style={{
-                marginTop: 4,
                 backgroundColor: colors.surface2,
                 color: colors.text,
                 border: `2px solid ${colors.border}`,
-                padding: '8px 12px',
+                padding: '6px 10px',
                 fontFamily: 'monospace',
-                fontSize: 14,
-                width: '100%',
-                boxSizing: 'border-box',
+                fontSize: 13,
+                width: 120,
+                outline: 'none',
               } as React.CSSProperties}
             />
           )}
 
           <View style={styles.divider} />
-
-          {/* Nudges */}
-          <View style={styles.row}>
-            <Text style={styles.subLabel}>NUDGES FROM FRIENDS</Text>
-            <Switch
-              value={nudges}
-              onValueChange={handleNudgesToggle}
-              thumbColor={nudges ? colors.accent : colors.textMuted}
-              trackColor={{ false: colors.border, true: colors.accentLight }}
-              disabled={saving}
-            />
-          </View>
+          <Row label="NUDGES FROM FRIENDS" value={nudges} onToggle={async (v) => { setNudges(v); await save({ notifNudgesEnabled: v }); }} disabled={saving} />
 
           <View style={styles.divider} />
-
-          {/* Friend requests */}
-          <View style={styles.row}>
-            <Text style={styles.subLabel}>FRIEND REQUEST ALERTS</Text>
-            <Switch
-              value={friendReqs}
-              onValueChange={handleFriendReqsToggle}
-              thumbColor={friendReqs ? colors.accent : colors.textMuted}
-              trackColor={{ false: colors.border, true: colors.accentLight }}
-              disabled={saving}
-            />
-          </View>
+          <Row label="FRIEND REQUEST ALERTS" value={friendReqs} onToggle={async (v) => { setFriendReqs(v); await save({ notifFriendRequestsEnabled: v }); }} disabled={saving} />
         </View>
       )}
+    </View>
+  );
+}
+
+function Row({ label, sub, value, onToggle, disabled }: { label: string; sub?: string; value: boolean; onToggle: (v: boolean) => void; disabled?: boolean }) {
+  return (
+    <View style={styles.row}>
+      <View>
+        <Text style={styles.subLabel}>{label}</Text>
+        {sub && <Text style={styles.sub}>{sub}</Text>}
+      </View>
+      <ToggleSwitch value={value} onValueChange={onToggle} disabled={disabled} />
     </View>
   );
 }
@@ -224,10 +225,9 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontFamily: fonts.pixel, fontSize: 8, color: colors.accent },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  label: { fontFamily: fonts.pixel, fontSize: 6, color: colors.text },
-  subSection: { gap: 12 },
   subLabel: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
   sub: { fontFamily: fonts.vt323, fontSize: 18, color: colors.text, marginTop: 2 },
+  subSection: { gap: 12 },
   divider: { height: 1, backgroundColor: colors.border },
   timePicker: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   colon: { fontFamily: fonts.vt323, fontSize: 32, color: colors.text },
