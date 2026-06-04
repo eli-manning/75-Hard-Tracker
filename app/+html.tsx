@@ -34,18 +34,19 @@ export default function Root({ children }: PropsWithChildren) {
             height: 100%;
             min-height: 100dvh;
             height: -webkit-fill-available;
-            background-color: #0c0b08;
+            /* Match nav surface color so any gap below the nav is invisible */
+            background-color: #161410;
           }
           body {
             display: flex;
             flex-direction: column;
             margin: 0;
             padding: 0;
-            overflow: clip !important;
+            overflow: hidden;
             min-height: 100vh;
             min-height: 100dvh;
             min-height: -webkit-fill-available;
-            background-color: #0c0b08;
+            background-color: #161410;
           }
           #root {
             display: flex;
@@ -53,18 +54,6 @@ export default function Root({ children }: PropsWithChildren) {
             flex: 1;
             overflow: hidden;
             background-color: #0c0b08;
-          }
-
-          /* PWA standalone: -webkit-fill-available excludes the home indicator zone,
-             causing body's overflow:hidden to clip #root ~34px short of the screen.
-             Override html+body to 100dvh so the full physical screen is available. */
-          @media all and (display-mode: standalone) {
-            html,
-            body,
-            #root {
-              height: 100dvh !important;
-              min-height: 100dvh !important;
-            }
           }
         `}</style>
       </head>
