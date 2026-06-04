@@ -25,6 +25,9 @@ export interface UserProfile {
   notifDailyTime?: string; // "HH:MM" 24h
   notifNudgesEnabled?: boolean;
   notifFriendRequestsEnabled?: boolean;
+  totalPoints?: number;
+  challengeMode?: '75hard' | 'general';
+  leaderboardOptOut?: boolean; // default false (opted in)
 }
 
 export interface DayEntry {
@@ -53,6 +56,7 @@ export interface DayEntry {
   dayNumber: number;
   allCoreCompleted: boolean;
   updatedAt: Timestamp;
+  dailyPoints?: number;
 }
 
 export interface CustomTask {
@@ -65,4 +69,6 @@ export interface CustomTask {
   completedAt?: Timestamp;
   archived: boolean;
   visible?: boolean; // whether friends can see this task (defaults to true)
+  why?: string;
+  points?: number; // 1-10, optional point value for this task
 }

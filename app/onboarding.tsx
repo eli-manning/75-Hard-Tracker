@@ -211,6 +211,7 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
+  const [mode, setMode] = useState<'75hard' | 'general'>('general');
   const [startDate, setStartDate] = useState(initialProfile.challengeStartDate ?? format(new Date(), 'yyyy-MM-dd'));
   const [weightUnit, setWeightUnit] = useState<'lbs' | 'kg'>(initialProfile.weightUnit ?? 'lbs');
   const [startingWeight, setStartingWeight] = useState(initialProfile.startingWeight ? String(initialProfile.startingWeight) : '');
@@ -232,13 +233,13 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
 
   async function handleStep2Next() {
     setSaving(true);
-    await updateUserProfile(profile.uid, { challengeStartDate: startDate });
+    await updateUserProfile(profile.uid, { challengeStartDate: startDate, challengeMode: mode });
     invalidate(`profile-${profile.uid}`);
-    const updated = { ...profile, challengeStartDate: startDate };
+    const updated = { ...profile, challengeStartDate: startDate, challengeMode: mode };
     setProfile(updated);
     setSessionCached('75hard-profile', updated);
     setSaving(false);
-    setStep(3);
+    setStep(4);
   }
 
   async function handleStep3Next() {
@@ -255,18 +256,18 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
     setProfile(updated);
     setSessionCached('75hard-profile', updated);
     setSaving(false);
-    setStep(4);
+    setStep(5);
   }
 
   function handleFinish() {
-    updateUserProfile(profile.uid, { onboardingComplete: true }).catch(() => {});
+    updateUserProfile(profile.uid, { onboardingComplete: true, challengeMode: mode }).catch(() => {});
     invalidate(`profile-${profile.uid}`);
-    const updated = { ...profile, onboardingComplete: true };
+    const updated = { ...profile, onboardingComplete: true, challengeMode: mode };
     setSessionCached('75hard-profile', updated);
     router.replace('/(tabs)/today');
   }
 
-  const totalSteps = Platform.OS === 'web' ? 5 : 4;
+  const totalSteps = Platform.OS === 'web' ? 6 : 5;
   const ProgressDots = () => (
     <View style={styles.dots}>
       {Array.from({ length: totalSteps }, (_, i) => i + 1).map((n) => (
@@ -317,8 +318,32 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
     </ScrollView>
   );
 
-  // Step 2: Start date
+  // Step 2: Choose Mode
   if (step === 2) return (
+    <View style={[styles.screen, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}>
+      <ProgressDots />
+      <Text style={styles.stepTitle}>HOW DO YOU WANT TO PLAY?</Text>
+      <View style={styles.modeRow}>
+        <TouchableOpacity
+          onPress={() => { setMode('75hard'); setStep(3); }}
+          style={[styles.modeCard, mode === '75hard' && styles.modeCardActive]}
+        >
+          <Text style={[styles.modeTitle, mode === '75hard' && styles.modeTitleActive]}>75 HARD MODE</Text>
+          <Text style={styles.modeDesc}>ALL 6 tasks daily. Miss a day, restart.</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => { setMode('general'); setStep(3); }}
+          style={[styles.modeCard, mode === 'general' && styles.modeCardActive]}
+        >
+          <Text style={[styles.modeTitle, mode === 'general' && styles.modeTitleActive]}>GENERAL</Text>
+          <Text style={styles.modeDesc}>Track habits your way. No failure, no pressure.</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  // Step 3: Start date
+  if (step === 3) return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
       <ScrollView contentContainerStyle={[styles.screen, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}>
         <ProgressDots />
@@ -328,7 +353,7 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
           <DateSpinPicker value={startDate} onChange={setStartDate} />
           <Text style={styles.helperText}>You can change this later in your profile.</Text>
           <View style={styles.btnRow}>
-            <TouchableOpacity onPress={() => setStep(1)} style={[styles.secondaryBtn, styles.backBtn]}>
+            <TouchableOpacity onPress={() => setStep(2)} style={[styles.secondaryBtn, styles.backBtn]}>
               <Text style={styles.secondaryBtnText}>BACK</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -344,8 +369,8 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
     </KeyboardAvoidingView>
   );
 
-  // Step 3: Fitness profile
-  if (step === 3) return (
+  // Step 4: Fitness profile
+  if (step === 4) return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
       <ScrollView contentContainerStyle={[styles.screen, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}>
         <ProgressDots />
@@ -408,7 +433,7 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
           </View>
 
           <View style={styles.btnRow}>
-            <TouchableOpacity onPress={() => setStep(2)} style={[styles.secondaryBtn, styles.backBtn]}>
+            <TouchableOpacity onPress={() => setStep(3)} style={[styles.secondaryBtn, styles.backBtn]}>
               <Text style={styles.secondaryBtnText}>BACK</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -424,8 +449,8 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
     </KeyboardAvoidingView>
   );
 
-  // Step 4: Review + Finish
-  if (step === 4) return (
+  // Step 5: Review + Finish
+  if (step === 5) return (
     <ScrollView contentContainerStyle={[styles.screen, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}>
       <ProgressDots />
       <Text style={styles.stepTitle}>READY TO START</Text>
@@ -449,19 +474,19 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
           ))}
         </View>
 
-        <TouchableOpacity onPress={Platform.OS === 'web' ? () => setStep(5) : handleFinish} style={styles.primaryBtn}>
+        <TouchableOpacity onPress={Platform.OS === 'web' ? () => setStep(6) : handleFinish} style={styles.primaryBtn}>
           <Text style={styles.primaryBtnText}>LET'S GO! →</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setStep(3)}>
+        <TouchableOpacity onPress={() => setStep(4)}>
           <Text style={styles.ghostBtnText}>← BACK</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
   );
 
-  // Step 5: Install prompt (web only)
-  if (step === 5) return (
-    <InstallStep onFinish={handleFinish} onBack={() => setStep(4)} ProgressDots={ProgressDots} insets={insets} />
+  // Step 6: Install prompt (web only)
+  if (step === 6) return (
+    <InstallStep onFinish={handleFinish} onBack={() => setStep(5)} ProgressDots={ProgressDots} insets={insets} />
   );
 
   return null;
@@ -586,6 +611,15 @@ const styles = StyleSheet.create({
   goalBtnActive: { borderColor: colors.accent, backgroundColor: colors.accentLight, ...shadows.glowAccent },
   goalBtnText: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted, textAlign: 'center' },
   goalBtnTextActive: { color: colors.accent },
+  modeRow: { flexDirection: 'column', gap: 12, width: '100%' },
+  modeCard: {
+    padding: 16, borderWidth: 2, borderColor: colors.border,
+    backgroundColor: colors.surface, gap: 8, ...shadows.pixel,
+  },
+  modeCardActive: { borderColor: colors.accent, backgroundColor: colors.accentLight },
+  modeTitle: { fontFamily: fonts.pixel, fontSize: 9, color: colors.textMuted },
+  modeTitleActive: { color: colors.accent },
+  modeDesc: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted, lineHeight: 12 },
   reviewRows: { width: '100%', gap: 8 },
   reviewRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

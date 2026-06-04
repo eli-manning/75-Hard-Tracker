@@ -8,6 +8,7 @@ const NAV = [
   { href: '/(tabs)/today', label: 'TODAY', icon: 'sunny-outline' as const },
   { href: '/(tabs)/tasks', label: 'TASKS', icon: 'list-outline' as const },
   { href: '/(tabs)/history', label: 'HISTORY', icon: 'calendar-outline' as const },
+  { href: '/(tabs)/leaderboard', label: 'RANKS', icon: 'trophy-outline' as const, match: 'leaderboard' },
 ];
 
 // Web: renders via a React DOM portal directly into document.body so it is
@@ -38,8 +39,8 @@ function WebBottomNav() {
         paddingBottom: 'max(env(safe-area-inset-bottom), 0px)',
       }}
     >
-      {NAV.map(({ href, label, icon }) => {
-        const active = pathname.includes(label.toLowerCase());
+      {NAV.map(({ href, label, icon, match }) => {
+        const active = pathname.includes((match ?? label).toLowerCase());
         return (
           <button
             key={href}
@@ -90,8 +91,8 @@ function NativeBottomNav() {
 
   return (
     <View style={[styles.nav, { bottom: -insets.bottom, paddingBottom: insets.bottom }]}>
-      {NAV.map(({ href, label, icon }) => {
-        const active = pathname.includes(label.toLowerCase());
+      {NAV.map(({ href, label, icon, match }) => {
+        const active = pathname.includes((match ?? label).toLowerCase());
         return (
           <TouchableOpacity
             key={href}

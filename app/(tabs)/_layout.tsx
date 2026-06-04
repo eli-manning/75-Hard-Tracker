@@ -17,6 +17,7 @@ export default function TabsLayout() {
         <Tabs.Screen name="today" />
         <Tabs.Screen name="tasks" />
         <Tabs.Screen name="history" />
+        <Tabs.Screen name="leaderboard" />
       </Tabs>
     </AuthGuard>
   );
