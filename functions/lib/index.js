@@ -55,14 +55,14 @@ exports.onFriendRequestReceived = (0, firestore_1.onDocumentCreated)('friendRequ
     if (recipientData.notifFriendRequestsEnabled === false)
         return;
     const senderName = (_a = senderSnap.get('displayName')) !== null && _a !== void 0 ? _a : 'Someone';
-    await (0, push_1.sendPush)(recipientData.expoPushToken, recipientData.fcmWebToken, '75 HARD', `${senderName} sent you a friend request!`);
+    await (0, push_1.sendPush)(recipientData.expoPushToken, recipientData.fcmWebToken, senderName, 'Sent you a friend request!');
 });
 exports.onNudge = (0, firestore_1.onDocumentCreated)('nudges/{nudgeId}', async (event) => {
     var _a;
     const data = (_a = event.data) === null || _a === void 0 ? void 0 : _a.data();
     if (!data)
         return;
-    const { toUid, fromName } = data;
+    const { toUid, fromName, message } = data;
     const userSnap = await db.doc(`users/${toUid}`).get();
     const userData = userSnap.data();
     if (!userData)
@@ -71,7 +71,8 @@ exports.onNudge = (0, firestore_1.onDocumentCreated)('nudges/{nudgeId}', async (
         return;
     if (userData.notifNudgesEnabled === false)
         return;
-    await (0, push_1.sendPush)(userData.expoPushToken, userData.fcmWebToken, '75 HARD', `${fromName} is nudging you! Go complete your tasks.`);
+    const body = message !== null && message !== void 0 ? message : 'Go complete your tasks!';
+    await (0, push_1.sendPush)(userData.expoPushToken, userData.fcmWebToken, fromName, body);
 });
 exports.onFriendRequestAccepted = (0, firestore_1.onDocumentUpdated)('friendRequests/{toUid}/incoming/{fromUid}', async (event) => {
     var _a, _b, _c;
@@ -97,6 +98,6 @@ exports.onFriendRequestAccepted = (0, firestore_1.onDocumentUpdated)('friendRequ
     if (senderData.notifFriendRequestsEnabled === false)
         return;
     const accepterName = (_c = accepterSnap.get('displayName')) !== null && _c !== void 0 ? _c : 'Someone';
-    await (0, push_1.sendPush)(senderData.expoPushToken, senderData.fcmWebToken, '75 HARD', `${accepterName} accepted your friend request!`);
+    await (0, push_1.sendPush)(senderData.expoPushToken, senderData.fcmWebToken, accepterName, 'Accepted your friend request!');
 });
 //# sourceMappingURL=index.js.map

@@ -21,6 +21,7 @@
   "functions": {
     "source": "functions",
     "codebase": "default",
-    "ignore": ["node_modules", ".git"]
+    "ignore": ["node_modules", ".git"],
+    "predeploy": ["npm --prefix functions run build"]
   }
 }
