@@ -391,9 +391,12 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
                         </>
                       ) : (
                         <View style={styles.dayNumRow}>
-                          <Text style={styles.dayNum}>DAY {dayNum}</Text>
+                          <Text style={styles.dayNumSmall}>DAY {dayNum}</Text>
                           {(activeProfile.totalPoints ?? 0) > 0 && (
-                            <Text style={styles.dayNum}>{activeProfile.totalPoints ?? 0} PTS</Text>
+                            <>
+                              <Text style={styles.dayNumSep}>/</Text>
+                              <Text style={styles.dayNumSmall}>{activeProfile.totalPoints ?? 0} PTS</Text>
+                            </>
                           )}
                         </View>
                       )}
@@ -588,7 +591,12 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(232, 100, 58, 0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8,
   },
   dateText: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted, marginTop: 6 },
-  dayNumRow: { flexDirection: 'row', alignItems: 'baseline', gap: 16 },
+  dayNumRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10 },
+  dayNumSmall: {
+    fontFamily: fonts.pixel, fontSize: 26, color: colors.accent, lineHeight: 36,
+    textShadowColor: 'rgba(232, 100, 58, 0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8,
+  },
+  dayNumSep: { fontFamily: fonts.pixel, fontSize: 20, color: colors.textMuted, lineHeight: 36 },
   generalDayNum: { fontFamily: fonts.pixel, fontSize: 13, color: colors.textMuted, marginTop: 2 },
   sectionLabel: { fontFamily: fonts.pixel, fontSize: 9, color: colors.textMuted, marginBottom: 10 },
   skeletonContainer: { gap: 12, padding: 4 },
