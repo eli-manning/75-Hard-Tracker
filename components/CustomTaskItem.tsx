@@ -11,9 +11,11 @@ interface CustomTaskItemProps {
   onToggle: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onNudge?: () => void;
+  nudgedAlready?: boolean;
 }
 
-export function CustomTaskItem({ task, completed, readOnly, onToggle, onEdit, onDelete }: CustomTaskItemProps) {
+export function CustomTaskItem({ task, completed, readOnly, onToggle, onEdit, onDelete, onNudge, nudgedAlready }: CustomTaskItemProps) {
   const card = (
     <View style={[styles.card, completed ? styles.cardDone : styles.cardDefault]}>
       <View style={[styles.checkbox, completed ? styles.checkboxDone : styles.checkboxEmpty]}>
@@ -31,6 +33,18 @@ export function CustomTaskItem({ task, completed, readOnly, onToggle, onEdit, on
       ]} numberOfLines={2}>
         {task.label}
       </Text>
+
+      {onNudge && (
+        <TouchableOpacity
+          onPress={onNudge}
+          disabled={nudgedAlready}
+          style={[styles.nudgeBtn, nudgedAlready && styles.nudgeBtnDone]}
+        >
+          <Text style={[styles.nudgeBtnText, nudgedAlready && styles.nudgeBtnTextDone]}>
+            {nudgedAlready ? 'NUDGED' : 'NUDGE'}
+          </Text>
+        </TouchableOpacity>
+      )}
 
       {!readOnly && (
         <View style={styles.actions}>
@@ -113,5 +127,25 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     padding: 4,
+  },
+  nudgeBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 2,
+    borderColor: colors.accent,
+    backgroundColor: colors.accentLight,
+    flexShrink: 0,
+  },
+  nudgeBtnDone: {
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+  },
+  nudgeBtnText: {
+    fontFamily: fonts.pixel,
+    fontSize: 5,
+    color: colors.accent,
+  },
+  nudgeBtnTextDone: {
+    color: colors.textMuted,
   },
 });

@@ -13,6 +13,8 @@ interface ChallengeItemProps {
   onToggle?: () => void;
   disabled?: boolean;
   disabledReason?: string;
+  onNudge?: () => void;
+  nudgedAlready?: boolean;
 }
 
 export function ChallengeItem({
@@ -24,6 +26,8 @@ export function ChallengeItem({
   onToggle,
   disabled,
   disabledReason,
+  onNudge,
+  nudgedAlready,
 }: ChallengeItemProps) {
   const isDisabled = readOnly || disabled;
   const iconSource = icon ? getImageSource(icon) : undefined;
@@ -69,6 +73,18 @@ export function ChallengeItem({
           )}
           {children && <View style={styles.children}>{children}</View>}
         </View>
+
+        {onNudge && (
+          <TouchableOpacity
+            onPress={onNudge}
+            disabled={nudgedAlready}
+            style={[styles.nudgeBtn, nudgedAlready && styles.nudgeBtnDone]}
+          >
+            <Text style={[styles.nudgeBtnText, nudgedAlready && styles.nudgeBtnTextDone]}>
+              {nudgedAlready ? 'NUDGED' : 'NUDGE'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -89,6 +105,28 @@ const styles = StyleSheet.create({
     padding: 12,
     borderWidth: 2,
     ...shadows.pixel,
+  },
+  nudgeBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 2,
+    borderColor: colors.accent,
+    backgroundColor: colors.accentLight,
+    alignSelf: 'center',
+    flexShrink: 0,
+    marginLeft: 4,
+  },
+  nudgeBtnDone: {
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+  },
+  nudgeBtnText: {
+    fontFamily: fonts.pixel,
+    fontSize: 5,
+    color: colors.accent,
+  },
+  nudgeBtnTextDone: {
+    color: colors.textMuted,
   },
   cardDefault: {
     borderColor: colors.border,

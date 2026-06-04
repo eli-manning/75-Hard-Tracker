@@ -10,9 +10,11 @@ interface ChallengeChecklistProps {
   readOnly: boolean;
   onUpdate: (updates: Partial<DayEntry>) => void;
   weightUnit?: 'lbs' | 'kg';
+  onNudge?: (taskKey: string, message: string) => void;
+  nudgedTasks?: Set<string>;
 }
 
-export function ChallengeChecklist({ entry, readOnly, onUpdate, weightUnit = 'lbs' }: ChallengeChecklistProps) {
+export function ChallengeChecklist({ entry, readOnly, onUpdate, weightUnit = 'lbs', onNudge, nudgedTasks }: ChallengeChecklistProps) {
   const [w1Duration, setW1Duration] = useState(String(entry.workoutOneDuration));
   const [w2Duration, setW2Duration] = useState(String(entry.workoutTwoDuration));
   const [weightInput, setWeightInput] = useState(entry.bodyWeight ? String(entry.bodyWeight) : '');
@@ -57,6 +59,8 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate, weightUnit = 'lb
         completed={entry.workoutOneCompleted}
         readOnly={readOnly}
         onToggle={() => patch({ workoutOneCompleted: !entry.workoutOneCompleted })}
+        onNudge={onNudge ? () => onNudge('workout1', "Get your first workout in today!") : undefined}
+        nudgedAlready={nudgedTasks?.has('workout1')}
       >
         {!readOnly && (
           <View style={styles.durationRow}>
@@ -82,6 +86,8 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate, weightUnit = 'lb
         onToggle={() => { if (!entry.workoutTwoOutdoor) return; patch({ workoutTwoCompleted: !entry.workoutTwoCompleted }); }}
         disabled={!entry.workoutTwoOutdoor && !readOnly}
         disabledReason="Tap 'OUTDOOR' first"
+        onNudge={onNudge ? () => onNudge('workout2', "Your outdoor workout is waiting!") : undefined}
+        nudgedAlready={nudgedTasks?.has('workout2')}
       >
         {!readOnly && (
           <View style={styles.w2Controls}>
@@ -124,6 +130,8 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate, weightUnit = 'lb
         completed={entry.dietCompleted}
         readOnly={readOnly}
         onToggle={() => patch({ dietCompleted: !entry.dietCompleted })}
+        onNudge={onNudge ? () => onNudge('diet', "Stay strong on your diet today!") : undefined}
+        nudgedAlready={nudgedTasks?.has('diet')}
       />
 
       {/* Water */}
@@ -132,6 +140,8 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate, weightUnit = 'lb
         icon="/images/water.png"
         completed={entry.waterCompleted}
         readOnly={readOnly}
+        onNudge={onNudge ? () => onNudge('water', "Don't forget to drink your gallon of water!") : undefined}
+        nudgedAlready={nudgedTasks?.has('water')}
       >
         <WaterTracker ozLogged={entry.waterOzLogged} goal={128} readOnly={readOnly} onAdd={addWater} onSetCustom={setWater} />
       </ChallengeItem>
@@ -143,6 +153,8 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate, weightUnit = 'lb
         completed={entry.readingCompleted}
         readOnly={readOnly}
         onToggle={() => { if (entry.readingCompleted) patch({ readingCompleted: false, pagesRead: 0 }); }}
+        onNudge={onNudge ? () => onNudge('reading', "Time to hit those 10 pages!") : undefined}
+        nudgedAlready={nudgedTasks?.has('reading')}
       >
         <View style={styles.readingContent}>
           <View style={styles.readingBarRow}>
@@ -185,6 +197,8 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate, weightUnit = 'lb
         completed={entry.photoCompleted}
         readOnly={readOnly}
         onToggle={() => patch({ photoCompleted: !entry.photoCompleted })}
+        onNudge={onNudge ? () => onNudge('photo', "Take that progress photo!") : undefined}
+        nudgedAlready={nudgedTasks?.has('photo')}
       >
         {!readOnly && (
           <View style={{ marginTop: 8 }}>

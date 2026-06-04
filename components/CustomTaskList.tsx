@@ -13,9 +13,11 @@ interface CustomTaskListProps {
   uid: string;
   readOnly: boolean;
   onDayUpdate: (updates: Partial<DayEntry>) => void;
+  onNudge?: (taskKey: string, message: string) => void;
+  nudgedTasks?: Set<string>;
 }
 
-export function CustomTaskList({ tasks, dayEntry, uid, readOnly, onDayUpdate }: CustomTaskListProps) {
+export function CustomTaskList({ tasks, dayEntry, uid, readOnly, onDayUpdate, onNudge, nudgedTasks }: CustomTaskListProps) {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<CustomTask | undefined>();
   const [defaultType, setDefaultType] = useState<'daily' | 'backlog'>('daily');
@@ -85,6 +87,8 @@ export function CustomTaskList({ tasks, dayEntry, uid, readOnly, onDayUpdate }: 
                 onToggle={() => toggleDailyTask(task.id)}
                 onEdit={() => openEditor('daily', task)}
                 onDelete={() => archiveCustomTask(uid, task.id)}
+                onNudge={onNudge ? () => onNudge(`custom-${task.id}`, task.label) : undefined}
+                nudgedAlready={nudgedTasks?.has(`custom-${task.id}`)}
               />
             ))}
           </View>

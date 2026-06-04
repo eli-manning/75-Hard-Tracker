@@ -64,7 +64,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
   const [profileError, setProfileError] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [pendingRequestCount, setPendingRequestCount] = useState(0);
-  const [nudgeCooldown, setNudgeCooldown] = useState(false);
+  const [nudgedTasks, setNudgedTasks] = useState<Set<string>>(new Set());
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -115,18 +115,23 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
       .finally(() => setProfileLoading(false));
   }, [activeUid, currentUser, users]);
 
-  async function sendNudge() {
-    if (nudgeCooldown) return;
-    setNudgeCooldown(true);
+  async function sendNudge(taskKey: string, message: string) {
+    if (nudgedTasks.has(taskKey)) return;
+    setNudgedTasks((prev) => new Set([...prev, taskKey]));
     try {
       await addDoc(collection(getFirebaseDb(), 'nudges'), {
         fromUid: currentUser.uid,
         toUid: activeProfile.uid,
         fromName: currentUser.displayName,
+        message,
         sentAt: serverTimestamp(),
       });
     } catch {}
-    setTimeout(() => setNudgeCooldown(false), 60_000);
+    setTimeout(() => setNudgedTasks((prev) => {
+      const next = new Set(prev);
+      next.delete(taskKey);
+      return next;
+    }), 60_000);
   }
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
@@ -174,13 +179,6 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
             <Text style={styles.viewingBannerText}>
               VIEWING {activeProfile.displayName.toUpperCase()}'S DAY
             </Text>
-            <TouchableOpacity
-              onPress={sendNudge}
-              disabled={nudgeCooldown}
-              style={[styles.nudgeBtn, nudgeCooldown && styles.nudgeBtnDisabled]}
-            >
-              <Text style={styles.nudgeBtnText}>{nudgeCooldown ? 'NUDGED!' : 'NUDGE'}</Text>
-            </TouchableOpacity>
           </View>
         )}
 
@@ -226,6 +224,8 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
                   readOnly={readOnly}
                   onUpdate={update}
                   weightUnit={currentUser.weightUnit ?? 'lbs'}
+                  onNudge={readOnly ? sendNudge : undefined}
+                  nudgedTasks={readOnly ? nudgedTasks : undefined}
                 />
               )}
             </View>
@@ -237,6 +237,8 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
                 uid={activeUid}
                 readOnly={readOnly}
                 onDayUpdate={update}
+                onNudge={readOnly ? sendNudge : undefined}
+                nudgedTasks={readOnly ? nudgedTasks : undefined}
               />
             )}
           </View>
@@ -348,12 +350,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   viewingBannerText: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
-  nudgeBtn: {
-    marginTop: 8, paddingHorizontal: 16, paddingVertical: 8,
-    borderWidth: 2, borderColor: colors.accent, backgroundColor: colors.accentLight,
-  },
-  nudgeBtnDisabled: { borderColor: colors.border, backgroundColor: colors.surface },
-  nudgeBtnText: { fontFamily: fonts.pixel, fontSize: 6, color: colors.accent },
   errorBanner: {
     marginBottom: 16, padding: 12,
     borderWidth: 2, borderColor: colors.red,

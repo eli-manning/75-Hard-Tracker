@@ -70,7 +70,7 @@ export function useNotifications(uid: string | undefined) {
       if (!messaging) return;
       const { getToken } = await import('firebase/messaging');
       const vapidKey = process.env.EXPO_PUBLIC_FIREBASE_VAPID_KEY;
-      const swReg = await navigator.serviceWorker.getRegistration('/');
+      const swReg = await navigator.serviceWorker.ready;
       const fcmToken = await getToken(messaging as any, {
         vapidKey,
         serviceWorkerRegistration: swReg,
@@ -78,8 +78,8 @@ export function useNotifications(uid: string | undefined) {
       if (!fcmToken) return;
       setToken(fcmToken);
       await updateDoc(doc(getFirebaseDb(), 'users', uid), { fcmWebToken: fcmToken });
-    } catch {
-      // Notification API or FCM not available
+    } catch (err) {
+      console.error('[FCM] token registration failed:', err);
     }
   }
 

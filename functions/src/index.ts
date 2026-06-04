@@ -36,7 +36,7 @@ export const onNudge = onDocumentCreated('nudges/{nudgeId}', async (event) => {
   const data = event.data?.data();
   if (!data) return;
 
-  const { toUid, fromName } = data as { toUid: string; fromName: string };
+  const { toUid, fromName, message } = data as { toUid: string; fromName: string; message?: string };
   const userSnap = await db.doc(`users/${toUid}`).get();
   const userData = userSnap.data();
   if (!userData) return;
@@ -44,12 +44,8 @@ export const onNudge = onDocumentCreated('nudges/{nudgeId}', async (event) => {
   if (userData.notifAllEnabled === false) return;
   if (userData.notifNudgesEnabled === false) return;
 
-  await sendPush(
-    userData.expoPushToken,
-    userData.fcmWebToken,
-    '75 HARD',
-    `${fromName} is nudging you! Go complete your tasks.`,
-  );
+  const body = message ? `${fromName}: ${message}` : `${fromName} is nudging you! Go complete your tasks.`;
+  await sendPush(userData.expoPushToken, userData.fcmWebToken, '75 HARD', body);
 });
 
 export const onFriendRequestAccepted = onDocumentUpdated(
