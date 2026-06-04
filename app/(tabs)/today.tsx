@@ -379,7 +379,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
                 const daysUntil = notStarted ? Math.abs(dayNum) + 1 : 0;
                 return (
                   <View style={styles.dayHeaderRow}>
-                    <View>
+                    <View style={styles.dayHeaderLeft}>
                       {notStarted ? (
                         <>
                           <Text style={styles.startsInLabel}>STARTS IN</Text>
@@ -392,7 +392,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
                           <Text style={styles.dayNumSmall}>DAY {dayNum}</Text>
                           {(activeProfile.totalPoints ?? 0) > 0 && (
                             <>
-                              <Text style={styles.dayNumSep}>/</Text>
+                              <Text style={styles.dayNumSep}>|</Text>
                               <Text style={styles.dayNumSmall}>{activeProfile.totalPoints ?? 0} PTS</Text>
                             </>
                           )}
@@ -579,6 +579,7 @@ const styles = StyleSheet.create({
   content: { gap: 24 },
   dayHeader: { gap: 12 },
   dayHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  dayHeaderLeft: { flex: 1, marginRight: 12 },
   dayNum: {
     fontFamily: fonts.pixel, fontSize: 32, color: colors.accent, lineHeight: 44,
     textShadowColor: 'rgba(232, 100, 58, 0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8,
@@ -589,7 +590,7 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(232, 100, 58, 0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8,
   },
   dateText: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted, marginTop: 6 },
-  dayNumRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10 },
+  dayNumRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   dayNumSmall: {
     fontFamily: fonts.pixel, fontSize: 26, color: colors.accent, lineHeight: 36,
     textShadowColor: 'rgba(232, 100, 58, 0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8,
