@@ -40,7 +40,7 @@ export default function Root({ children }: PropsWithChildren) {
             flex-direction: column;
             margin: 0;
             padding: 0;
-            overflow: hidden;
+            overflow: clip !important;
             min-height: -webkit-fill-available;
             background-color: #0c0b08;
           }
