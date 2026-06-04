@@ -18,10 +18,19 @@ export function TaskEditor({ task, defaultType = 'daily', onSave, onClose }: Tas
   const [label, setLabel] = useState(task?.label ?? '');
   const [type, setType] = useState<'daily' | 'backlog'>(task?.type ?? defaultType);
   const [visible, setVisible] = useState(task?.visible ?? true);
+  const [why, setWhy] = useState(task?.why ?? '');
+  const [points, setPoints] = useState<string>(task?.points ? String(task.points) : '');
 
   function handleSave() {
     if (!label.trim()) return;
-    onSave({ label: label.trim().slice(0, 200), type, visible });
+    const parsedPoints = parseInt(points, 10);
+    onSave({
+      label: label.trim().slice(0, 200),
+      type,
+      visible,
+      why: why.trim() || undefined,
+      points: (!isNaN(parsedPoints) && parsedPoints > 0) ? Math.min(parsedPoints, 10) : undefined,
+    });
   }
 
   return (
@@ -54,6 +63,19 @@ export function TaskEditor({ task, defaultType = 'daily', onSave, onClose }: Tas
           </View>
 
           <View style={styles.field}>
+            <Text style={styles.fieldLabel}>WHY? (OPTIONAL)</Text>
+            <TextInput
+              value={why}
+              onChangeText={setWhy}
+              maxLength={150}
+              placeholderTextColor={colors.textMuted}
+              placeholder="Your motivation…"
+              style={styles.input}
+              multiline
+            />
+          </View>
+
+          <View style={styles.field}>
             <Text style={styles.fieldLabel}>TYPE</Text>
             <View style={styles.typeRow}>
               {(['daily', 'backlog'] as const).map((t) => (
@@ -68,6 +90,19 @@ export function TaskEditor({ task, defaultType = 'daily', onSave, onClose }: Tas
                 </TouchableOpacity>
               ))}
             </View>
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.fieldLabel}>POINT VALUE (OPTIONAL, 1-10)</Text>
+            <TextInput
+              value={points}
+              onChangeText={(t) => setPoints(t.replace(/[^0-9]/g, ''))}
+              keyboardType="numeric"
+              maxLength={2}
+              placeholderTextColor={colors.textMuted}
+              placeholder="0"
+              style={styles.input}
+            />
           </View>
 
           <TouchableOpacity onPress={() => setVisible((v) => !v)} style={styles.visibilityRow}>

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +17,8 @@ interface CustomTaskItemProps {
 }
 
 export function CustomTaskItem({ task, completed, readOnly, onToggle, onEdit, onDelete, onNudge, nudgedAlready }: CustomTaskItemProps) {
+  const [whyExpanded, setWhyExpanded] = useState(false);
+
   const card = (
     <View style={[styles.card, completed ? styles.cardDone : styles.cardDefault]}>
       <View style={[styles.checkbox, completed ? styles.checkboxDone : styles.checkboxEmpty]}>
@@ -26,13 +29,34 @@ export function CustomTaskItem({ task, completed, readOnly, onToggle, onEdit, on
         )}
       </View>
 
-      <Text style={[
-        styles.label,
-        completed && styles.labelDone,
-        completed && styles.labelStrike,
-      ]} numberOfLines={2}>
-        {task.label}
-      </Text>
+      <View style={styles.labelArea}>
+        <View style={styles.labelRow}>
+          <Text style={[
+            styles.label,
+            completed && styles.labelDone,
+            completed && styles.labelStrike,
+          ]} numberOfLines={2}>
+            {task.label}
+          </Text>
+          {task.points && !completed && (
+            <View style={styles.pointsBadge}>
+              <Text style={styles.pointsBadgeText}>+{task.points} PTS</Text>
+            </View>
+          )}
+        </View>
+        {!readOnly && task.why && (
+          <TouchableOpacity
+            onPress={(e) => { e.stopPropagation?.(); setWhyExpanded((v) => !v); }}
+            style={styles.whyHint}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.whyHintText}>{whyExpanded ? 'HIDE WHY' : 'WHY?'}</Text>
+          </TouchableOpacity>
+        )}
+        {whyExpanded && task.why && (
+          <Text style={styles.whyText}>{task.why}</Text>
+        )}
+      </View>
 
       {onNudge && !completed && (
         <TouchableOpacity
@@ -106,12 +130,40 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.6,
     shadowRadius: 8,
   },
+  labelArea: { flex: 1, minWidth: 0 },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   label: {
-    flex: 1,
     fontFamily: fonts.vt323,
     fontSize: 20,
     color: colors.text,
     letterSpacing: 0.4,
+    flexShrink: 1,
+  },
+  pointsBadge: {
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    backgroundColor: colors.accentLight,
+    flexShrink: 0,
+  },
+  pointsBadgeText: {
+    fontFamily: fonts.pixel,
+    fontSize: 5,
+    color: colors.accent,
+  },
+  whyHint: { marginTop: 4 },
+  whyHintText: {
+    fontFamily: fonts.pixel,
+    fontSize: 5,
+    color: colors.textMuted,
+  },
+  whyText: {
+    fontFamily: fonts.vt323,
+    fontSize: 16,
+    color: colors.textMuted,
+    marginTop: 2,
+    fontStyle: 'italic',
   },
   labelDone: {
     color: colors.green,
