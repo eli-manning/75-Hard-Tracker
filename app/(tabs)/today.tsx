@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { format, differenceInDays, parseISO, subDays } from 'date-fns';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getFirebaseDb } from '../../lib/firebase';
@@ -69,6 +69,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
   const [menuOpen, setMenuOpen] = useState(false);
   const [pendingRequestCount, setPendingRequestCount] = useState(0);
   const [nudgedTasks, setNudgedTasks] = useState<Set<string>>(new Set());
+  const [pendingNudge, setPendingNudge] = useState<{ taskKey: string; message: string } | null>(null);
   const [dismissedMilestone, setDismissedMilestone] = useState<number | null>(null);
   const [showRestartModal, setShowRestartModal] = useState(false);
   const [showMissedDay, setShowMissedDay] = useState(false);
@@ -165,8 +166,19 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
     setShowMissedDay(false);
   }
 
-  async function sendNudge(taskKey: string, message: string) {
-    if (nudgedTasks.has(taskKey)) return;
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+
+  const nudgeQuota = useMemo(() => {
+    if (!currentUser.nudgeResetDate || currentUser.nudgeResetDate !== todayStr) {
+      return { remaining: 5, purchased: 0 };
+    }
+    return {
+      remaining: currentUser.nudgesRemaining ?? 5,
+      purchased: currentUser.purchasedNudgesToday ?? 0,
+    };
+  }, [currentUser, todayStr]);
+
+  async function doSendNudge(taskKey: string, message: string) {
     setNudgedTasks((prev) => new Set([...prev, taskKey]));
     try {
       await addDoc(collection(getFirebaseDb(), 'nudges'), {
@@ -174,7 +186,14 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
         toUid: activeProfile.uid,
         fromName: currentUser.displayName,
         message,
+        taskKey,
         sentAt: serverTimestamp(),
+      });
+      onProfileUpdate({
+        ...currentUser,
+        nudgeResetDate: todayStr,
+        nudgesRemaining: Math.max(0, nudgeQuota.remaining - 1),
+        purchasedNudgesToday: nudgeQuota.purchased,
       });
     } catch {}
     setTimeout(() => setNudgedTasks((prev) => {
@@ -184,7 +203,43 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
     }), 60_000);
   }
 
-  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  async function handleSpendPoints() {
+    if (!pendingNudge) return;
+    const { taskKey, message } = pendingNudge;
+    setPendingNudge(null);
+    setNudgedTasks((prev) => new Set([...prev, taskKey]));
+    try {
+      await addDoc(collection(getFirebaseDb(), 'nudges'), {
+        fromUid: currentUser.uid,
+        toUid: activeProfile.uid,
+        fromName: currentUser.displayName,
+        message,
+        taskKey,
+        sentAt: serverTimestamp(),
+      });
+      onProfileUpdate({
+        ...currentUser,
+        nudgeResetDate: todayStr,
+        nudgesRemaining: 0,
+        purchasedNudgesToday: nudgeQuota.purchased + 1,
+        totalPoints: Math.max(0, (currentUser.totalPoints ?? 0) - 10),
+      });
+    } catch {}
+    setTimeout(() => setNudgedTasks((prev) => {
+      const next = new Set(prev);
+      next.delete(taskKey);
+      return next;
+    }), 60_000);
+  }
+
+  async function sendNudge(taskKey: string, message: string) {
+    if (nudgedTasks.has(taskKey)) return;
+    if (nudgeQuota.remaining <= 0) {
+      setPendingNudge({ taskKey, message });
+      return;
+    }
+    await doSendNudge(taskKey, message);
+  }
   const today = format(new Date(), 'MMMM d, yyyy').toUpperCase();
   const streak = activeProfile.currentStreak ?? 0;
   const dayNum = activeProfile.challengeStartDate
@@ -237,6 +292,45 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
         onRequestsSeen={() => setPendingRequestCount(0)}
       />
 
+      {pendingNudge && (
+        <Modal transparent animationType="fade">
+          <View style={styles.spendBackdrop}>
+            <View style={styles.spendCard}>
+              {nudgeQuota.purchased >= 5 || (currentUser.totalPoints ?? 0) < 10 ? (
+                <>
+                  <Text style={styles.spendTitle}>NOT ENOUGH POINTS</Text>
+                  <Text style={styles.spendBody}>
+                    {nudgeQuota.purchased >= 5
+                      ? "You've sent 5 paid nudges today. Try again tomorrow."
+                      : `You need 10 points to send a nudge. You have ${currentUser.totalPoints ?? 0}.`}
+                  </Text>
+                  <TouchableOpacity onPress={() => setPendingNudge(null)} style={styles.spendCancelBtn}>
+                    <Text style={styles.spendCancelText}>OK</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.spendTitle}>SPEND 10 POINTS?</Text>
+                  <Text style={styles.spendBody}>
+                    {"You've used all 5 free nudges today.\n"}
+                    {`You have ${currentUser.totalPoints ?? 0} points.\n`}
+                    {`Paid nudges today: ${nudgeQuota.purchased}/5`}
+                  </Text>
+                  <View style={styles.spendBtns}>
+                    <TouchableOpacity onPress={() => setPendingNudge(null)} style={styles.spendCancelBtn}>
+                      <Text style={styles.spendCancelText}>CANCEL</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={handleSpendPoints} style={styles.spendConfirmBtn}>
+                      <Text style={styles.spendConfirmText}>SPEND 10 PTS</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
+            </View>
+          </View>
+        </Modal>
+      )}
+
       <ScrollView
         style={styles.scrollArea}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 + insets.bottom }]}
@@ -246,6 +340,11 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
           <View style={styles.viewingBanner}>
             <Text style={styles.viewingBannerText}>
               VIEWING {activeProfile.displayName.toUpperCase()}'S DAY
+            </Text>
+            <Text style={styles.nudgeQuotaText}>
+              {nudgeQuota.remaining > 0
+                ? `${nudgeQuota.remaining} NUDGE${nudgeQuota.remaining !== 1 ? 'S' : ''} LEFT TODAY`
+                : '0 FREE — 10 PTS EACH'}
             </Text>
           </View>
         )}
@@ -422,6 +521,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   viewingBannerText: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
+  nudgeQuotaText: { fontFamily: fonts.pixel, fontSize: 5, color: colors.textMuted, marginTop: 2, opacity: 0.7 },
+  spendBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', padding: 32 },
+  spendCard: { backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.accent, padding: 24, gap: 16, width: '100%' },
+  spendTitle: { fontFamily: fonts.pixel, fontSize: 9, color: colors.accent },
+  spendBody: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted, lineHeight: 12 },
+  spendBtns: { flexDirection: 'row', gap: 8 },
+  spendCancelBtn: { flex: 1, paddingVertical: 10, borderWidth: 2, borderColor: colors.border, alignItems: 'center' },
+  spendCancelText: { fontFamily: fonts.pixel, fontSize: 7, color: colors.textMuted },
+  spendConfirmBtn: { flex: 1, paddingVertical: 10, borderWidth: 2, borderColor: colors.accent, backgroundColor: colors.accentLight, alignItems: 'center' },
+  spendConfirmText: { fontFamily: fonts.pixel, fontSize: 7, color: colors.accent },
   errorBanner: {
     marginBottom: 16, padding: 12,
     borderWidth: 2, borderColor: colors.red,

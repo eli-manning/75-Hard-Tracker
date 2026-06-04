@@ -45,6 +45,10 @@ service cloud.firestore {
                       || resource.data.fromUid == request.auth.uid);
     }
 
+    match /users/{uid}/nudgeCooldowns/{cooldownId} {
+      allow read, write: if false; // written by Cloud Functions admin SDK only
+    }
+
     match /friendRequests/{toUid}/incoming/{fromUid} {
       // Anyone logged in can send a request (write where fromUid == their own uid)
       allow create: if request.auth != null && request.auth.uid == fromUid;
