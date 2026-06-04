@@ -266,7 +266,6 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSe
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text style={styles.bodyText} numberOfLines={1}>{u.displayName}</Text>
-                      <Text style={[styles.bodyText, { fontSize: 10, color: colors.textMuted }]} numberOfLines={1}>{u.email}</Text>
                     </View>
                     {sent ? (
                       <Text style={styles.sentLabel}>SENT</Text>
