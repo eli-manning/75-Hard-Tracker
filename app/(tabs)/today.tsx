@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { format, differenceInDays, parseISO } from 'date-fns';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirebaseDb } from '../../lib/firebase';
 import { useAuth } from '../../hooks/useAuth';
 import { useRouter } from 'expo-router';
 import { useAllUsers } from '../../hooks/useAllUsers';
@@ -62,6 +64,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
   const [profileError, setProfileError] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [pendingRequestCount, setPendingRequestCount] = useState(0);
+  const [nudgeCooldown, setNudgeCooldown] = useState(false);
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -112,6 +115,20 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
       .finally(() => setProfileLoading(false));
   }, [activeUid, currentUser, users]);
 
+  async function sendNudge() {
+    if (nudgeCooldown) return;
+    setNudgeCooldown(true);
+    try {
+      await addDoc(collection(getFirebaseDb(), 'nudges'), {
+        fromUid: currentUser.uid,
+        toUid: activeProfile.uid,
+        fromName: currentUser.displayName,
+        sentAt: serverTimestamp(),
+      });
+    } catch {}
+    setTimeout(() => setNudgeCooldown(false), 60_000);
+  }
+
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const today = format(new Date(), 'MMMM d, yyyy').toUpperCase();
   const streak = activeProfile.currentStreak ?? 0;
@@ -157,6 +174,13 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
             <Text style={styles.viewingBannerText}>
               VIEWING {activeProfile.displayName.toUpperCase()}'S DAY
             </Text>
+            <TouchableOpacity
+              onPress={sendNudge}
+              disabled={nudgeCooldown}
+              style={[styles.nudgeBtn, nudgeCooldown && styles.nudgeBtnDisabled]}
+            >
+              <Text style={styles.nudgeBtnText}>{nudgeCooldown ? 'NUDGED!' : '👊 NUDGE'}</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -323,6 +347,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   viewingBannerText: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
+  nudgeBtn: {
+    marginTop: 8, paddingHorizontal: 16, paddingVertical: 8,
+    borderWidth: 2, borderColor: colors.accent, backgroundColor: colors.accentLight,
+  },
+  nudgeBtnDisabled: { borderColor: colors.border, backgroundColor: colors.surface },
+  nudgeBtnText: { fontFamily: fonts.pixel, fontSize: 6, color: colors.accent },
   errorBanner: {
     marginBottom: 16, padding: 12,
     borderWidth: 2, borderColor: colors.red,

@@ -12,6 +12,7 @@ import { getAvatarUrl, generateSeed, hasCustomAvatar } from '../lib/avatar';
 import { getAvatarSource, AVATAR_PORTRAIT_RATIO } from '../lib/avatarMap';
 import { invalidate, getSessionCached } from '../lib/cache';
 import { LoadingScreen } from '../components/LoadingScreen';
+import { NotificationSettings } from '../components/NotificationSettings';
 import { colors, fonts, shadows } from '../lib/theme';
 import { format, parseISO } from 'date-fns';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -176,6 +177,15 @@ function ProfileInner({ currentUser }: { currentUser: UserProfile }) {
             <Text style={styles.statLabel}>LONGEST STREAK</Text>
           </View>
         </View>
+
+        {/* Notifications */}
+        <NotificationSettings
+          profile={profile}
+          onUpdate={async (patch) => {
+            await updateUserProfile(profile.uid, patch);
+            setProfile((p) => ({ ...p, ...patch }));
+          }}
+        />
 
         {/* Fitness info */}
         {(profile.startingWeight || profile.fitnessGoal) && (
