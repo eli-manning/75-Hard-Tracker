@@ -67,24 +67,23 @@ export function ChallengeItem({
                 resizeMode="contain"
               />
             )}
+            {onNudge && !completed && (
+              <TouchableOpacity
+                onPress={onNudge}
+                disabled={nudgedAlready}
+                style={[styles.nudgeBtn, nudgedAlready && styles.nudgeBtnDone]}
+              >
+                <Text style={[styles.nudgeBtnText, nudgedAlready && styles.nudgeBtnTextDone]}>
+                  {nudgedAlready ? 'NUDGED' : 'NUDGE'}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
           {disabled && disabledReason && (
             <Text style={styles.disabledReason}>{disabledReason}</Text>
           )}
           {children && <View style={styles.children}>{children}</View>}
         </View>
-
-        {onNudge && (
-          <TouchableOpacity
-            onPress={onNudge}
-            disabled={nudgedAlready}
-            style={[styles.nudgeBtn, nudgedAlready && styles.nudgeBtnDone]}
-          >
-            <Text style={[styles.nudgeBtnText, nudgedAlready && styles.nudgeBtnTextDone]}>
-              {nudgedAlready ? 'NUDGED' : 'NUDGE'}
-            </Text>
-          </TouchableOpacity>
-        )}
       </View>
     </View>
   );
@@ -107,14 +106,12 @@ const styles = StyleSheet.create({
     ...shadows.pixel,
   },
   nudgeBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 3,
     borderWidth: 2,
     borderColor: colors.accent,
     backgroundColor: colors.accentLight,
-    alignSelf: 'center',
     flexShrink: 0,
-    marginLeft: 4,
   },
   nudgeBtnDone: {
     borderColor: colors.border,

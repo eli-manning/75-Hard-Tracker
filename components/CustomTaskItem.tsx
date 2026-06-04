@@ -34,7 +34,7 @@ export function CustomTaskItem({ task, completed, readOnly, onToggle, onEdit, on
         {task.label}
       </Text>
 
-      {onNudge && (
+      {onNudge && !completed && (
         <TouchableOpacity
           onPress={onNudge}
           disabled={nudgedAlready}
@@ -129,8 +129,8 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   nudgeBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 3,
     borderWidth: 2,
     borderColor: colors.accent,
     backgroundColor: colors.accentLight,
