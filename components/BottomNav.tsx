@@ -10,17 +10,86 @@ const NAV = [
   { href: '/(tabs)/history', label: 'HISTORY', icon: 'calendar-outline' as const },
 ];
 
-export function BottomNav() {
+// Web: renders via a React DOM portal directly into document.body so it is
+// completely outside the React Native container tree and all its overflow:hidden
+// clipping. Uses plain HTML inline styles so env(safe-area-inset-bottom) is
+// resolved by the browser natively, not filtered by RN's style processor.
+function WebBottomNav() {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  if (typeof document === 'undefined') return null;
+  const { createPortal } = require('react-dom');
+
+  const nav = (
+    <div
+      style={{
+        position: 'fixed',
+        bottom: 0,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: '100%',
+        maxWidth: '480px',
+        display: 'flex',
+        backgroundColor: colors.surface,
+        borderTop: `2px solid ${colors.border}`,
+        boxShadow: '0 -4px 0 #000',
+        zIndex: 9999,
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}
+    >
+      {NAV.map(({ href, label, icon }) => {
+        const active = pathname.includes(label.toLowerCase());
+        return (
+          <button
+            key={href}
+            onClick={() => router.replace(href as any)}
+            style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingTop: '12px',
+              paddingBottom: '12px',
+              gap: '4px',
+              border: 'none',
+              borderRight: `1px solid ${colors.border}`,
+              background: active ? colors.accentLight : 'transparent',
+              cursor: 'pointer',
+              WebkitTapHighlightColor: 'transparent',
+            } as React.CSSProperties}
+          >
+            <Ionicons
+              name={icon}
+              size={20}
+              color={active ? colors.accent : colors.textMuted}
+            />
+            <span
+              style={{
+                fontFamily: '"Press Start 2P", monospace',
+                fontSize: '6px',
+                color: active ? colors.accent : colors.textMuted,
+              }}
+            >
+              {label}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  return createPortal(nav, document.body) as any;
+}
+
+function NativeBottomNav() {
   const pathname = usePathname();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const navInsetStyle = Platform.OS === 'web'
-    ? { bottom: 0, paddingBottom: insets.bottom }
-    : { bottom: -insets.bottom, paddingBottom: insets.bottom };
-
   return (
-    <View style={[styles.nav, navInsetStyle]}>
+    <View style={[styles.nav, { bottom: -insets.bottom, paddingBottom: insets.bottom }]}>
       {NAV.map(({ href, label, icon }) => {
         const active = pathname.includes(label.toLowerCase());
         return (
@@ -43,6 +112,8 @@ export function BottomNav() {
     </View>
   );
 }
+
+export const BottomNav = Platform.OS === 'web' ? WebBottomNav : NativeBottomNav;
 
 const styles = StyleSheet.create({
   nav: {
