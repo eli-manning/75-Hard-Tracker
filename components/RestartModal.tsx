@@ -23,7 +23,7 @@ export function RestartModal({ visible, onConfirm, onCancel, cancellable = true 
   }, [visible]);
 
   return (
-    <Modal visible={visible} transparent animationType="slide">
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={cancellable ? onCancel : undefined}>
       <View style={styles.overlay}>
         <View style={styles.card}>
           {step === 1 ? (

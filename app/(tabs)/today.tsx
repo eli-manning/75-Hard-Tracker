@@ -421,6 +421,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
                   weightUnit={currentUser.weightUnit ?? 'lbs'}
                   onNudge={readOnly ? sendNudge : undefined}
                   nudgedTasks={readOnly ? nudgedTasks : undefined}
+                  challengeMode={activeProfile.challengeMode}
                 />
               )}
             </View>

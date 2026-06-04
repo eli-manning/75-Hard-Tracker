@@ -12,9 +12,10 @@ interface ChallengeChecklistProps {
   weightUnit?: 'lbs' | 'kg';
   onNudge?: (taskKey: string, message: string) => void;
   nudgedTasks?: Set<string>;
+  challengeMode?: '75hard' | 'general';
 }
 
-export function ChallengeChecklist({ entry, readOnly, onUpdate, weightUnit = 'lbs', onNudge, nudgedTasks }: ChallengeChecklistProps) {
+export function ChallengeChecklist({ entry, readOnly, onUpdate, weightUnit = 'lbs', onNudge, nudgedTasks, challengeMode }: ChallengeChecklistProps) {
   const [w1Duration, setW1Duration] = useState(String(entry.workoutOneDuration));
   const [w2Duration, setW2Duration] = useState(String(entry.workoutTwoDuration));
   const [weightInput, setWeightInput] = useState(entry.bodyWeight ? String(entry.bodyWeight) : '');
@@ -22,8 +23,9 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate, weightUnit = 'lb
 
   function computeAllCore(updates: Partial<DayEntry> = {}): boolean {
     const e = { ...entry, ...updates };
+    const outdoorRequired = challengeMode !== 'general';
     return (
-      e.workoutOneCompleted && e.workoutTwoCompleted && e.workoutTwoOutdoor &&
+      e.workoutOneCompleted && e.workoutTwoCompleted && (!outdoorRequired || e.workoutTwoOutdoor) &&
       e.dietCompleted && e.waterCompleted && e.readingCompleted && e.photoCompleted
     );
   }

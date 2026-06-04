@@ -56,6 +56,9 @@ service cloud.firestore {
       allow read: if request.auth != null && request.auth.uid == toUid;
       allow delete: if request.auth != null &&
         (request.auth.uid == toUid || request.auth.uid == fromUid);
+      // Recipient can mark as accepted (triggers Cloud Function notification to sender)
+      allow update: if request.auth != null && request.auth.uid == toUid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
     }
   }
 }

@@ -154,6 +154,9 @@ export async function getPendingRequests(uid: string): Promise<string[]> {
 }
 
 export async function acceptFriendRequest(currentUid: string, fromUid: string): Promise<void> {
+  // Update status first so Cloud Function can trigger the acceptance notification to the sender
+  await updateDoc(doc(db(), 'friendRequests', currentUid, 'incoming', fromUid), { status: 'accepted' });
+  // Then atomically add friends + delete the request
   const batch = writeBatch(db());
   batch.update(doc(db(), 'users', currentUid), { friends: arrayUnion(fromUid) });
   batch.update(doc(db(), 'users', fromUid), { friends: arrayUnion(currentUid) });
