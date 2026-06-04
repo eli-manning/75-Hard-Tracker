@@ -13,6 +13,7 @@ import { getAvatarSource, AVATAR_PORTRAIT_RATIO } from '../lib/avatarMap';
 import { invalidate, getSessionCached } from '../lib/cache';
 import { LoadingScreen } from '../components/LoadingScreen';
 import { NotificationSettings } from '../components/NotificationSettings';
+import { RestartModal } from '../components/RestartModal';
 import { colors, fonts, shadows } from '../lib/theme';
 import { format, parseISO } from 'date-fns';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -27,6 +28,7 @@ function ProfileInner({ currentUser }: { currentUser: UserProfile }) {
   const [startInput, setStartInput] = useState(profile.challengeStartDate);
   const [saving, setSaving] = useState(false);
   const [randomizing, setRandomizing] = useState(false);
+  const [showRestartModal, setShowRestartModal] = useState(false);
 
   useEffect(() => {
     const unsub = subscribeToProfile(profile.uid, (fresh) => setProfile(fresh));
@@ -166,6 +168,26 @@ function ProfileInner({ currentUser }: { currentUser: UserProfile }) {
           )}
         </View>
 
+        {/* Challenge mode */}
+        <View style={styles.fieldCard}>
+          <Text style={styles.fieldLabel}>CHALLENGE MODE</Text>
+          <View style={styles.displayRow}>
+            <Text style={styles.displayValue}>
+              {(profile.challengeMode ?? 'general') === '75hard' ? '75 HARD MODE' : 'GENERAL FITNESS'}
+            </Text>
+            <TouchableOpacity
+              onPress={async () => {
+                const newMode = (profile.challengeMode ?? 'general') === '75hard' ? 'general' : '75hard';
+                await updateUserProfile(profile.uid, { challengeMode: newMode });
+                setProfile((p) => ({ ...p, challengeMode: newMode }));
+              }}
+              style={styles.iconBtn}
+            >
+              <Ionicons name="swap-horizontal-outline" size={16} color={colors.accent} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Stats */}
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
@@ -203,7 +225,37 @@ function ProfileInner({ currentUser }: { currentUser: UserProfile }) {
             )}
           </View>
         )}
+        {/* Danger zone */}
+        {(profile.challengeMode ?? 'general') === '75hard' && (
+          <View style={styles.dangerZone}>
+            <Text style={styles.dangerLabel}>DANGER ZONE</Text>
+            <TouchableOpacity
+              onPress={() => setShowRestartModal(true)}
+              style={styles.dangerBtn}
+            >
+              <Text style={styles.dangerBtnText}>FAILED THE CHALLENGE</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
+
+      <RestartModal
+        visible={showRestartModal}
+        onConfirm={async ({ keepPoints, keepLongestStreak }) => {
+          const { format: fmt } = await import('date-fns');
+          const { clearAll } = await import('../lib/cache');
+          await updateUserProfile(profile.uid, {
+            challengeStartDate: fmt(new Date(), 'yyyy-MM-dd'),
+            currentStreak: 0,
+            ...(keepLongestStreak ? {} : { longestStreak: 0 }),
+            ...(keepPoints ? {} : { totalPoints: 0 }),
+          });
+          clearAll();
+          setShowRestartModal(false);
+          setProfile((p) => ({ ...p, challengeStartDate: fmt(new Date(), 'yyyy-MM-dd'), currentStreak: 0 }));
+        }}
+        onCancel={() => setShowRestartModal(false)}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -272,4 +324,16 @@ const styles = StyleSheet.create({
   },
   statValue: { fontFamily: fonts.pixel, fontSize: 20, color: colors.accent },
   statLabel: { fontFamily: fonts.pixel, fontSize: 5, color: colors.textMuted, textAlign: 'center' },
+  dangerZone: {
+    padding: 16, gap: 12,
+    borderWidth: 2, borderColor: colors.red,
+    backgroundColor: colors.redLight,
+  },
+  dangerLabel: { fontFamily: fonts.pixel, fontSize: 6, color: colors.red },
+  dangerBtn: {
+    paddingVertical: 12, paddingHorizontal: 16,
+    borderWidth: 2, borderColor: colors.red,
+    alignItems: 'center',
+  },
+  dangerBtnText: { fontFamily: fonts.pixel, fontSize: 7, color: colors.red },
 });

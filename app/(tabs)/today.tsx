@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { format, differenceInDays, parseISO } from 'date-fns';
+import { format, differenceInDays, parseISO, subDays } from 'date-fns';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getFirebaseDb } from '../../lib/firebase';
 import { useAuth } from '../../hooks/useAuth';
@@ -9,7 +9,7 @@ import { useAllUsers } from '../../hooks/useAllUsers';
 import { useDayData } from '../../hooks/useDayData';
 import { useCustomTasks } from '../../hooks/useCustomTasks';
 import { useMinDuration } from '../../hooks/useMinDuration';
-import { getUserProfile, getAllUsers, getPendingRequests, getOrCreateDayEntry, getDayHistory } from '../../lib/firestore';
+import { getUserProfile, getAllUsers, getPendingRequests, getOrCreateDayEntry, getDayHistory, updateUserProfile, updateDayEntry, incrementUserPoints } from '../../lib/firestore';
 import { getCached, getSessionCached, setSessionCached, clearAll } from '../../lib/cache';
 import { UserProfile, DayEntry } from '../../lib/types';
 import { LoadingScreen } from '../../components/LoadingScreen';
@@ -19,6 +19,10 @@ import { ChallengeChecklist } from '../../components/ChallengeChecklist';
 import { CustomTaskList } from '../../components/CustomTaskList';
 import { StreakBadge } from '../../components/StreakBadge';
 import { SideMenu } from '../../components/SideMenu';
+import { MilestoneBanner } from '../../components/MilestoneBanner';
+import { RestartModal } from '../../components/RestartModal';
+import { MissedDayModal } from '../../components/MissedDayModal';
+import { computeDayPoints } from '../../lib/points';
 import { colors, fonts } from '../../lib/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -65,6 +69,11 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
   const [menuOpen, setMenuOpen] = useState(false);
   const [pendingRequestCount, setPendingRequestCount] = useState(0);
   const [nudgedTasks, setNudgedTasks] = useState<Set<string>>(new Set());
+  const [dismissedMilestone, setDismissedMilestone] = useState<number | null>(null);
+  const [showRestartModal, setShowRestartModal] = useState(false);
+  const [showMissedDay, setShowMissedDay] = useState(false);
+  const [yesterdayEntry, setYesterdayEntry] = useState<DayEntry | null>(null);
+  const missedDayChecked = useRef(false);
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -115,6 +124,47 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
       .finally(() => setProfileLoading(false));
   }, [activeUid, currentUser, users]);
 
+  useEffect(() => {
+    if (readOnly || missedDayChecked.current) return;
+    if (!dayEntry || !activeProfile.challengeMode || activeProfile.challengeMode !== '75hard') return;
+    missedDayChecked.current = true;
+    const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+    if (!activeProfile.challengeStartDate || yesterday < activeProfile.challengeStartDate) return;
+    getOrCreateDayEntry(activeUid, yesterday, activeProfile.challengeStartDate)
+      .then((entry) => {
+        if (!entry.allCoreCompleted) {
+          setYesterdayEntry(entry);
+          setShowMissedDay(true);
+        }
+      })
+      .catch(() => {});
+  }, [dayEntry, readOnly, activeProfile.challengeMode, activeProfile.challengeStartDate]);
+
+  const wrappedUpdate = useCallback(async (patch: Partial<DayEntry>) => {
+    if (!dayEntry) return;
+    const merged = { ...dayEntry, ...patch };
+    const newPts = computeDayPoints(merged, tasks);
+    const oldPts = dayEntry.dailyPoints ?? 0;
+    const delta = newPts - oldPts;
+    await update({ ...patch, dailyPoints: newPts });
+    if (delta !== 0) {
+      incrementUserPoints(activeUid, delta).catch(() => {});
+    }
+  }, [dayEntry, tasks, update, activeUid]);
+
+  async function handleRestartConfirm({ keepPoints, keepLongestStreak }: { keepPoints: boolean; keepLongestStreak: boolean }) {
+    const { format: fmt } = await import('date-fns');
+    await updateUserProfile(activeUid, {
+      challengeStartDate: fmt(new Date(), 'yyyy-MM-dd'),
+      currentStreak: 0,
+      ...(keepLongestStreak ? {} : { longestStreak: 0 }),
+      ...(keepPoints ? {} : { totalPoints: 0 }),
+    });
+    clearAll();
+    setShowRestartModal(false);
+    setShowMissedDay(false);
+  }
+
   async function sendNudge(taskKey: string, message: string) {
     if (nudgedTasks.has(taskKey)) return;
     setNudgedTasks((prev) => new Set([...prev, taskKey]));
@@ -143,6 +193,24 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
 
   return (
     <View style={styles.container}>
+      <RestartModal
+        visible={showRestartModal}
+        onConfirm={handleRestartConfirm}
+        onCancel={() => setShowRestartModal(false)}
+      />
+      {yesterdayEntry && (
+        <MissedDayModal
+          visible={showMissedDay}
+          yesterdayEntry={yesterdayEntry}
+          onMissed={() => { setShowMissedDay(false); setShowRestartModal(true); }}
+          onSaved={async (patch) => {
+            if (!yesterdayEntry) return;
+            await updateDayEntry(activeUid, format(subDays(new Date(), 1), 'yyyy-MM-dd'), patch);
+            setShowMissedDay(false);
+          }}
+          onDismiss={() => setShowMissedDay(false)}
+        />
+      )}
       {/* Top bar */}
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
         {users.length > 0 ? (
@@ -216,13 +284,17 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
               {dayEntry && dayEntry.dayNumber > 0 && <DailyProgress entry={dayEntry} />}
             </View>
 
+            {!readOnly && dayNum > 0 && [25, 50, 75].includes(dayNum) && dismissedMilestone !== dayNum && (
+              <MilestoneBanner dayNum={dayNum} onDismiss={() => setDismissedMilestone(dayNum)} />
+            )}
+
             <View>
               <Text style={styles.sectionLabel}>CORE TASKS</Text>
               {dayEntry && (
                 <ChallengeChecklist
                   entry={dayEntry}
                   readOnly={readOnly}
-                  onUpdate={update}
+                  onUpdate={wrappedUpdate}
                   weightUnit={currentUser.weightUnit ?? 'lbs'}
                   onNudge={readOnly ? sendNudge : undefined}
                   nudgedTasks={readOnly ? nudgedTasks : undefined}
@@ -236,7 +308,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
                 dayEntry={dayEntry}
                 uid={activeUid}
                 readOnly={readOnly}
-                onDayUpdate={update}
+                onDayUpdate={wrappedUpdate}
                 onNudge={readOnly ? sendNudge : undefined}
                 nudgedTasks={readOnly ? nudgedTasks : undefined}
               />

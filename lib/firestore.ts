@@ -15,6 +15,7 @@ import {
   writeBatch,
   arrayUnion,
   arrayRemove,
+  increment,
 } from 'firebase/firestore';
 import { getFirebaseDb } from './firebase';
 import { UserProfile, DayEntry, CustomTask } from './types';
@@ -75,6 +76,20 @@ export function subscribeToProfile(
   }, (err) => {
     if (err.code !== 'permission-denied') console.error(err);
   });
+}
+
+export async function incrementUserPoints(uid: string, delta: number): Promise<void> {
+  if (delta === 0) return;
+  await updateDoc(doc(db(), 'users', uid), { totalPoints: increment(delta) });
+  invalidate(`profile-${uid}`);
+  invalidate('all-users');
+}
+
+export async function getGlobalLeaderboard(): Promise<UserProfile[]> {
+  const users = await getAllUsers();
+  return [...users]
+    .filter((u) => u.isActive)
+    .sort((a, b) => (b.totalPoints ?? 0) - (a.totalPoints ?? 0));
 }
 
 export async function updateStreakOnProfile(uid: string): Promise<void> {
