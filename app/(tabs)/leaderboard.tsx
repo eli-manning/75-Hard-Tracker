@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
 import { useAllUsers } from '../../hooks/useAllUsers';
 import { getUserProfile, getGlobalLeaderboard, updateUserProfile } from '../../lib/firestore';
@@ -104,23 +105,34 @@ function LeaderboardInner({ currentUser, onOptIn }: { currentUser: UserProfile; 
     return [...combined].sort((a, b) => (b.totalPoints ?? 0) - (a.totalPoints ?? 0));
   }, [allUsers, currentUser.uid, currentUser.friends]);
 
-  async function handleOptIn() {
-    setOptingIn(true);
-    try {
-      await updateUserProfile(currentUser.uid, { leaderboardOptOut: false });
-      onOptIn();
-    } catch {}
-    setOptingIn(false);
-  }
-
-  useEffect(() => {
-    if (tab !== 'global' || globalList.length > 0) return;
+  function fetchGlobal() {
     setLoadingGlobal(true);
     getGlobalLeaderboard()
       .then((list) => setGlobalList(list.slice(0, 20)))
       .catch(() => {})
       .finally(() => setLoadingGlobal(false));
-  }, [tab]);
+  }
+
+  async function handleOptIn() {
+    setOptingIn(true);
+    try {
+      await updateUserProfile(currentUser.uid, { leaderboardOptOut: false });
+      onOptIn();
+      fetchGlobal();
+    } catch {}
+    setOptingIn(false);
+  }
+
+  useFocusEffect(
+    useCallback(() => {
+      setGlobalList([]);
+    }, [])
+  );
+
+  useEffect(() => {
+    if (tab !== 'global' || globalList.length > 0) return;
+    fetchGlobal();
+  }, [tab, globalList.length]);
 
   const inTopGlobal = tab === 'global' && globalList.some((u) => u.uid === currentUser.uid);
 

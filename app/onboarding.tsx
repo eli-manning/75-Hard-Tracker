@@ -215,7 +215,6 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
   const [startDate, setStartDate] = useState(initialProfile.challengeStartDate ?? format(new Date(), 'yyyy-MM-dd'));
   const [weightUnit, setWeightUnit] = useState<'lbs' | 'kg'>(initialProfile.weightUnit ?? 'lbs');
   const [startingWeight, setStartingWeight] = useState(initialProfile.startingWeight ? String(initialProfile.startingWeight) : '');
-  const [height, setHeight] = useState(initialProfile.height ? String(initialProfile.height) : '');
   const [fitnessGoal, setFitnessGoal] = useState<string>(initialProfile.fitnessGoal ?? '');
 
   const isCustom = hasCustomAvatar(profile);
@@ -247,8 +246,6 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
     const updates: Partial<UserProfile> = { weightUnit };
     const w = Number(startingWeight);
     if (startingWeight && !isNaN(w) && w >= 10 && w <= 999) updates.startingWeight = w;
-    const h = Number(height);
-    if (height && !isNaN(h) && h >= 20 && h <= 300) updates.height = h;
     if (fitnessGoal) updates.fitnessGoal = fitnessGoal as UserProfile['fitnessGoal'];
     await updateUserProfile(profile.uid, updates);
     invalidate(`profile-${profile.uid}`);
@@ -396,18 +393,6 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
               onChangeText={setStartingWeight}
               keyboardType="decimal-pad"
               placeholder={`weight in ${weightUnit}`}
-              placeholderTextColor={colors.textMuted}
-              style={styles.input}
-            />
-          </View>
-
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>HEIGHT ({weightUnit === 'lbs' ? 'inches' : 'cm'})</Text>
-            <TextInput
-              value={height}
-              onChangeText={setHeight}
-              keyboardType="decimal-pad"
-              placeholder={weightUnit === 'lbs' ? 'e.g. 70' : 'e.g. 178'}
               placeholderTextColor={colors.textMuted}
               style={styles.input}
             />
@@ -619,7 +604,7 @@ const styles = StyleSheet.create({
   modeCardActive: { borderColor: colors.accent, backgroundColor: colors.accentLight },
   modeTitle: { fontFamily: fonts.pixel, fontSize: 9, color: colors.textMuted },
   modeTitleActive: { color: colors.accent },
-  modeDesc: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted, lineHeight: 12 },
+  modeDesc: { fontFamily: fonts.pixel, fontSize: 8, color: colors.textMuted, lineHeight: 14 },
   reviewRows: { width: '100%', gap: 8 },
   reviewRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

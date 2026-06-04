@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontFamily: fonts.pixel,
-    fontSize: 7,
+    fontSize: 9,
     color: colors.textMuted,
     letterSpacing: 3,
   },

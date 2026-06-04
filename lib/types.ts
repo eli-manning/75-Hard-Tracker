@@ -15,7 +15,6 @@ export interface UserProfile {
   // Fitness profile (set during onboarding, all optional)
   startingWeight?: number;
   weightUnit?: 'lbs' | 'kg';
-  height?: number;             // inches when lbs, cm when kg
   fitnessGoal?: 'lose_weight' | 'build_muscle' | 'general_fitness' | 'mental_toughness';
   onboardingComplete?: boolean;
   expoPushToken?: string;    // native iOS/Android
