@@ -237,13 +237,16 @@ export default function LeaderboardPage() {
   const [profile, setProfile] = useState<UserProfile | null>(
     () => getSessionCached<UserProfile>('75hard-profile')
   );
-  useEffect(() => {
-    if (user && !profile) {
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!user) return;
       getUserProfile(user.uid)
         .then((p) => { if (p) setProfile(p); })
         .catch(() => {});
-    }
-  }, [user]);
+    }, [user?.uid])
+  );
+
   if (!profile) return <LoadingScreen />;
   return (
     <LeaderboardInner
