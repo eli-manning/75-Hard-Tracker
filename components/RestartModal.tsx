@@ -6,9 +6,10 @@ interface RestartModalProps {
   visible: boolean;
   onConfirm: (opts: { keepPoints: boolean; keepLongestStreak: boolean }) => void;
   onCancel: () => void;
+  cancellable?: boolean;
 }
 
-export function RestartModal({ visible, onConfirm, onCancel }: RestartModalProps) {
+export function RestartModal({ visible, onConfirm, onCancel, cancellable = true }: RestartModalProps) {
   const [step, setStep] = useState(1);
   const [keepPoints, setKeepPoints] = useState(false);
   const [keepLongestStreak, setKeepLongestStreak] = useState(false);
@@ -32,9 +33,11 @@ export function RestartModal({ visible, onConfirm, onCancel }: RestartModalProps
                 This will reset your streak and start date. This cannot be undone.
               </Text>
               <View style={styles.buttonRow}>
-                <TouchableOpacity onPress={onCancel} style={styles.cancelBtn}>
-                  <Text style={styles.cancelBtnText}>CANCEL</Text>
-                </TouchableOpacity>
+                {cancellable && (
+                  <TouchableOpacity onPress={onCancel} style={styles.cancelBtn}>
+                    <Text style={styles.cancelBtnText}>CANCEL</Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity onPress={() => setStep(2)} style={styles.continueBtn}>
                   <Text style={styles.continueBtnText}>CONTINUE</Text>
                 </TouchableOpacity>
@@ -69,9 +72,11 @@ export function RestartModal({ visible, onConfirm, onCancel }: RestartModalProps
               >
                 <Text style={styles.restartBtnText}>YES, RESTART</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={onCancel} style={styles.textCancelBtn}>
-                <Text style={styles.textCancelBtnText}>CANCEL</Text>
-              </TouchableOpacity>
+              {cancellable && (
+                <TouchableOpacity onPress={onCancel} style={styles.textCancelBtn}>
+                  <Text style={styles.textCancelBtnText}>CANCEL</Text>
+                </TouchableOpacity>
+              )}
             </>
           )}
         </View>

@@ -72,6 +72,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
   const [pendingNudge, setPendingNudge] = useState<{ taskKey: string; message: string } | null>(null);
   const [dismissedMilestone, setDismissedMilestone] = useState<number | null>(null);
   const [showRestartModal, setShowRestartModal] = useState(false);
+  const [restartForced, setRestartForced] = useState(false);
   const [showMissedDay, setShowMissedDay] = useState(false);
   const [yesterdayEntry, setYesterdayEntry] = useState<DayEntry | null>(null);
   const missedDayChecked = useRef(false);
@@ -167,6 +168,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
     clearAll();
     setShowRestartModal(false);
     setShowMissedDay(false);
+    setRestartForced(false);
   }
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
@@ -255,12 +257,13 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
         visible={showRestartModal}
         onConfirm={handleRestartConfirm}
         onCancel={() => setShowRestartModal(false)}
+        cancellable={!restartForced}
       />
       {yesterdayEntry && (
         <MissedDayModal
           visible={showMissedDay}
           yesterdayEntry={yesterdayEntry}
-          onMissed={() => { setShowMissedDay(false); setShowRestartModal(true); }}
+          onMissed={() => { setShowMissedDay(false); setRestartForced(true); setShowRestartModal(true); }}
           onSaved={async (patch) => {
             if (!yesterdayEntry) return;
             await updateDayEntry(activeUid, format(subDays(new Date(), 1), 'yyyy-MM-dd'), patch);
