@@ -29,6 +29,25 @@ export default function Root({ children }: PropsWithChildren) {
 
         <ScrollViewStyleReset />
 
+        {/* Force body to true screen height in PWA mode before React mounts.
+            CSS approaches (-webkit-fill-available, 100dvh) all fall short of the
+            physical screen bottom on iOS because WebKit excludes the home indicator
+            zone. screen.height gives the real CSS pixel height of the device. */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function() {
+            var standalone = window.navigator.standalone === true ||
+              window.matchMedia('(display-mode: standalone)').matches;
+            if (!standalone) return;
+            document.addEventListener('DOMContentLoaded', function() {
+              var h = window.screen.height + 'px';
+              document.documentElement.style.height = h;
+              document.body.style.height = h;
+              document.body.style.minHeight = h;
+              document.body.style.overflow = 'clip';
+            });
+          })();
+        `}} />
+
         <style>{`
           html {
             height: 100%;
