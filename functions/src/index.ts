@@ -103,6 +103,9 @@ export const onNudge = onDocumentCreated('nudges/{nudgeId}', async (event) => {
     return;
   }
 
+  // Always delete the nudge doc — used only as a trigger, no need to persist
+  await event.data!.ref.delete().catch(() => {});
+
   if (!shouldSend) return;
 
   const userSnap = await db.doc(`users/${toUid}`).get();

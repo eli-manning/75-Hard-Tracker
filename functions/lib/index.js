@@ -118,6 +118,8 @@ exports.onNudge = (0, firestore_1.onDocumentCreated)('nudges/{nudgeId}', async (
         console.error('[onNudge] rate-limit transaction failed:', e);
         return;
     }
+    // Always delete the nudge doc — used only as a trigger, no need to persist
+    await event.data.ref.delete().catch(() => { });
     if (!shouldSend)
         return;
     const userSnap = await db.doc(`users/${toUid}`).get();

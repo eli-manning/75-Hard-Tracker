@@ -40,9 +40,8 @@ service cloud.firestore {
     match /nudges/{nudgeId} {
       allow create: if request.auth != null
                     && request.resource.data.fromUid == request.auth.uid;
-      allow read: if request.auth != null
-                  && (resource.data.toUid == request.auth.uid
-                      || resource.data.fromUid == request.auth.uid);
+      // Doc is deleted by Cloud Function immediately after processing — no client reads needed
+      allow read: if false;
     }
 
     match /users/{uid}/nudgeCooldowns/{cooldownId} {
