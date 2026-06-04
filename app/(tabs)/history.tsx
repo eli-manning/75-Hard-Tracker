@@ -318,8 +318,6 @@ function InsightsDashboard({ history, viewProfile }: { history: DayEntry[]; view
   const totalWaterOz = sorted.reduce((s, e) => s + (e.waterOzLogged || 0), 0);
   const totalPages = sorted.reduce((s, e) => s + (e.pagesRead || 0), 0);
   const totalWorkoutMins = sorted.reduce((s, e) => s + (e.workoutOneDuration || 0) + (e.workoutTwoCompleted ? (e.workoutTwoDuration || 0) : 0), 0);
-  const totalPhotos = sorted.filter((e) => e.photoCompleted).length;
-  const perfectDays = sorted.filter((e) => e.allCoreCompleted).length;
   const avgWorkoutMins = sorted.filter((e) => e.workoutOneCompleted).length > 0
     ? Math.round(sorted.reduce((s, e) => s + (e.workoutOneDuration || 0), 0) / sorted.filter((e) => e.workoutOneCompleted).length)
     : 0;
@@ -328,9 +326,7 @@ function InsightsDashboard({ history, viewProfile }: { history: DayEntry[]; view
     { icon: 'water-outline' as const, label: 'TOTAL WATER', value: `${(totalWaterOz / 128).toFixed(1)}gal` },
     { icon: 'book-outline' as const, label: 'TOTAL PAGES', value: String(totalPages) },
     { icon: 'timer-outline' as const, label: 'WORKOUT MINS', value: String(totalWorkoutMins) },
-    { icon: 'camera-outline' as const, label: 'PHOTOS TAKEN', value: String(totalPhotos) },
-    { icon: 'trophy-outline' as const, label: 'PERFECT DAYS', value: String(perfectDays) },
-    { icon: 'barbell-outline' as const, label: 'AVG WORKOUT', value: `${avgWorkoutMins}min` },
+{ icon: 'barbell-outline' as const, label: 'AVG WORKOUT', value: `${avgWorkoutMins}min` },
   ];
 
   if (sorted.length === 0) return null;
