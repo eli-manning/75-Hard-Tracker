@@ -40,12 +40,12 @@
     "typescript": "~6.0.3"
   },
   "scripts": {
-    "start": "expo start",
+    "start": "node scripts/gen-sw.js && expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web",
-    "export:web": "expo export --platform web",
-    "build": "expo export --platform web && node scripts/inject-pwa-meta.js"
+    "web": "node scripts/gen-sw.js && expo start --web",
+    "export:web": "node scripts/gen-sw.js && expo export --platform web",
+    "build": "node scripts/gen-sw.js && expo export --platform web && node scripts/inject-pwa-meta.js"
   },
   "private": true
 }
