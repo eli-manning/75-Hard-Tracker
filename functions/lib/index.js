@@ -157,6 +157,9 @@ exports.onFriendRequestAccepted = (0, firestore_1.onDocumentUpdated)('friendRequ
     if (senderData.notifFriendRequestsEnabled === false)
         return;
     const accepterName = (_c = accepterSnap.get('displayName')) !== null && _c !== void 0 ? _c : 'Someone';
-    await (0, push_1.sendPush)(senderData.expoPushToken, senderData.fcmWebToken, accepterName, 'Accepted your friend request!');
+    await Promise.all([
+        (0, push_1.sendPush)(senderData.expoPushToken, senderData.fcmWebToken, accepterName, 'Accepted your friend request!'),
+        event.data.after.ref.delete(),
+    ]);
 });
 //# sourceMappingURL=index.js.map

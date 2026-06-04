@@ -143,11 +143,14 @@ export const onFriendRequestAccepted = onDocumentUpdated(
 
     const accepterName: string = accepterSnap.get('displayName') ?? 'Someone';
 
-    await sendPush(
-      senderData.expoPushToken,
-      senderData.fcmWebToken,
-      accepterName,
-      'Accepted your friend request!',
-    );
+    await Promise.all([
+      sendPush(
+        senderData.expoPushToken,
+        senderData.fcmWebToken,
+        accepterName,
+        'Accepted your friend request!',
+      ),
+      event.data!.after.ref.delete(),
+    ]);
   },
 );
