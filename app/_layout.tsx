@@ -11,11 +11,14 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from '../context/AuthContext';
 import { useAuthContext } from '../context/AuthContext';
 import { BottomNav } from '../components/BottomNav';
+import { useNotifications } from '../hooks/useNotifications';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function AppShell() {
-  const { loading: authLoading } = useAuthContext();
+  const { loading: authLoading, user } = useAuthContext();
+  // Silently refresh push token on every app open for users who already granted permission
+  useNotifications(user?.uid);
   const pathname = usePathname();
   const [fontsLoaded] = useFonts({
     PressStart2P_400Regular,

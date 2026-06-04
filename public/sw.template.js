@@ -24,7 +24,7 @@ messaging.onBackgroundMessage((payload) => {
 });
 
 // ── Cache / Offline ───────────────────────────────────────────────────────
-const CACHE = '75hard-v2';
+const CACHE = '75hard-v3';
 const PRECACHE = [
   '/',
   '/manifest.json',
