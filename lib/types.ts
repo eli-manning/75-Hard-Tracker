@@ -31,6 +31,7 @@ export interface UserProfile {
   nudgesRemaining?: number;       // free nudges left today (max 5, default 5 if absent)
   purchasedNudgesToday?: number;  // paid nudges used today (max 5)
   nudgeResetDate?: string;        // "YYYY-MM-DD" — date of last reset
+  missedDayPromptShownDate?: string; // "YYYY-MM-DD" — last date we showed the missed-day prompt
 }
 
 export interface DayEntry {

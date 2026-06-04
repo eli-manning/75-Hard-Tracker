@@ -127,19 +127,22 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
 
   useEffect(() => {
     if (readOnly || missedDayChecked.current) return;
-    if (!dayEntry || !activeProfile.challengeMode || activeProfile.challengeMode !== '75hard') return;
-    missedDayChecked.current = true;
+    if (!dayEntry || activeProfile.challengeMode !== '75hard') return;
     const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+    if (currentUser.missedDayPromptShownDate === yesterday) return;
+    missedDayChecked.current = true;
     if (!activeProfile.challengeStartDate || yesterday < activeProfile.challengeStartDate) return;
     getOrCreateDayEntry(activeUid, yesterday, activeProfile.challengeStartDate)
       .then((entry) => {
         if (!entry.allCoreCompleted) {
           setYesterdayEntry(entry);
           setShowMissedDay(true);
+          updateUserProfile(activeUid, { missedDayPromptShownDate: yesterday }).catch(() => {});
+          onProfileUpdate({ ...currentUser, missedDayPromptShownDate: yesterday });
         }
       })
       .catch(() => {});
-  }, [dayEntry, readOnly, activeProfile.challengeMode, activeProfile.challengeStartDate]);
+  }, [dayEntry, readOnly, activeProfile.challengeMode, activeProfile.challengeStartDate, currentUser.missedDayPromptShownDate]);
 
   const wrappedUpdate = useCallback(async (patch: Partial<DayEntry>) => {
     if (!dayEntry) return;
