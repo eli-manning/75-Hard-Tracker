@@ -11,17 +11,7 @@ firebase.initializeApp({
   appId: '__FIREBASE_APP_ID__',
 });
 
-const messaging = firebase.messaging();
-
-messaging.onBackgroundMessage((payload) => {
-  const title = payload.notification?.title ?? '75 HARD';
-  const body = payload.notification?.body ?? '';
-  self.registration.showNotification(title, {
-    body,
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
-  });
-});
+firebase.messaging();
 
 // ── Cache / Offline ───────────────────────────────────────────────────────
 const CACHE = '75hard-v3';

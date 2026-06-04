@@ -26,8 +26,8 @@ export const onFriendRequestReceived = onDocumentCreated(
     await sendPush(
       recipientData.expoPushToken,
       recipientData.fcmWebToken,
-      '75 HARD',
-      `${senderName} sent you a friend request!`,
+      senderName,
+      'Sent you a friend request!',
     );
   },
 );
@@ -44,8 +44,8 @@ export const onNudge = onDocumentCreated('nudges/{nudgeId}', async (event) => {
   if (userData.notifAllEnabled === false) return;
   if (userData.notifNudgesEnabled === false) return;
 
-  const body = message ? `${fromName}: ${message}` : `${fromName} is nudging you! Go complete your tasks.`;
-  await sendPush(userData.expoPushToken, userData.fcmWebToken, '75 HARD', body);
+  const body = message ?? 'Go complete your tasks!';
+  await sendPush(userData.expoPushToken, userData.fcmWebToken, fromName, body);
 });
 
 export const onFriendRequestAccepted = onDocumentUpdated(
@@ -76,8 +76,8 @@ export const onFriendRequestAccepted = onDocumentUpdated(
     await sendPush(
       senderData.expoPushToken,
       senderData.fcmWebToken,
-      '75 HARD',
-      `${accepterName} accepted your friend request!`,
+      accepterName,
+      'Accepted your friend request!',
     );
   },
 );
