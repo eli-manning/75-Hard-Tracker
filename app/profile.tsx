@@ -205,20 +205,20 @@ function ProfileInner({ currentUser }: { currentUser: UserProfile }) {
           <Text style={styles.fieldLabel}>LEADERBOARD</Text>
           <View style={styles.displayRow}>
             <Text style={styles.displayValue}>
-              {profile.leaderboardOptOut ? 'OPTED OUT' : 'VISIBLE TO ALL'}
+              {profile.leaderboardOptOut !== false ? 'OPTED OUT' : 'VISIBLE TO ALL'}
             </Text>
             <TouchableOpacity
               onPress={async () => {
-                const next = !profile.leaderboardOptOut;
-                await updateUserProfile(profile.uid, { leaderboardOptOut: next });
-                setProfile((p) => ({ ...p, leaderboardOptOut: next }));
+                const next = profile.leaderboardOptOut !== false;
+                await updateUserProfile(profile.uid, { leaderboardOptOut: !next });
+                setProfile((p) => ({ ...p, leaderboardOptOut: !next }));
               }}
               style={styles.iconBtn}
             >
               <Ionicons
-                name={profile.leaderboardOptOut ? 'eye-off-outline' : 'eye-outline'}
+                name={profile.leaderboardOptOut !== false ? 'eye-off-outline' : 'eye-outline'}
                 size={16}
-                color={profile.leaderboardOptOut ? colors.textMuted : colors.accent}
+                color={profile.leaderboardOptOut !== false ? colors.textMuted : colors.accent}
               />
             </TouchableOpacity>
           </View>

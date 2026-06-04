@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet } from 'rea
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../hooks/useAuth';
 import { useAllUsers } from '../../hooks/useAllUsers';
-import { getUserProfile, getGlobalLeaderboard } from '../../lib/firestore';
+import { getUserProfile, getGlobalLeaderboard, updateUserProfile } from '../../lib/firestore';
 import { UserProfile } from '../../lib/types';
 import { getAvatarUrl } from '../../lib/avatar';
 import { getAvatarSource } from '../../lib/avatarMap';
@@ -86,20 +86,32 @@ const rowStyles = StyleSheet.create({
   youText: { fontFamily: fonts.pixel, fontSize: 5, color: colors.green },
 });
 
-function LeaderboardInner({ currentUser }: { currentUser: UserProfile }) {
+function LeaderboardInner({ currentUser, onOptIn }: { currentUser: UserProfile; onOptIn: () => void }) {
   const [tab, setTab] = useState<'friends' | 'global'>('friends');
   const { users: allUsers } = useAllUsers();
   const [globalList, setGlobalList] = useState<UserProfile[]>([]);
   const [loadingGlobal, setLoadingGlobal] = useState(false);
+  const [optingIn, setOptingIn] = useState(false);
   const insets = useSafeAreaInsets();
+
+  const isOptedOut = currentUser.leaderboardOptOut !== false;
 
   const friendsList = useMemo(() => {
     const friendSet = new Set(currentUser.friends ?? []);
     const combined = allUsers.filter((u) =>
-      u.uid === currentUser.uid || (friendSet.has(u.uid) && !u.leaderboardOptOut)
+      u.uid === currentUser.uid || friendSet.has(u.uid)
     );
     return [...combined].sort((a, b) => (b.totalPoints ?? 0) - (a.totalPoints ?? 0));
   }, [allUsers, currentUser.uid, currentUser.friends]);
+
+  async function handleOptIn() {
+    setOptingIn(true);
+    try {
+      await updateUserProfile(currentUser.uid, { leaderboardOptOut: false });
+      onOptIn();
+    } catch {}
+    setOptingIn(false);
+  }
 
   useEffect(() => {
     if (tab !== 'global' || globalList.length > 0) return;
@@ -165,16 +177,41 @@ function LeaderboardInner({ currentUser }: { currentUser: UserProfile }) {
                 <View style={styles.divider}>
                   <Text style={styles.dividerText}>- - - - -</Text>
                 </View>
-                <LeaderboardRow
-                  rank={
-                    (currentUser.totalPoints ?? 0) > 0
-                      ? globalList.filter((u) => (u.totalPoints ?? 0) > (currentUser.totalPoints ?? 0)).length + 1
-                      : globalList.length + 1
-                  }
-                  profile={currentUser}
-                  isCurrentUser={true}
-                />
+                {isOptedOut ? (
+                  <View style={styles.optInCard}>
+                    <Text style={styles.optInLabel}>YOU ARE NOT ON THE GLOBAL BOARD</Text>
+                    <TouchableOpacity
+                      onPress={handleOptIn}
+                      disabled={optingIn}
+                      style={[styles.optInBtn, optingIn && { opacity: 0.5 }]}
+                    >
+                      <Text style={styles.optInBtnText}>{optingIn ? 'JOINING...' : 'JOIN GLOBAL LEADERBOARD'}</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <LeaderboardRow
+                    rank={
+                      (currentUser.totalPoints ?? 0) > 0
+                        ? globalList.filter((u) => (u.totalPoints ?? 0) > (currentUser.totalPoints ?? 0)).length + 1
+                        : globalList.length + 1
+                    }
+                    profile={currentUser}
+                    isCurrentUser={true}
+                  />
+                )}
               </>
+            )}
+            {isOptedOut && globalList.length === 0 && (
+              <View style={styles.optInCard}>
+                <Text style={styles.optInLabel}>YOU ARE NOT ON THE GLOBAL BOARD</Text>
+                <TouchableOpacity
+                  onPress={handleOptIn}
+                  disabled={optingIn}
+                  style={[styles.optInBtn, optingIn && { opacity: 0.5 }]}
+                >
+                  <Text style={styles.optInBtnText}>{optingIn ? 'JOINING...' : 'JOIN GLOBAL LEADERBOARD'}</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </>
         )}
@@ -196,7 +233,12 @@ export default function LeaderboardPage() {
     }
   }, [user]);
   if (!profile) return <LoadingScreen />;
-  return <LeaderboardInner currentUser={profile} />;
+  return (
+    <LeaderboardInner
+      currentUser={profile}
+      onOptIn={() => setProfile((p) => p ? { ...p, leaderboardOptOut: false } : p)}
+    />
+  );
 }
 
 const styles = StyleSheet.create({
@@ -222,4 +264,16 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', paddingVertical: 32 },
   emptyText: { fontFamily: fonts.pixel, fontSize: 7, color: colors.textMuted },
   loading: { alignItems: 'center', paddingVertical: 32 },
+  optInCard: {
+    padding: 16, gap: 12, alignItems: 'center',
+    borderWidth: 2, borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  optInLabel: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
+  optInBtn: {
+    paddingVertical: 10, paddingHorizontal: 20,
+    borderWidth: 2, borderColor: colors.accent,
+    backgroundColor: colors.accentLight,
+  },
+  optInBtnText: { fontFamily: fonts.pixel, fontSize: 7, color: colors.accent },
 });
