@@ -55,22 +55,18 @@ function AppShell() {
 
 
   return (
-  <View style={styles.root}>
-    {Platform.OS === 'web' ? (
-      <>
+    <View style={styles.root}>
+      {Platform.OS === 'web' ? (
         <View style={styles.webCenter}>
           <View style={styles.webFrame}>
             {screens}
+            {showWebNav && <BottomNav />}
           </View>
         </View>
-        {/* Move the Web Nav OUTSIDE of the centering/framing constraints */}
-        {showWebNav && <BottomNav />}
-      </>
-    ) : (
-      screens
-    )}
-  </View>
-);}
+      ) : screens}
+    </View>
+  );
+}
 
 export default function RootLayout() {
   return (
@@ -87,7 +83,6 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: '#0c0b08',
-    position: 'relative', // Vital for the root-level absolute positioning of the navbar
   },
   webCenter: {
     flex: 1,
@@ -99,7 +94,5 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     maxWidth: 480,
-    // Add bottom padding to the frame so screen views don't get hidden behind the floating nav
-    paddingBottom: 58, 
   },
 });
