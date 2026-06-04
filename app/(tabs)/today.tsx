@@ -154,8 +154,9 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
     await update({ ...patch, dailyPoints: newPts });
     if (delta !== 0) {
       incrementUserPoints(activeUid, delta).catch(() => {});
+      onProfileUpdate({ ...currentUser, totalPoints: Math.max(0, (currentUser.totalPoints ?? 0) + delta) });
     }
-  }, [dayEntry, tasks, update, activeUid]);
+  }, [dayEntry, tasks, update, activeUid, currentUser, onProfileUpdate]);
 
   async function handleRestartConfirm({ keepPoints, keepLongestStreak }: { keepPoints: boolean; keepLongestStreak: boolean }) {
     const newStartDate = format(new Date(), 'yyyy-MM-dd');
