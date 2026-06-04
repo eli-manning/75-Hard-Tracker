@@ -35,10 +35,6 @@ export default function Root({ children }: PropsWithChildren) {
             height: -webkit-fill-available;
             background-color: #0c0b08;
           }
-          body, #root {
-            height: 100%;
-            background-color: #0c0b08;
-          }
           body {
             display: flex;
             flex-direction: column;
@@ -46,23 +42,25 @@ export default function Root({ children }: PropsWithChildren) {
             padding: 0;
             overflow: hidden;
             min-height: -webkit-fill-available;
+            background-color: #0c0b08;
           }
           #root {
             display: flex;
             flex-direction: column;
             flex: 1;
+            height: 100% !important;
+            height: 100dvh !important; /* Forces dynamic viewport calculation */
             overflow: hidden;
+            background-color: #0c0b08;
+          }
+
+          /* CRUCIAL PWA OVERRIDE: Forces the absolute outermost React Native Web 
+            container to span the literal glass dimensions of the iPhone */
+          #root > div {
+            height: 100dvh !important;
+            background-color: #0c0b08;
           }
         `}</style>
-
-        {/* Service worker */}
-        <script dangerouslySetInnerHTML={{ __html: `
-          if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-              navigator.serviceWorker.register('/sw.js');
-            });
-          }
-        `}} />
       </head>
       <body style={{ height: '100%' }}>
         {children}

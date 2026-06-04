@@ -82,27 +82,25 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: '#0c0b08',
-    ...Platform.select({
-      web: {
-        // Cast as any to prevent StyleSheet from rejecting web-only viewport units
-        height: '100dvh' as any,
-      },
-    }),
+    width: '100%',
   },
   webCenter: {
     flex: 1,
     alignItems: 'center',
     backgroundColor: '#0c0b08',
     width: '100%',
+    height: '100%',
   },
   webFrame: {
-    flex: 1,
+    position: 'relative', // Absolutely vital for anchoring BottomNav
     width: '100%',
     maxWidth: 480,
-    position: 'relative',
+    height: '100%',
+    flex: 1,
     ...Platform.select({
       web: {
-        // Cast as any to prevent StyleSheet from rejecting CSS env values
+        // Force the frame layout to stretch to the bottom viewport boundary
+        height: '100dvh' as any,
         paddingBottom: 'env(safe-area-inset-bottom, 0px)' as any,
       },
     }),
