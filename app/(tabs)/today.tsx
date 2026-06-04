@@ -385,10 +385,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
                           <Text style={styles.daysUntil}>{daysUntil} {daysUntil === 1 ? 'DAY' : 'DAYS'}</Text>
                         </>
                       ) : activeProfile.challengeMode === 'general' ? (
-                        <>
-                          <Text style={styles.dayNum}>{activeProfile.totalPoints ?? 0} PTS</Text>
-                          <Text style={styles.generalDayNum}>DAY {dayNum}</Text>
-                        </>
+                        <Text style={styles.dayNum}>{activeProfile.totalPoints ?? 0} PTS</Text>
                       ) : (
                         <View style={styles.dayNumRow}>
                           <Text style={styles.dayNumSmall}>DAY {dayNum}</Text>
