@@ -94,8 +94,8 @@ export default function LoginPage() {
       >
         {/* Title */}
         <View style={styles.titleSection}>
-          <Text style={styles.title}>75 HARD</Text>
-          <Text style={styles.subtitle}>TRACKER</Text>
+          <Text style={styles.title}>CrewDay</Text>
+          <Text style={styles.subtitle}>Your crew. Your goals. Every day.</Text>
         </View>
 
         {/* Card */}

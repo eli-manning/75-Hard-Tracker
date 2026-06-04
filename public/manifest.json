@@ -1,7 +1,7 @@
 {
-  "name": "75 Hard Tracker",
-  "short_name": "75 HARD",
-  "description": "Track your 75 Hard challenge",
+  "name": "CrewDay",
+  "short_name": "CREWDAY",
+  "description": "Your crew. Your goals. Every day.",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",

@@ -83,7 +83,7 @@ export function NotificationSettings({ profile, onUpdate }: Props) {
     await Notifications.cancelAllScheduledNotificationsAsync();
     const [h, m] = hhmm.split(':').map(Number);
     await Notifications.scheduleNotificationAsync({
-      content: { title: '75 HARD', body: "Don't forget to log today's tasks. Keep the streak alive.", sound: true },
+      content: { title: 'CrewDay', body: "Don't forget to log today's tasks. Keep the streak alive.", sound: true },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.CALENDAR, hour: h, minute: m, repeats: true },
     });
   }

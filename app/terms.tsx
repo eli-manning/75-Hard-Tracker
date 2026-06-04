@@ -20,8 +20,8 @@ export default function TermsPage() {
 
         <Text style={styles.body}>
           {`Last updated: June 2024\n\n`}
-          {`By using 75 Hard Tracker, you agree to these terms.\n\n`}
-          {`USE OF SERVICE\n\n75 Hard Tracker is provided as-is for personal use. The app is designed to help track the 75 Hard challenge. We are not affiliated with the creators of the 75 Hard program.\n\n`}
+          {`By using CrewDay, you agree to these terms.\n\n`}
+          {`USE OF SERVICE\n\nCrewDay is provided as-is for personal use. The app is designed to help track the 75 Hard challenge. We are not affiliated with the creators of the 75 Hard program.\n\n`}
           {`USER CONDUCT\n\nYou are responsible for maintaining the confidentiality of your account. Do not share your credentials with others.\n\n`}
           {`DATA\n\nYou retain ownership of your data. We do not claim any rights to your personal information or challenge data.\n\n`}
           {`DISCLAIMER\n\nThis app is provided "as is" without warranty of any kind. We are not liable for any health decisions made based on data tracked in this app. Always consult a healthcare professional before starting an exercise program.\n\n`}

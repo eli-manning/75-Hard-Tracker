@@ -19,7 +19,7 @@ export default function PrivacyPage() {
         <Text style={styles.title}>PRIVACY POLICY</Text>
 
         <Text style={styles.body}>
-          {`Last updated: June 2024\n\n75 Hard Tracker is a personal challenge tracking app. Here is how we handle your data:\n\n`}
+          {`Last updated: June 2024\n\nCrewDay is a personal challenge tracking app. Here is how we handle your data:\n\n`}
           {`DATA WE COLLECT\n\nWe collect the email address and display name you provide when you sign up. We store your daily challenge progress, custom tasks, and optional fitness data (weight, height, mood) in Firebase Firestore.\n\n`}
           {`HOW WE USE YOUR DATA\n\nYour data is used solely to display your challenge progress to you and your friends within the app. We do not sell, share, or use your data for advertising.\n\n`}
           {`FIREBASE\n\nThis app uses Google Firebase for authentication and data storage. Firebase may collect usage analytics. See Google's privacy policy at policies.google.com/privacy.\n\n`}

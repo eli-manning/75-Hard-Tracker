@@ -288,7 +288,7 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
       <ProgressDots />
       <View style={styles.titleSection}>
         <Text style={styles.welcomeLabel}>WELCOME TO</Text>
-        <Text style={styles.title}>75 HARD</Text>
+        <Text style={styles.title}>CrewDay</Text>
       </View>
       <View style={styles.card}>
         <Text style={styles.cardLabel}>YOUR AVATAR</Text>
