@@ -4,7 +4,7 @@ import { format, differenceInDays, parseISO, subDays } from 'date-fns';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getFirebaseDb } from '../../lib/firebase';
 import { useAuth } from '../../hooks/useAuth';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useAllUsers } from '../../hooks/useAllUsers';
 import { useDayData } from '../../hooks/useDayData';
 import { useCustomTasks } from '../../hooks/useCustomTasks';
@@ -158,14 +158,21 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
   }, [dayEntry, tasks, update, activeUid]);
 
   async function handleRestartConfirm({ keepPoints, keepLongestStreak }: { keepPoints: boolean; keepLongestStreak: boolean }) {
-    const { format: fmt } = await import('date-fns');
+    const newStartDate = format(new Date(), 'yyyy-MM-dd');
     await updateUserProfile(activeUid, {
-      challengeStartDate: fmt(new Date(), 'yyyy-MM-dd'),
+      challengeStartDate: newStartDate,
       currentStreak: 0,
       ...(keepLongestStreak ? {} : { longestStreak: 0 }),
       ...(keepPoints ? {} : { totalPoints: 0 }),
     });
     clearAll();
+    onProfileUpdate({
+      ...currentUser,
+      challengeStartDate: newStartDate,
+      currentStreak: 0,
+      ...(keepLongestStreak ? {} : { longestStreak: 0 }),
+      ...(keepPoints ? {} : { totalPoints: 0 }),
+    });
     setShowRestartModal(false);
     setShowMissedDay(false);
     setRestartForced(false);
@@ -440,6 +447,20 @@ export default function TodayPage() {
   const [error, setError] = useState(false);
 
   const showLoader = useMinDuration(authLoading || !profile, 600);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!user) return;
+      getUserProfile(user.uid)
+        .then((p) => {
+          if (!p || p.onboardingComplete === false) return;
+          _memProfile = p;
+          setSessionCached(SESSION_KEY, p);
+          setProfile(p);
+        })
+        .catch(() => {});
+    }, [user?.uid])
+  );
 
   useEffect(() => {
     if (!user) {

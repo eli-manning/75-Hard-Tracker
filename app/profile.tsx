@@ -268,15 +268,22 @@ function ProfileInner({ currentUser }: { currentUser: UserProfile }) {
         onConfirm={async ({ keepPoints, keepLongestStreak }) => {
           const { format: fmt } = await import('date-fns');
           const { clearAll } = await import('../lib/cache');
+          const newStartDate = fmt(new Date(), 'yyyy-MM-dd');
           await updateUserProfile(profile.uid, {
-            challengeStartDate: fmt(new Date(), 'yyyy-MM-dd'),
+            challengeStartDate: newStartDate,
             currentStreak: 0,
             ...(keepLongestStreak ? {} : { longestStreak: 0 }),
             ...(keepPoints ? {} : { totalPoints: 0 }),
           });
           clearAll();
           setShowRestartModal(false);
-          setProfile((p) => ({ ...p, challengeStartDate: fmt(new Date(), 'yyyy-MM-dd'), currentStreak: 0 }));
+          setProfile((p) => ({
+            ...p,
+            challengeStartDate: newStartDate,
+            currentStreak: 0,
+            ...(keepLongestStreak ? {} : { longestStreak: 0 }),
+            ...(keepPoints ? {} : { totalPoints: 0 }),
+          }));
         }}
         onCancel={() => setShowRestartModal(false)}
       />
