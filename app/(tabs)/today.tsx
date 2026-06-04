@@ -179,7 +179,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
               disabled={nudgeCooldown}
               style={[styles.nudgeBtn, nudgeCooldown && styles.nudgeBtnDisabled]}
             >
-              <Text style={styles.nudgeBtnText}>{nudgeCooldown ? 'NUDGED!' : '👊 NUDGE'}</Text>
+              <Text style={styles.nudgeBtnText}>{nudgeCooldown ? 'NUDGED!' : 'NUDGE'}</Text>
             </TouchableOpacity>
           </View>
         )}

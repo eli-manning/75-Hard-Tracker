@@ -46,10 +46,9 @@ exports.onNudge = (0, firestore_1.onDocumentCreated)('nudges/{nudgeId}', async (
         return;
     const { toUid, fromName } = data;
     const userSnap = await db.doc(`users/${toUid}`).get();
-    const token = userSnap.get('expoPushToken');
-    if (!token)
-        return;
-    await (0, push_1.sendExpoPush)(token, '75 HARD', `${fromName} is nudging you! Go complete your tasks.`);
+    const expoPushToken = userSnap.get('expoPushToken');
+    const fcmWebToken = userSnap.get('fcmWebToken');
+    await (0, push_1.sendPush)(expoPushToken, fcmWebToken, '75 HARD', `${fromName} is nudging you! Go complete your tasks.`);
 });
 exports.onFriendRequestAccepted = (0, firestore_1.onDocumentUpdated)('friendRequests/{toUid}/incoming/{fromUid}', async (event) => {
     var _a, _b, _c;
@@ -63,16 +62,13 @@ exports.onFriendRequestAccepted = (0, firestore_1.onDocumentUpdated)('friendRequ
         return;
     const toUid = event.params.toUid;
     const fromUid = event.params.fromUid;
-    // The person who sent the original request (toUid) should be notified
-    // The accepter is fromUid
     const [senderSnap, accepterSnap] = await Promise.all([
         db.doc(`users/${toUid}`).get(),
         db.doc(`users/${fromUid}`).get(),
     ]);
-    const token = senderSnap.get('expoPushToken');
+    const expoPushToken = senderSnap.get('expoPushToken');
+    const fcmWebToken = senderSnap.get('fcmWebToken');
     const accepterName = (_c = accepterSnap.get('displayName')) !== null && _c !== void 0 ? _c : 'Someone';
-    if (!token)
-        return;
-    await (0, push_1.sendExpoPush)(token, '75 HARD', `${accepterName} accepted your friend request!`);
+    await (0, push_1.sendPush)(expoPushToken, fcmWebToken, '75 HARD', `${accepterName} accepted your friend request!`);
 });
 //# sourceMappingURL=index.js.map

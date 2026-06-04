@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
+import { getToken } from 'firebase/messaging';
 import { doc, updateDoc } from 'firebase/firestore';
 import { getFirebaseDb } from '../lib/firebase';
+import { getFirebaseMessaging } from '../lib/firebase';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -19,41 +21,86 @@ export function useNotifications(uid: string | undefined) {
   const [token, setToken] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    if (Platform.OS === 'web' || !uid) return;
-    checkPermission();
+    if (!uid) return;
+    if (Platform.OS === 'web') {
+      checkWebPermission();
+    } else {
+      checkNativePermission();
+    }
   }, [uid]);
 
-  async function checkPermission() {
+  // ── Native (iOS / Android) ────────────────────────────────────────────────
+
+  async function checkNativePermission() {
     const { status } = await Notifications.getPermissionsAsync();
     if (status === 'granted') {
       setPermissionGranted(true);
-      await fetchAndSaveToken();
+      await fetchAndSaveNativeToken();
     }
   }
 
-  async function requestPermission(): Promise<boolean> {
-    if (Platform.OS === 'web') return false;
-    const { status } = await Notifications.requestPermissionsAsync();
-    const granted = status === 'granted';
-    setPermissionGranted(granted);
-    if (granted) await fetchAndSaveToken();
-    return granted;
-  }
-
-  async function fetchAndSaveToken() {
+  async function fetchAndSaveNativeToken() {
     if (!uid) return;
     try {
       const projectId =
         Constants.expoConfig?.extra?.eas?.projectId ??
-        Constants.easConfig?.projectId;
+        (Constants as any).easConfig?.projectId;
       const { data } = await Notifications.getExpoPushTokenAsync(
         projectId ? { projectId } : undefined,
       );
       setToken(data);
       await updateDoc(doc(getFirebaseDb(), 'users', uid), { expoPushToken: data });
     } catch {
-      // Token fetch fails in Expo Go without EAS project ID or on simulators — safe to ignore
+      // Fails in Expo Go without EAS project ID or on simulators
     }
+  }
+
+  // ── Web (PWA) ─────────────────────────────────────────────────────────────
+
+  async function checkWebPermission() {
+    if (typeof Notification === 'undefined') return;
+    if (Notification.permission === 'granted') {
+      setPermissionGranted(true);
+      await fetchAndSaveWebToken();
+    }
+  }
+
+  async function fetchAndSaveWebToken() {
+    if (!uid) return;
+    try {
+      const messaging = getFirebaseMessaging();
+      if (!messaging) return;
+      const vapidKey = process.env.EXPO_PUBLIC_FIREBASE_VAPID_KEY;
+      const swReg = await navigator.serviceWorker.getRegistration('/');
+      const fcmToken = await getToken(messaging, {
+        vapidKey,
+        serviceWorkerRegistration: swReg,
+      });
+      if (!fcmToken) return;
+      setToken(fcmToken);
+      await updateDoc(doc(getFirebaseDb(), 'users', uid), { fcmWebToken: fcmToken });
+    } catch {
+      // Notification API or FCM not available
+    }
+  }
+
+  // ── Public API ────────────────────────────────────────────────────────────
+
+  async function requestPermission(): Promise<boolean> {
+    if (Platform.OS !== 'web') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      const granted = status === 'granted';
+      setPermissionGranted(granted);
+      if (granted) await fetchAndSaveNativeToken();
+      return granted;
+    }
+
+    if (typeof Notification === 'undefined') return false;
+    const status = await Notification.requestPermission();
+    const granted = status === 'granted';
+    setPermissionGranted(granted);
+    if (granted) await fetchAndSaveWebToken();
+    return granted;
   }
 
   return { permissionGranted, token, requestPermission };

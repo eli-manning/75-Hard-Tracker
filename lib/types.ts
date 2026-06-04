@@ -18,7 +18,8 @@ export interface UserProfile {
   height?: number;             // inches when lbs, cm when kg
   fitnessGoal?: 'lose_weight' | 'build_muscle' | 'general_fitness' | 'mental_toughness';
   onboardingComplete?: boolean;
-  expoPushToken?: string;
+  expoPushToken?: string;    // native iOS/Android
+  fcmWebToken?: string;      // PWA web push
   notifDailyEnabled?: boolean;
   notifDailyTime?: string; // "HH:MM" 24h
 }
