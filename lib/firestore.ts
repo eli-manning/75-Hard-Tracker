@@ -88,7 +88,7 @@ export async function incrementUserPoints(uid: string, delta: number): Promise<v
 export async function getGlobalLeaderboard(): Promise<UserProfile[]> {
   const users = await getAllUsers();
   return [...users]
-    .filter((u) => u.isActive)
+    .filter((u) => u.isActive && !u.leaderboardOptOut)
     .sort((a, b) => (b.totalPoints ?? 0) - (a.totalPoints ?? 0));
 }
 

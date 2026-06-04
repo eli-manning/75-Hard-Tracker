@@ -95,7 +95,9 @@ function LeaderboardInner({ currentUser }: { currentUser: UserProfile }) {
 
   const friendsList = useMemo(() => {
     const friendSet = new Set(currentUser.friends ?? []);
-    const combined = allUsers.filter((u) => u.uid === currentUser.uid || friendSet.has(u.uid));
+    const combined = allUsers.filter((u) =>
+      u.uid === currentUser.uid || (friendSet.has(u.uid) && !u.leaderboardOptOut)
+    );
     return [...combined].sort((a, b) => (b.totalPoints ?? 0) - (a.totalPoints ?? 0));
   }, [allUsers, currentUser.uid, currentUser.friends]);
 
