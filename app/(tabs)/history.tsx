@@ -671,7 +671,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     alignItems: 'center', justifyContent: 'center',
   },
-  calendarDayNum: { fontFamily: fonts.inter, fontSize: 13, fontWeight: '600', color: colors.text, textAlign: 'center' },
+  calendarDayNum: { fontFamily: fonts.inter, fontSize: 12, fontWeight: '600', color: colors.text, textAlign: 'center' },
   calendarLegend: { flexDirection: 'row', gap: 12, marginTop: 12, flexWrap: 'wrap' },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   legendTile: { width: 12, height: 12, borderWidth: 2 },
