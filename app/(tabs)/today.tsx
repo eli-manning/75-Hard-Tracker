@@ -388,6 +388,9 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
                         <Text style={styles.dayNum}>DAY {dayNum}</Text>
                       )}
                       <Text style={styles.dateText}>{today}</Text>
+                      {(activeProfile.totalPoints ?? 0) > 0 && (
+                        <Text style={styles.pointsText}>{activeProfile.totalPoints ?? 0} PTS</Text>
+                      )}
                     </View>
                     <StreakBadge streak={streak} />
                   </View>
@@ -578,6 +581,7 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(232, 100, 58, 0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8,
   },
   dateText: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted, marginTop: 6 },
+  pointsText: { fontFamily: fonts.pixel, fontSize: 6, color: colors.accent, marginTop: 4, opacity: 0.8 },
   sectionLabel: { fontFamily: fonts.pixel, fontSize: 9, color: colors.textMuted, marginBottom: 10 },
   skeletonContainer: { gap: 12, padding: 4 },
   skeletonHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
