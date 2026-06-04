@@ -2,10 +2,8 @@ import { useState, useEffect } from 'react';
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
-import { getToken } from 'firebase/messaging';
 import { doc, updateDoc } from 'firebase/firestore';
-import { getFirebaseDb } from '../lib/firebase';
-import { getFirebaseMessaging } from '../lib/firebase';
+import { getFirebaseDb, getFirebaseMessaging } from '../lib/firebase';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -68,11 +66,12 @@ export function useNotifications(uid: string | undefined) {
   async function fetchAndSaveWebToken() {
     if (!uid) return;
     try {
-      const messaging = getFirebaseMessaging();
+      const messaging = await getFirebaseMessaging();
       if (!messaging) return;
+      const { getToken } = await import('firebase/messaging');
       const vapidKey = process.env.EXPO_PUBLIC_FIREBASE_VAPID_KEY;
       const swReg = await navigator.serviceWorker.getRegistration('/');
-      const fcmToken = await getToken(messaging, {
+      const fcmToken = await getToken(messaging as any, {
         vapidKey,
         serviceWorkerRegistration: swReg,
       });

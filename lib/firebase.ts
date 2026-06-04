@@ -1,7 +1,6 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { Auth, initializeAuth, getAuth, getReactNativePersistence } from 'firebase/auth';
 import { Firestore, getFirestore } from 'firebase/firestore';
-import { Messaging, getMessaging } from 'firebase/messaging';
 import { Platform } from 'react-native';
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -17,7 +16,7 @@ const firebaseConfig = {
 let _app: FirebaseApp | undefined;
 let _auth: Auth | undefined;
 let _db: Firestore | undefined;
-let _messaging: Messaging | undefined;
+let _messaging: unknown | undefined;
 
 function getApp(): FirebaseApp {
   if (!_app) _app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
@@ -51,9 +50,12 @@ export function getFirebaseDb(): Firestore {
   return _db;
 }
 
-export function getFirebaseMessaging(): Messaging | null {
+export async function getFirebaseMessaging(): Promise<unknown | null> {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return null;
-  if (!_messaging) _messaging = getMessaging(getApp());
+  if (!_messaging) {
+    const { getMessaging } = await import('firebase/messaging');
+    _messaging = getMessaging(getApp());
+  }
   return _messaging;
 }
 
