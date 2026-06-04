@@ -53,19 +53,24 @@ function AppShell() {
   const showWebNav = Platform.OS === 'web' &&
     ['/today', '/tasks', '/history'].some(p => pathname.startsWith(p));
 
+
   return (
-    <View style={styles.root}>
-      {Platform.OS === 'web' ? (
+  <View style={styles.root}>
+    {Platform.OS === 'web' ? (
+      <>
         <View style={styles.webCenter}>
           <View style={styles.webFrame}>
             {screens}
-            {showWebNav && <BottomNav />}
           </View>
         </View>
-      ) : screens}
-    </View>
-  );
-}
+        {/* Move the Web Nav OUTSIDE of the centering/framing constraints */}
+        {showWebNav && <BottomNav />}
+      </>
+    ) : (
+      screens
+    )}
+  </View>
+);}
 
 export default function RootLayout() {
   return (
@@ -82,27 +87,19 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: '#0c0b08',
-    width: '100%',
+    position: 'relative', // Vital for the root-level absolute positioning of the navbar
   },
   webCenter: {
     flex: 1,
     alignItems: 'center',
     backgroundColor: '#0c0b08',
     width: '100%',
-    height: '100%',
   },
   webFrame: {
-    position: 'relative', // Absolutely vital for anchoring BottomNav
+    flex: 1,
     width: '100%',
     maxWidth: 480,
-    height: '100%',
-    flex: 1,
-    ...Platform.select({
-      web: {
-        // Force the frame layout to stretch to the bottom viewport boundary
-        height: '100dvh' as any,
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)' as any,
-      },
-    }),
+    // Add bottom padding to the frame so screen views don't get hidden behind the floating nav
+    paddingBottom: 58, 
   },
 });

@@ -18,8 +18,15 @@ export function BottomNav() {
   // On Web/PWA, we want bottom: 0 relative to the padded frame, but we also 
   // ensure the component layout has enough internal padding to mask the home bar area.
   const navInsetStyle = Platform.OS === 'web'
-    ? { bottom: 0, paddingBottom: Math.max(insets.bottom, 12) }
-    : { bottom: 0, paddingBottom: Math.max(insets.bottom, 12) };
+  ? { 
+      bottom: 0, 
+      // Use the actual pixel measurement number instead of the CSS env string
+      paddingBottom: insets.bottom > 0 ? insets.bottom : 0,
+    }
+  : { 
+      bottom: 0, 
+      paddingBottom: Math.min(insets.bottom, 0),
+    };
 
   return (
     <View style={[styles.nav, navInsetStyle]}>
@@ -57,6 +64,15 @@ const styles = StyleSheet.create({
     borderTopWidth: 2,
     borderTopColor: colors.border,
     ...shadows.pixelUp,
+    // Web centering safety check:
+    ...Platform.select({
+      web: {
+        maxWidth: 480,
+        left: '50%',
+        transform: [{ translateX: '-50%' }] as any,
+        width: '100%',
+      }
+    }),
   },
   tab: {
     flex: 1,
