@@ -46,9 +46,14 @@ exports.onNudge = (0, firestore_1.onDocumentCreated)('nudges/{nudgeId}', async (
         return;
     const { toUid, fromName } = data;
     const userSnap = await db.doc(`users/${toUid}`).get();
-    const expoPushToken = userSnap.get('expoPushToken');
-    const fcmWebToken = userSnap.get('fcmWebToken');
-    await (0, push_1.sendPush)(expoPushToken, fcmWebToken, '75 HARD', `${fromName} is nudging you! Go complete your tasks.`);
+    const userData = userSnap.data();
+    if (!userData)
+        return;
+    if (userData.notifAllEnabled === false)
+        return;
+    if (userData.notifNudgesEnabled === false)
+        return;
+    await (0, push_1.sendPush)(userData.expoPushToken, userData.fcmWebToken, '75 HARD', `${fromName} is nudging you! Go complete your tasks.`);
 });
 exports.onFriendRequestAccepted = (0, firestore_1.onDocumentUpdated)('friendRequests/{toUid}/incoming/{fromUid}', async (event) => {
     var _a, _b, _c;
@@ -66,9 +71,14 @@ exports.onFriendRequestAccepted = (0, firestore_1.onDocumentUpdated)('friendRequ
         db.doc(`users/${toUid}`).get(),
         db.doc(`users/${fromUid}`).get(),
     ]);
-    const expoPushToken = senderSnap.get('expoPushToken');
-    const fcmWebToken = senderSnap.get('fcmWebToken');
+    const senderData = senderSnap.data();
+    if (!senderData)
+        return;
+    if (senderData.notifAllEnabled === false)
+        return;
+    if (senderData.notifFriendRequestsEnabled === false)
+        return;
     const accepterName = (_c = accepterSnap.get('displayName')) !== null && _c !== void 0 ? _c : 'Someone';
-    await (0, push_1.sendPush)(expoPushToken, fcmWebToken, '75 HARD', `${accepterName} accepted your friend request!`);
+    await (0, push_1.sendPush)(senderData.expoPushToken, senderData.fcmWebToken, '75 HARD', `${accepterName} accepted your friend request!`);
 });
 //# sourceMappingURL=index.js.map

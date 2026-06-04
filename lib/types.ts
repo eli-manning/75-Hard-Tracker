@@ -20,8 +20,11 @@ export interface UserProfile {
   onboardingComplete?: boolean;
   expoPushToken?: string;    // native iOS/Android
   fcmWebToken?: string;      // PWA web push
+  notifAllEnabled?: boolean;
   notifDailyEnabled?: boolean;
   notifDailyTime?: string; // "HH:MM" 24h
+  notifNudgesEnabled?: boolean;
+  notifFriendRequestsEnabled?: boolean;
 }
 
 export interface DayEntry {

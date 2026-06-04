@@ -102,5 +102,14 @@ export function useNotifications(uid: string | undefined) {
     return granted;
   }
 
-  return { permissionGranted, token, requestPermission };
+  async function clearTokens() {
+    if (!uid) return;
+    try {
+      const patch: Record<string, null> = { expoPushToken: null };
+      if (Platform.OS === 'web') patch.fcmWebToken = null;
+      await updateDoc(doc(getFirebaseDb(), 'users', uid), patch);
+    } catch {}
+  }
+
+  return { permissionGranted, token, requestPermission, clearTokens };
 }

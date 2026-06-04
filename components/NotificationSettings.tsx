@@ -24,9 +24,13 @@ function formatTime(hour: number, minute: number): string {
 }
 
 export function NotificationSettings({ profile, onUpdate }: Props) {
-  const { requestPermission } = useNotifications(profile.uid);
-  const [enabled, setEnabled] = useState(profile.notifDailyEnabled ?? false);
+  const { requestPermission, clearTokens } = useNotifications(profile.uid);
+
+  const [allEnabled, setAllEnabled] = useState(profile.notifAllEnabled ?? false);
+  const [daily, setDaily] = useState(profile.notifDailyEnabled ?? false);
   const [time, setTime] = useState(profile.notifDailyTime ?? '08:00');
+  const [nudges, setNudges] = useState(profile.notifNudgesEnabled ?? true);
+  const [friendReqs, setFriendReqs] = useState(profile.notifFriendRequestsEnabled ?? true);
   const [saving, setSaving] = useState(false);
 
   const { hour, minute } = parseTime(time);
@@ -36,78 +40,142 @@ export function NotificationSettings({ profile, onUpdate }: Props) {
     await Notifications.cancelAllScheduledNotificationsAsync();
     const [h, m] = hhmm.split(':').map(Number);
     await Notifications.scheduleNotificationAsync({
-      content: {
-        title: '75 HARD',
-        body: "Don't forget to log today's tasks. Keep the streak alive.",
-        sound: true,
-      },
+      content: { title: '75 HARD', body: "Don't forget to log today's tasks. Keep the streak alive.", sound: true },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.CALENDAR, hour: h, minute: m, repeats: true },
     });
   }
 
-  async function handleToggle(val: boolean) {
+  async function save(patch: Partial<UserProfile>) {
+    setSaving(true);
+    await onUpdate(patch);
+    setSaving(false);
+  }
+
+  async function handleAllToggle(val: boolean) {
     if (val) {
       const granted = await requestPermission();
       if (!granted) return;
+      if (daily) await scheduleDaily(time);
+    } else {
+      if (Platform.OS !== 'web') await Notifications.cancelAllScheduledNotificationsAsync();
+      await clearTokens();
+    }
+    setAllEnabled(val);
+    await save({ notifAllEnabled: val });
+  }
+
+  async function handleDailyToggle(val: boolean) {
+    if (val) {
       await scheduleDaily(time);
     } else {
       if (Platform.OS !== 'web') await Notifications.cancelAllScheduledNotificationsAsync();
     }
-    setEnabled(val);
-    setSaving(true);
-    await onUpdate({ notifDailyEnabled: val });
-    setSaving(false);
+    setDaily(val);
+    await save({ notifDailyEnabled: val });
   }
 
   async function handleTimeChange(hhmm: string) {
     setTime(hhmm);
-    if (enabled) await scheduleDaily(hhmm);
-    setSaving(true);
-    await onUpdate({ notifDailyTime: hhmm });
-    setSaving(false);
+    if (daily && allEnabled) await scheduleDaily(hhmm);
+    await save({ notifDailyTime: hhmm });
+  }
+
+  async function handleNudgesToggle(val: boolean) {
+    setNudges(val);
+    await save({ notifNudgesEnabled: val });
+  }
+
+  async function handleFriendReqsToggle(val: boolean) {
+    setFriendReqs(val);
+    await save({ notifFriendRequestsEnabled: val });
   }
 
   return (
     <View style={styles.card}>
+      <Text style={styles.sectionTitle}>NOTIFICATIONS</Text>
+
+      {/* Master toggle */}
       <View style={styles.row}>
-        <View>
-          <Text style={styles.label}>DAILY REMINDER</Text>
-          {enabled && <Text style={styles.sub}>{formatTime(hour, minute)}</Text>}
-        </View>
+        <Text style={styles.label}>ALL NOTIFICATIONS</Text>
         <Switch
-          value={enabled}
-          onValueChange={handleToggle}
-          thumbColor={enabled ? colors.accent : colors.textMuted}
+          value={allEnabled}
+          onValueChange={handleAllToggle}
+          thumbColor={allEnabled ? colors.accent : colors.textMuted}
           trackColor={{ false: colors.border, true: colors.accentLight }}
           disabled={saving}
         />
       </View>
 
-      {enabled && Platform.OS !== 'web' && (
-        <NativeTimePicker time={time} onChange={handleTimeChange} />
-      )}
+      {/* Sub-toggles — only shown when all is on */}
+      {allEnabled && (
+        <View style={styles.subSection}>
+          <View style={styles.divider} />
 
-      {enabled && Platform.OS === 'web' && (
-        <input
-          type="time"
-          value={time}
-          onChange={(e) => handleTimeChange(e.target.value)}
-          style={{
-            marginTop: 8,
-            backgroundColor: colors.surface2,
-            color: colors.text,
-            border: `2px solid ${colors.border}`,
-            padding: '8px 12px',
-            fontFamily: 'monospace',
-            fontSize: 14,
-            width: '100%',
-            boxSizing: 'border-box',
-          } as React.CSSProperties}
-        />
-      )}
+          {/* Daily reminder */}
+          <View style={styles.row}>
+            <View>
+              <Text style={styles.subLabel}>DAILY REMINDER</Text>
+              {daily && <Text style={styles.sub}>{formatTime(hour, minute)}</Text>}
+            </View>
+            <Switch
+              value={daily}
+              onValueChange={handleDailyToggle}
+              thumbColor={daily ? colors.accent : colors.textMuted}
+              trackColor={{ false: colors.border, true: colors.accentLight }}
+              disabled={saving}
+            />
+          </View>
 
-      {Platform.OS === 'web' && (
-        <Text style={styles.webNote}>Enable to receive nudges and friend alerts.</Text>
+          {daily && Platform.OS !== 'web' && (
+            <NativeTimePicker time={time} onChange={handleTimeChange} />
+          )}
+          {daily && Platform.OS === 'web' && (
+            <input
+              type="time"
+              value={time}
+              onChange={(e) => handleTimeChange(e.target.value)}
+              style={{
+                marginTop: 4,
+                backgroundColor: colors.surface2,
+                color: colors.text,
+                border: `2px solid ${colors.border}`,
+                padding: '8px 12px',
+                fontFamily: 'monospace',
+                fontSize: 14,
+                width: '100%',
+                boxSizing: 'border-box',
+              } as React.CSSProperties}
+            />
+          )}
+
+          <View style={styles.divider} />
+
+          {/* Nudges */}
+          <View style={styles.row}>
+            <Text style={styles.subLabel}>NUDGES FROM FRIENDS</Text>
+            <Switch
+              value={nudges}
+              onValueChange={handleNudgesToggle}
+              thumbColor={nudges ? colors.accent : colors.textMuted}
+              trackColor={{ false: colors.border, true: colors.accentLight }}
+              disabled={saving}
+            />
+          </View>
+
+          <View style={styles.divider} />
+
+          {/* Friend requests */}
+          <View style={styles.row}>
+            <Text style={styles.subLabel}>FRIEND REQUEST ALERTS</Text>
+            <Switch
+              value={friendReqs}
+              onValueChange={handleFriendReqsToggle}
+              thumbColor={friendReqs ? colors.accent : colors.textMuted}
+              trackColor={{ false: colors.border, true: colors.accentLight }}
+              disabled={saving}
+            />
+          </View>
+        </View>
       )}
     </View>
   );
@@ -150,20 +218,18 @@ function Stepper({ label, onUp, onDown }: { label: string; onUp: () => void; onD
 
 const styles = StyleSheet.create({
   card: {
-    padding: 16, gap: 8,
+    padding: 16, gap: 12,
     borderWidth: 2, borderColor: colors.border,
     backgroundColor: colors.surface, ...shadows.pixel,
   },
-  row: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-  },
-  label: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
-  sub: { fontFamily: fonts.vt323, fontSize: 18, color: colors.text, marginTop: 4 },
-  webNote: { fontFamily: fonts.pixel, fontSize: 5, color: colors.textMuted, marginTop: 4 },
-  timePicker: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, marginTop: 8,
-  },
+  sectionTitle: { fontFamily: fonts.pixel, fontSize: 8, color: colors.accent },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  label: { fontFamily: fonts.pixel, fontSize: 6, color: colors.text },
+  subSection: { gap: 12 },
+  subLabel: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
+  sub: { fontFamily: fonts.vt323, fontSize: 18, color: colors.text, marginTop: 2 },
+  divider: { height: 1, backgroundColor: colors.border },
+  timePicker: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   colon: { fontFamily: fonts.vt323, fontSize: 32, color: colors.text },
   ampm: { fontFamily: fonts.pixel, fontSize: 8, color: colors.textMuted, marginLeft: 4 },
   stepper: { alignItems: 'center', gap: 4 },

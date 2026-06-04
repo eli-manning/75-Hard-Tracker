@@ -11,10 +11,18 @@ export const onNudge = onDocumentCreated('nudges/{nudgeId}', async (event) => {
 
   const { toUid, fromName } = data as { toUid: string; fromName: string };
   const userSnap = await db.doc(`users/${toUid}`).get();
-  const expoPushToken: string | undefined = userSnap.get('expoPushToken');
-  const fcmWebToken: string | undefined = userSnap.get('fcmWebToken');
+  const userData = userSnap.data();
+  if (!userData) return;
 
-  await sendPush(expoPushToken, fcmWebToken, '75 HARD', `${fromName} is nudging you! Go complete your tasks.`);
+  if (userData.notifAllEnabled === false) return;
+  if (userData.notifNudgesEnabled === false) return;
+
+  await sendPush(
+    userData.expoPushToken,
+    userData.fcmWebToken,
+    '75 HARD',
+    `${fromName} is nudging you! Go complete your tasks.`,
+  );
 });
 
 export const onFriendRequestAccepted = onDocumentUpdated(
@@ -34,10 +42,19 @@ export const onFriendRequestAccepted = onDocumentUpdated(
       db.doc(`users/${fromUid}`).get(),
     ]);
 
-    const expoPushToken: string | undefined = senderSnap.get('expoPushToken');
-    const fcmWebToken: string | undefined = senderSnap.get('fcmWebToken');
+    const senderData = senderSnap.data();
+    if (!senderData) return;
+
+    if (senderData.notifAllEnabled === false) return;
+    if (senderData.notifFriendRequestsEnabled === false) return;
+
     const accepterName: string = accepterSnap.get('displayName') ?? 'Someone';
 
-    await sendPush(expoPushToken, fcmWebToken, '75 HARD', `${accepterName} accepted your friend request!`);
+    await sendPush(
+      senderData.expoPushToken,
+      senderData.fcmWebToken,
+      '75 HARD',
+      `${accepterName} accepted your friend request!`,
+    );
   },
 );
