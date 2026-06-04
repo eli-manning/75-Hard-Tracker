@@ -16,6 +16,7 @@ import {
   arrayUnion,
   arrayRemove,
   increment,
+  deleteField,
 } from 'firebase/firestore';
 import { getFirebaseDb } from './firebase';
 import { UserProfile, DayEntry, CustomTask } from './types';
@@ -258,11 +259,15 @@ export async function getCustomTasks(uid: string): Promise<CustomTask[]> {
   return snap.docs.map((d) => d.data() as CustomTask);
 }
 
+function stripUndefined<T extends object>(obj: T): Partial<T> {
+  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as Partial<T>;
+}
+
 export async function createCustomTask(
   task: Omit<CustomTask, 'id' | 'createdAt'>
 ): Promise<void> {
   const ref = doc(collection(db(), 'customTasks', task.uid, 'tasks'));
-  await setDoc(ref, { ...task, id: ref.id, createdAt: serverTimestamp() });
+  await setDoc(ref, { ...stripUndefined(task), id: ref.id, createdAt: serverTimestamp() });
 }
 
 export async function updateCustomTask(
@@ -270,7 +275,10 @@ export async function updateCustomTask(
   taskId: string,
   updates: Partial<CustomTask>
 ): Promise<void> {
-  await updateDoc(doc(db(), 'customTasks', uid, 'tasks', taskId), updates);
+  const cleaned = Object.fromEntries(
+    Object.entries(updates).map(([k, v]) => [k, v === undefined ? deleteField() : v])
+  );
+  await updateDoc(doc(db(), 'customTasks', uid, 'tasks', taskId), cleaned);
 }
 
 export async function archiveCustomTask(

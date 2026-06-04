@@ -48,6 +48,9 @@ export function CustomTaskList({ tasks, dayEntry, uid, readOnly, onDayUpdate, on
         type: data.type!,
         order: tasks.length,
         archived: false,
+        visible: data.visible ?? true,
+        ...(data.why ? { why: data.why } : {}),
+        ...(data.points !== undefined ? { points: data.points } : {}),
       });
     }
     setEditorOpen(false);

@@ -29,7 +29,7 @@ export function TaskEditor({ task, defaultType = 'daily', onSave, onClose }: Tas
       type,
       visible,
       why: why.trim() || undefined,
-      points: (!isNaN(parsedPoints) && parsedPoints > 0) ? Math.min(parsedPoints, 10) : undefined,
+      points: !isNaN(parsedPoints) ? Math.max(0, Math.min(parsedPoints, 10)) : undefined,
     });
   }
 
