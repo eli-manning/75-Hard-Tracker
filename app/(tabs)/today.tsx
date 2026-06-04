@@ -266,6 +266,7 @@ export default function TodayPage() {
     if (!user) {
       _memProfile = null;
       clearAll();
+      setProfile(null);
       return;
     }
     const boot = getBootProfile();
