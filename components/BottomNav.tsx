@@ -25,7 +25,7 @@ function WebBottomNav() {
     <div
       style={{
         position: 'fixed',
-        bottom: 0,
+        bottom: 'calc(-1 * env(safe-area-inset-bottom))',
         left: '50%',
         transform: 'translateX(-50%)',
         width: '100%',
@@ -35,7 +35,7 @@ function WebBottomNav() {
         borderTop: `2px solid ${colors.border}`,
         boxShadow: '0 -4px 0 #000',
         zIndex: 9999,
-        paddingBottom: 'env(safe-area-inset-bottom)',
+        paddingBottom: 'max(env(safe-area-inset-bottom), 0px)',
       }}
     >
       {NAV.map(({ href, label, icon }) => {

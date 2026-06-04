@@ -3,7 +3,7 @@ import type { PropsWithChildren } from 'react';
 
 export default function Root({ children }: PropsWithChildren) {
   return (
-    <html lang="en" style={{ height: '100%' }}>
+    <html lang="en">
       <head>
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
@@ -32,6 +32,7 @@ export default function Root({ children }: PropsWithChildren) {
         <style>{`
           html {
             height: 100%;
+            min-height: 100dvh;
             height: -webkit-fill-available;
             background-color: #0c0b08;
           }
@@ -41,6 +42,8 @@ export default function Root({ children }: PropsWithChildren) {
             margin: 0;
             padding: 0;
             overflow: clip !important;
+            min-height: 100vh;
+            min-height: 100dvh;
             min-height: -webkit-fill-available;
             background-color: #0c0b08;
           }
@@ -56,14 +59,16 @@ export default function Root({ children }: PropsWithChildren) {
              causing body's overflow:hidden to clip #root ~34px short of the screen.
              Override html+body to 100dvh so the full physical screen is available. */
           @media all and (display-mode: standalone) {
-            html, body {
+            html,
+            body,
+            #root {
               height: 100dvh !important;
               min-height: 100dvh !important;
             }
           }
         `}</style>
       </head>
-      <body style={{ height: '100%' }}>
+      <body>
         {children}
       </body>
     </html>

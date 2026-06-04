@@ -17,10 +17,42 @@ html = html.replace(
   '#root {\n        display: flex;\n        flex-direction: column;\n        height: 100%;\n        flex: 1;\n      }'
 );
 
-// Add -webkit-fill-available for iOS PWA full-screen + fix bottom nav to viewport bottom
+// Keep the exported Expo web document painted through the full iOS PWA viewport.
+// In standalone mode, -webkit-fill-available can exclude the home-indicator area,
+// so the final override uses 100dvh for the full dynamic viewport.
 const extraCss = `  <style>
-    html { height: -webkit-fill-available; background-color: #0c0b08; }
-    body { display: flex; flex-direction: column; background-color: #0c0b08; min-height: -webkit-fill-available; }
+    html {
+      min-height: 100%;
+      min-height: 100dvh;
+      background-color: #0c0b08;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      margin: 0;
+      min-height: 100vh;
+      min-height: 100dvh;
+      overflow: hidden;
+      background-color: #0c0b08;
+    }
+    #root {
+      min-height: 100vh;
+      min-height: 100dvh;
+      background-color: #0c0b08;
+    }
+    @supports (-webkit-touch-callout: none) {
+      html { height: -webkit-fill-available; }
+      body, #root { min-height: -webkit-fill-available; }
+    }
+    @media all and (display-mode: standalone) {
+      html,
+      body,
+      #root {
+        height: 100dvh !important;
+        min-height: 100dvh !important;
+        background-color: #0c0b08;
+      }
+    }
   </style>`;
 
 // Inject PWA tags + service worker before </head>
