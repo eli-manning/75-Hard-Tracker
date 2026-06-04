@@ -5,6 +5,33 @@ import { sendPush } from './push';
 admin.initializeApp();
 const db = admin.firestore();
 
+export const onFriendRequestReceived = onDocumentCreated(
+  'friendRequests/{toUid}/incoming/{fromUid}',
+  async (event) => {
+    const toUid = event.params.toUid;
+    const fromUid = event.params.fromUid;
+
+    const [recipientSnap, senderSnap] = await Promise.all([
+      db.doc(`users/${toUid}`).get(),
+      db.doc(`users/${fromUid}`).get(),
+    ]);
+
+    const recipientData = recipientSnap.data();
+    if (!recipientData) return;
+    if (recipientData.notifAllEnabled === false) return;
+    if (recipientData.notifFriendRequestsEnabled === false) return;
+
+    const senderName: string = senderSnap.get('displayName') ?? 'Someone';
+
+    await sendPush(
+      recipientData.expoPushToken,
+      recipientData.fcmWebToken,
+      '75 HARD',
+      `${senderName} sent you a friend request!`,
+    );
+  },
+);
+
 export const onNudge = onDocumentCreated('nudges/{nudgeId}', async (event) => {
   const data = event.data?.data();
   if (!data) return;

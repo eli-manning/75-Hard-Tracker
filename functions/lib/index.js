@@ -33,12 +33,30 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onFriendRequestAccepted = exports.onNudge = void 0;
+exports.onFriendRequestAccepted = exports.onNudge = exports.onFriendRequestReceived = void 0;
 const admin = __importStar(require("firebase-admin"));
 const firestore_1 = require("firebase-functions/v2/firestore");
 const push_1 = require("./push");
 admin.initializeApp();
 const db = admin.firestore();
+exports.onFriendRequestReceived = (0, firestore_1.onDocumentCreated)('friendRequests/{toUid}/incoming/{fromUid}', async (event) => {
+    var _a;
+    const toUid = event.params.toUid;
+    const fromUid = event.params.fromUid;
+    const [recipientSnap, senderSnap] = await Promise.all([
+        db.doc(`users/${toUid}`).get(),
+        db.doc(`users/${fromUid}`).get(),
+    ]);
+    const recipientData = recipientSnap.data();
+    if (!recipientData)
+        return;
+    if (recipientData.notifAllEnabled === false)
+        return;
+    if (recipientData.notifFriendRequestsEnabled === false)
+        return;
+    const senderName = (_a = senderSnap.get('displayName')) !== null && _a !== void 0 ? _a : 'Someone';
+    await (0, push_1.sendPush)(recipientData.expoPushToken, recipientData.fcmWebToken, '75 HARD', `${senderName} sent you a friend request!`);
+});
 exports.onNudge = (0, firestore_1.onDocumentCreated)('nudges/{nudgeId}', async (event) => {
     var _a;
     const data = (_a = event.data) === null || _a === void 0 ? void 0 : _a.data();
