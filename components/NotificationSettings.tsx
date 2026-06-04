@@ -67,7 +67,7 @@ function ToggleSwitch({ value, onValueChange, disabled }: { value: boolean; onVa
 }
 
 export function NotificationSettings({ profile, onUpdate }: Props) {
-  const { requestPermission, clearTokens, webTokenError } = useNotifications(profile.uid);
+  const { requestPermission, clearTokens } = useNotifications(profile.uid);
 
   const [allEnabled, setAllEnabled] = useState(profile.notifAllEnabled ?? false);
   const [daily, setDaily] = useState(profile.notifDailyEnabled ?? false);
@@ -125,9 +125,6 @@ export function NotificationSettings({ profile, onUpdate }: Props) {
       <Text style={styles.sectionTitle}>NOTIFICATIONS</Text>
 
       <Row label="ALL NOTIFICATIONS" value={allEnabled} onToggle={handleAllToggle} disabled={saving} />
-      {webTokenError && (
-        <Text style={styles.errorText}>⚠ {webTokenError}</Text>
-      )}
 
       {allEnabled && (
         <View style={styles.subSection}>
@@ -227,7 +224,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, ...shadows.pixel,
   },
   sectionTitle: { fontFamily: fonts.pixel, fontSize: 8, color: colors.accent },
-  errorText: { fontFamily: fonts.pixel, fontSize: 6, color: colors.red },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   subLabel: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
   sub: { fontFamily: fonts.vt323, fontSize: 18, color: colors.text, marginTop: 2 },

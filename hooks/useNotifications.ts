@@ -17,7 +17,6 @@ Notifications.setNotificationHandler({
 export function useNotifications(uid: string | undefined) {
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [token, setToken] = useState<string | undefined>(undefined);
-  const [webTokenError, setWebTokenError] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (!uid) return;
@@ -66,26 +65,23 @@ export function useNotifications(uid: string | undefined) {
 
   async function fetchAndSaveWebToken() {
     if (!uid) return;
-    setWebTokenError(undefined);
     try {
       const messaging = await getFirebaseMessaging();
-      if (!messaging) { setWebTokenError('messaging init failed'); return; }
+      if (!messaging) return;
       const { getToken, isSupported } = await import('firebase/messaging');
       const supported = await isSupported();
-      if (!supported) { setWebTokenError('FCM not supported on this browser'); return; }
+      if (!supported) return;
       const vapidKey = process.env.EXPO_PUBLIC_FIREBASE_VAPID_KEY;
-      if (!vapidKey) { setWebTokenError('VAPID key missing'); return; }
+      if (!vapidKey) return;
       const swReg = await navigator.serviceWorker.ready;
       const fcmToken = await getToken(messaging as any, {
         vapidKey,
         serviceWorkerRegistration: swReg,
       });
-      if (!fcmToken) { setWebTokenError('getToken returned empty'); return; }
+      if (!fcmToken) return;
       setToken(fcmToken);
       await updateDoc(doc(getFirebaseDb(), 'users', uid), { fcmWebToken: fcmToken });
-    } catch (err: any) {
-      const msg = err?.message ?? String(err);
-      setWebTokenError(msg);
+    } catch (err) {
       console.error('[FCM] token registration failed:', err);
     }
   }
@@ -118,5 +114,5 @@ export function useNotifications(uid: string | undefined) {
     } catch {}
   }
 
-  return { permissionGranted, token, webTokenError, requestPermission, clearTokens };
+  return { permissionGranted, token, requestPermission, clearTokens };
 }
