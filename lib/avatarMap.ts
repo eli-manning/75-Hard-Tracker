@@ -5,10 +5,8 @@ const avatarRequireMap: Record<string, number> = {
 };
 
 // Portrait sprites: aspect ratio (width/height) — used to top-crop to show head
-export const AVATAR_PORTRAIT_RATIO: Record<string, number> = {
-  '/avatars/eli.png': 1536 / 2730,
-  '/avatars/rocket.png': 1792 / 2390,
-};
+// (only needed for uncropped tall sprites; pre-cropped images use cover mode)
+export const AVATAR_PORTRAIT_RATIO: Record<string, number> = {};
 
 export function getAvatarSource(url: string): { uri: string } | number {
   if (avatarRequireMap[url]) return avatarRequireMap[url];
