@@ -10,7 +10,7 @@ import { getAvatarUrl } from '../../lib/avatar';
 import { getAvatarSource } from '../../lib/avatarMap';
 import { colors, fonts, shadows } from '../../lib/theme';
 import { LoadingScreen } from '../../components/LoadingScreen';
-import { getSessionCached } from '../../lib/cache';
+import { getSessionCached, invalidate } from '../../lib/cache';
 
 function LeaderboardRow({
   rank,
@@ -106,6 +106,7 @@ function LeaderboardInner({ currentUser, onOptIn }: { currentUser: UserProfile; 
   }, [allUsers, currentUser.uid, currentUser.friends]);
 
   function fetchGlobal() {
+    invalidate('all-users');
     setLoadingGlobal(true);
     getGlobalLeaderboard()
       .then((list) => setGlobalList(list.slice(0, 20)))
@@ -186,14 +187,16 @@ function LeaderboardInner({ currentUser, onOptIn }: { currentUser: UserProfile; 
           </View>
         ) : (
           <>
-            {globalList.map((p, i) => (
-              <LeaderboardRow
-                key={p.uid}
-                rank={i + 1}
-                profile={p}
-                isCurrentUser={p.uid === currentUser.uid}
-              />
-            ))}
+            {globalList
+              .filter((p) => !(p.uid === currentUser.uid && isOptedOut))
+              .map((p, i) => (
+                <LeaderboardRow
+                  key={p.uid}
+                  rank={i + 1}
+                  profile={p}
+                  isCurrentUser={p.uid === currentUser.uid}
+                />
+              ))}
             {!inTopGlobal && globalList.length > 0 && (
               <>
                 <View style={styles.divider}>
