@@ -15,10 +15,9 @@ export function BottomNav() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const navInsetStyle = { 
-    bottom: 0, 
-    paddingBottom: Math.max(insets.bottom, 12),
-  };
+  const navInsetStyle = Platform.OS === 'web'
+    ? { bottom: 0, paddingBottom: insets.bottom }
+    : { bottom: -insets.bottom, paddingBottom: insets.bottom };
 
   return (
     <View style={[styles.nav, navInsetStyle]}>

@@ -48,19 +48,18 @@ export default function Root({ children }: PropsWithChildren) {
             display: flex;
             flex-direction: column;
             flex: 1;
-            height: 100dvh !important; /* Force dynamic viewport calculation */
             overflow: hidden;
             background-color: #0c0b08;
           }
 
-          /* TARGET EXPO'S NESTED GENERATED DIVS: 
-            Forces the absolute outermost compiled web containers to stretch 
-            to the literal bottom edge of the device viewport window */
-          #root > div {
-            height: 100dvh !important;
-            display: flex !important;
-            flex-direction: column !important;
-            background-color: #0c0b08 !important;
+          /* PWA standalone: -webkit-fill-available excludes the home indicator zone,
+             causing body's overflow:hidden to clip #root ~34px short of the screen.
+             Override html+body to 100dvh so the full physical screen is available. */
+          @media all and (display-mode: standalone) {
+            html, body {
+              height: 100dvh !important;
+              min-height: 100dvh !important;
+            }
           }
         `}</style>
       </head>
