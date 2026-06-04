@@ -32,6 +32,7 @@ export function NotificationSettings({ profile, onUpdate }: Props) {
   const { hour, minute } = parseTime(time);
 
   async function scheduleDaily(hhmm: string) {
+    if (Platform.OS === 'web') return;
     await Notifications.cancelAllScheduledNotificationsAsync();
     const [h, m] = hhmm.split(':').map(Number);
     await Notifications.scheduleNotificationAsync({
@@ -50,7 +51,7 @@ export function NotificationSettings({ profile, onUpdate }: Props) {
       if (!granted) return;
       await scheduleDaily(time);
     } else {
-      await Notifications.cancelAllScheduledNotificationsAsync();
+      if (Platform.OS !== 'web') await Notifications.cancelAllScheduledNotificationsAsync();
     }
     setEnabled(val);
     setSaving(true);
@@ -78,7 +79,7 @@ export function NotificationSettings({ profile, onUpdate }: Props) {
           onValueChange={handleToggle}
           thumbColor={enabled ? colors.accent : colors.textMuted}
           trackColor={{ false: colors.border, true: colors.accentLight }}
-          disabled={saving || Platform.OS === 'web'}
+          disabled={saving}
         />
       </View>
 
@@ -106,7 +107,7 @@ export function NotificationSettings({ profile, onUpdate }: Props) {
       )}
 
       {Platform.OS === 'web' && (
-        <Text style={styles.webNote}>Push notifications require the native app.</Text>
+        <Text style={styles.webNote}>Enable to receive nudges and friend alerts.</Text>
       )}
     </View>
   );
