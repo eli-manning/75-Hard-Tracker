@@ -13,7 +13,7 @@ export default function Root({ children }: PropsWithChildren) {
         />
 
         {/* PWA */}
-        <meta name="theme-color" content="#0c0b08" />
+        <meta name="theme-color" content="#0c1018" />
         <link rel="manifest" href="/manifest.json" />
 
         {/* iOS PWA */}
@@ -53,7 +53,7 @@ export default function Root({ children }: PropsWithChildren) {
             flex-direction: column;
             flex: 1;
             overflow: hidden;
-            background-color: #0c0b08;
+            background-color: #0c1018;
           }
         `}</style>
       </head>

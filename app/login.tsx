@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: colors.accent,
     lineHeight: 36,
-    textShadowColor: 'rgba(232, 100, 58, 0.6)',
+    textShadowColor: 'rgba(91, 140, 240, 0.6)',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 8,
   },

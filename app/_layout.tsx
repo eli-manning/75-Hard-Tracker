@@ -40,7 +40,7 @@ function AppShell() {
   }, [fontsLoaded, authLoading, minElapsed]);
 
   const screens = (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0c0b08' } }}>
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0c1018' } }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="login" />
       <Stack.Screen name="onboarding" />
@@ -85,12 +85,12 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#0c0b08',
+    backgroundColor: '#0c1018',
   },
   webCenter: {
     flex: 1,
     alignItems: 'center',
-    backgroundColor: '#0c0b08',
+    backgroundColor: '#0c1018',
     width: '100%',
   },
   webFrame: {

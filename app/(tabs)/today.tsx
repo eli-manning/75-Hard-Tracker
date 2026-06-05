@@ -602,18 +602,18 @@ const styles = StyleSheet.create({
   dayHeaderLeft: { flex: 1, marginRight: 12 },
   dayNum: {
     fontFamily: fonts.pixel, fontSize: 32, color: colors.accent, lineHeight: 44,
-    textShadowColor: 'rgba(232, 100, 58, 0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8,
+    textShadowColor: 'rgba(91, 140, 240, 0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8,
   },
   startsInLabel: { fontFamily: fonts.pixel, fontSize: 16, color: colors.textMuted, lineHeight: 24 },
   daysUntil: {
     fontFamily: fonts.pixel, fontSize: 28, color: colors.accent, lineHeight: 36, marginTop: 4,
-    textShadowColor: 'rgba(232, 100, 58, 0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8,
+    textShadowColor: 'rgba(91, 140, 240, 0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8,
   },
   dateText: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted, marginTop: 6 },
   dayNumRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   dayNumSmall: {
     fontFamily: fonts.pixel, fontSize: 26, color: colors.accent, lineHeight: 36,
-    textShadowColor: 'rgba(232, 100, 58, 0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8,
+    textShadowColor: 'rgba(91, 140, 240, 0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8,
   },
   dayNumSep: { fontFamily: fonts.pixel, fontSize: 20, color: colors.textMuted, lineHeight: 36 },
   generalDayNum: { fontFamily: fonts.pixel, fontSize: 13, color: colors.textMuted, marginTop: 2 },
