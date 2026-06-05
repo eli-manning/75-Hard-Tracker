@@ -1,3 +1,4 @@
+import { format, subDays, parseISO } from 'date-fns';
 import { DayEntry, CustomTask } from './types';
 
 export const TASK_POINTS = {
@@ -27,6 +28,40 @@ export function computeWaterBonus(ozLogged: number, completed: boolean): number 
   if (!completed) return 0;
   const extra = Math.max(0, ozLogged - WATER_GOAL_OZ);
   return Math.min(Math.floor(extra / 40) * 5, 10);
+}
+
+// Canonical streak computation — used by both the streak-update Cloud-facing function
+// and the history page. The history.tsx local copy was the more correct one; this
+// matches that logic exactly.
+export function computeStreakFromHistory(history: DayEntry[]): { current: number; longest: number } {
+  const sorted = [...history].sort((a, b) => b.date.localeCompare(a.date));
+  const today = format(new Date(), 'yyyy-MM-dd');
+  let current = 0, longest = 0, streak = 0;
+  const hasTodayComplete = sorted.some((e) => e.date === today && e.allCoreCompleted);
+  let expected = hasTodayComplete ? today : format(subDays(new Date(), 1), 'yyyy-MM-dd');
+
+  for (const entry of sorted) {
+    if (entry.date > today) continue;
+    if (entry.date < expected) {
+      if (current === 0) current = streak;
+      longest = Math.max(longest, streak);
+      streak = 0;
+      expected = format(subDays(parseISO(expected), 1), 'yyyy-MM-dd');
+      if (entry.date < expected) break;
+    }
+    if (!entry.allCoreCompleted) {
+      if (current === 0) current = streak;
+      if (entry.date !== today) { longest = Math.max(longest, streak); streak = 0; }
+      expected = format(subDays(parseISO(entry.date), 1), 'yyyy-MM-dd');
+      continue;
+    }
+    streak++;
+    longest = Math.max(longest, streak);
+    expected = format(subDays(parseISO(entry.date), 1), 'yyyy-MM-dd');
+  }
+  if (current === 0) current = streak;
+  longest = Math.max(longest, streak);
+  return { current, longest };
 }
 
 export function computeDayPoints(entry: DayEntry, customTasks: CustomTask[]): number {

@@ -13,18 +13,24 @@ import {
   serverTimestamp,
   Timestamp,
   writeBatch,
+  runTransaction,
   arrayUnion,
   arrayRemove,
-  increment,
   deleteField,
 } from 'firebase/firestore';
 import { getFirebaseDb } from './firebase';
 import { UserProfile, DayEntry, CustomTask } from './types';
 import { getCached, setCached, invalidate } from './cache';
-import { differenceInDays, format, parseISO, subDays } from 'date-fns';
+import { computeStreakFromHistory } from './points';
+import { differenceInDays, parseISO } from 'date-fns';
 
 function db() {
   return getFirebaseDb();
+}
+
+function invalidateHistory(uid: string): void {
+  invalidate(`history-${uid}-90`);
+  invalidate(`history-${uid}-120`);
 }
 
 // ── Users ────────────────────────────────────────────────────────────────────
@@ -81,45 +87,30 @@ export function subscribeToProfile(
 
 export async function incrementUserPoints(uid: string, delta: number): Promise<void> {
   if (delta === 0) return;
-  await updateDoc(doc(db(), 'users', uid), { totalPoints: increment(delta) });
+  const userRef = doc(db(), 'users', uid);
+  await runTransaction(db(), async (tx) => {
+    const snap = await tx.get(userRef);
+    const current = (snap.data()?.totalPoints ?? 0) as number;
+    tx.update(userRef, { totalPoints: Math.max(0, current + delta) });
+  });
   invalidate(`profile-${uid}`);
   invalidate('all-users');
 }
 
 export async function getGlobalLeaderboard(): Promise<UserProfile[]> {
-  const users = await getAllUsers();
-  return [...users]
-    .filter((u) => u.isActive && u.leaderboardOptOut === false)
-    .sort((a, b) => (b.totalPoints ?? 0) - (a.totalPoints ?? 0));
+  const ref = collection(db(), 'users');
+  // Server-side sort + limit avoids a full collection scan
+  const q = query(ref, orderBy('totalPoints', 'desc'), limit(50));
+  const snap = await getDocs(q);
+  return snap.docs
+    .map((d) => d.data() as UserProfile)
+    .filter((u) => u.isActive && u.leaderboardOptOut === false);
 }
 
 export async function updateStreakOnProfile(uid: string): Promise<void> {
-  invalidate(`history-${uid}`);
+  invalidateHistory(uid);
   const history = await getDayHistory(uid, 120);
-  const sorted = [...history].sort((a, b) => b.date.localeCompare(a.date));
-  const today = format(new Date(), 'yyyy-MM-dd');
-
-  let current = 0;
-  let longest = 0;
-  let streak = 0;
-  const hasTodayComplete = sorted.some((e) => e.date === today && e.allCoreCompleted);
-  let expected = hasTodayComplete ? today : format(subDays(new Date(), 1), 'yyyy-MM-dd');
-
-  for (const entry of sorted) {
-    if (entry.date > today) continue;
-    if (entry.date < expected) { longest = Math.max(longest, streak); streak = 0; break; }
-    if (!entry.allCoreCompleted) {
-      if (entry.date !== today) { longest = Math.max(longest, streak); if (current === 0) current = streak; streak = 0; }
-      expected = format(subDays(parseISO(entry.date), 1), 'yyyy-MM-dd');
-      continue;
-    }
-    streak++;
-    longest = Math.max(longest, streak);
-    expected = format(subDays(parseISO(entry.date), 1), 'yyyy-MM-dd');
-  }
-  if (current === 0) current = streak;
-  longest = Math.max(longest, streak);
-
+  const { current, longest } = computeStreakFromHistory(history);
   await updateDoc(doc(db(), 'users', uid), { currentStreak: current, longestStreak: longest });
   invalidate(`profile-${uid}`);
   invalidate('all-users');
@@ -127,20 +118,24 @@ export async function updateStreakOnProfile(uid: string): Promise<void> {
 
 // ── Friends ───────────────────────────────────────────────────────────────────
 
-// Returns true if both sides had pending requests and were auto-accepted as friends
+// Returns true if both sides had pending requests and were auto-accepted as friends.
+// The check-and-write is wrapped in a transaction to prevent duplicate outgoing docs
+// when two users send each other a request simultaneously.
 export async function sendFriendRequest(fromUid: string, toUid: string): Promise<boolean> {
-  // If the other person already sent us a request, just accept it immediately
   const mutualRef = doc(db(), 'friendRequests', fromUid, 'incoming', toUid);
-  const mutual = await getDoc(mutualRef);
-  if (mutual.exists()) {
+  const outgoingRef = doc(db(), 'friendRequests', toUid, 'incoming', fromUid);
+  let hasMutual = false;
+  await runTransaction(db(), async (tx) => {
+    const mutual = await tx.get(mutualRef);
+    hasMutual = mutual.exists();
+    if (!hasMutual) {
+      tx.set(outgoingRef, { fromUid, toUid, createdAt: serverTimestamp() });
+    }
+  });
+  if (hasMutual) {
     await acceptFriendRequest(fromUid, toUid);
     return true;
   }
-  await setDoc(doc(db(), 'friendRequests', toUid, 'incoming', fromUid), {
-    fromUid,
-    toUid,
-    createdAt: serverTimestamp(),
-  });
   return false;
 }
 
@@ -230,14 +225,46 @@ export async function updateDayEntry(
     safe[k] = v === undefined ? deleteField() : v;
   }
   await updateDoc(doc(db(), 'days', uid, 'entries', date), safe);
-  invalidate(`history-${uid}`);
+  invalidateHistory(uid);
+}
+
+// Atomically updates a day entry and the user's totalPoints in one transaction,
+// flooring totalPoints at 0. Use this for all task-toggle writes.
+export async function updateDayEntryWithPoints(
+  uid: string,
+  date: string,
+  updates: Partial<DayEntry>,
+  pointsDelta: number,
+): Promise<void> {
+  const entryRef = doc(db(), 'days', uid, 'entries', date);
+  const userRef = doc(db(), 'users', uid);
+
+  const safe: Record<string, unknown> = { updatedAt: serverTimestamp() };
+  for (const [k, v] of Object.entries(updates)) {
+    safe[k] = v === undefined ? deleteField() : v;
+  }
+
+  if (pointsDelta !== 0) {
+    await runTransaction(db(), async (tx) => {
+      const userSnap = await tx.get(userRef);
+      const current = (userSnap.data()?.totalPoints ?? 0) as number;
+      tx.update(entryRef, safe);
+      tx.update(userRef, { totalPoints: Math.max(0, current + pointsDelta) });
+    });
+    invalidate(`profile-${uid}`);
+    invalidate('all-users');
+  } else {
+    await updateDoc(entryRef, safe);
+  }
+  invalidateHistory(uid);
 }
 
 export async function getDayHistory(
   uid: string,
   limitCount = 90
 ): Promise<DayEntry[]> {
-  const key = `history-${uid}`;
+  // Include limitCount in the key so a 90-entry result never masks a 120-entry request
+  const key = `history-${uid}-${limitCount}`;
   const cached = getCached<DayEntry[]>(key);
   if (cached) return cached;
   const ref = collection(db(), 'days', uid, 'entries');

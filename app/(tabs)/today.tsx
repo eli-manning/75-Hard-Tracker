@@ -9,7 +9,7 @@ import { useAllUsers } from '../../hooks/useAllUsers';
 import { useDayData } from '../../hooks/useDayData';
 import { useCustomTasks } from '../../hooks/useCustomTasks';
 import { useMinDuration } from '../../hooks/useMinDuration';
-import { getUserProfile, getAllUsers, getPendingRequests, getOrCreateDayEntry, getDayHistory, updateUserProfile, updateDayEntry, incrementUserPoints } from '../../lib/firestore';
+import { getUserProfile, getAllUsers, getPendingRequests, getOrCreateDayEntry, getDayHistory, updateUserProfile, updateDayEntryWithPoints } from '../../lib/firestore';
 import { getCached, getSessionCached, setSessionCached, clearAll } from '../../lib/cache';
 import { UserProfile, DayEntry } from '../../lib/types';
 import { LoadingScreen } from '../../components/LoadingScreen';
@@ -17,7 +17,6 @@ import { UserTabBar } from '../../components/UserTabBar';
 import { DailyProgress } from '../../components/DailyProgress';
 import { ChallengeChecklist } from '../../components/ChallengeChecklist';
 import { CustomTaskList } from '../../components/CustomTaskList';
-import { StreakBadge } from '../../components/StreakBadge';
 import { SideMenu } from '../../components/SideMenu';
 import { MilestoneBanner } from '../../components/MilestoneBanner';
 import { RestartModal } from '../../components/RestartModal';
@@ -31,11 +30,8 @@ function DaySkeleton({ profile }: { profile: UserProfile }) {
   return (
     <View style={styles.skeletonContainer}>
       <View style={styles.skeletonHeader}>
-        <View>
-          <Text style={styles.skeletonDayNum}>DAY —</Text>
-          <Text style={styles.skeletonDate}>{today}</Text>
-        </View>
-        {profile.currentStreak > 0 && <StreakBadge streak={profile.currentStreak} />}
+        <Text style={styles.skeletonDayNum}>DAY —</Text>
+        <Text style={styles.skeletonDate}>{today}</Text>
       </View>
       <View style={styles.skeletonBar} />
       <Text style={styles.skeletonLabel}>CORE TASKS</Text>
@@ -85,7 +81,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
   }, [currentUser.uid]);
 
   const readOnly = activeUid !== currentUser.uid;
-  const { dayEntry, loading: dayLoading, update } = useDayData(activeUid, activeProfile.challengeStartDate);
+  const { dayEntry, loading: dayLoading } = useDayData(activeUid, activeProfile.challengeStartDate);
   const { tasks } = useCustomTasks(activeUid);
 
   const isTabSwitch = activeUid !== currentUser.uid && profileLoading;
@@ -145,18 +141,19 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
       .catch(() => {});
   }, [dayEntry, readOnly, activeProfile.challengeMode, activeProfile.challengeStartDate, currentUser.missedDayPromptShownDate]);
 
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+
   const wrappedUpdate = useCallback(async (patch: Partial<DayEntry>) => {
     if (!dayEntry) return;
     const merged = { ...dayEntry, ...patch };
     const newPts = computeDayPoints(merged, tasks);
     const oldPts = dayEntry.dailyPoints ?? 0;
     const delta = newPts - oldPts;
-    await update({ ...patch, dailyPoints: newPts });
+    await updateDayEntryWithPoints(activeUid, todayStr, { ...patch, dailyPoints: newPts }, delta);
     if (delta !== 0) {
-      await incrementUserPoints(activeUid, delta).catch(() => {});
       onProfileUpdate({ ...currentUser, totalPoints: Math.max(0, (currentUser.totalPoints ?? 0) + delta) });
     }
-  }, [dayEntry, tasks, update, activeUid, currentUser, onProfileUpdate]);
+  }, [dayEntry, tasks, activeUid, todayStr, currentUser, onProfileUpdate]);
 
   async function handleRestartConfirm({ keepPoints, keepLongestStreak }: { keepPoints: boolean; keepLongestStreak: boolean }) {
     const newStartDate = format(new Date(), 'yyyy-MM-dd');
@@ -183,8 +180,6 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
     }
   }
 
-  const todayStr = format(new Date(), 'yyyy-MM-dd');
-
   const nudgeQuota = useMemo(() => {
     if (!currentUser.nudgeResetDate || currentUser.nudgeResetDate !== todayStr) {
       return { remaining: 5, purchased: 0 };
@@ -195,17 +190,29 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
     };
   }, [currentUser, todayStr]);
 
+  async function writeNudgeDoc(taskKey: string, message: string): Promise<void> {
+    await addDoc(collection(getFirebaseDb(), 'nudges'), {
+      fromUid: currentUser.uid,
+      toUid: activeProfile.uid,
+      fromName: currentUser.displayName,
+      message,
+      taskKey,
+      sentAt: serverTimestamp(),
+    });
+  }
+
+  function scheduleNudgeClear(taskKey: string) {
+    setTimeout(() => setNudgedTasks((prev) => {
+      const next = new Set(prev);
+      next.delete(taskKey);
+      return next;
+    }), 60_000);
+  }
+
   async function doSendNudge(taskKey: string, message: string) {
     setNudgedTasks((prev) => new Set([...prev, taskKey]));
     try {
-      await addDoc(collection(getFirebaseDb(), 'nudges'), {
-        fromUid: currentUser.uid,
-        toUid: activeProfile.uid,
-        fromName: currentUser.displayName,
-        message,
-        taskKey,
-        sentAt: serverTimestamp(),
-      });
+      await writeNudgeDoc(taskKey, message);
       onProfileUpdate({
         ...currentUser,
         nudgeResetDate: todayStr,
@@ -213,15 +220,10 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
         purchasedNudgesToday: nudgeQuota.purchased,
       });
     } catch {
-      // Write failed — clear the nudged marker so the user can retry.
       setNudgedTasks((prev) => { const next = new Set(prev); next.delete(taskKey); return next; });
       return;
     }
-    setTimeout(() => setNudgedTasks((prev) => {
-      const next = new Set(prev);
-      next.delete(taskKey);
-      return next;
-    }), 60_000);
+    scheduleNudgeClear(taskKey);
   }
 
   async function handleSpendPoints() {
@@ -230,14 +232,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
     setPendingNudge(null);
     setNudgedTasks((prev) => new Set([...prev, taskKey]));
     try {
-      await addDoc(collection(getFirebaseDb(), 'nudges'), {
-        fromUid: currentUser.uid,
-        toUid: activeProfile.uid,
-        fromName: currentUser.displayName,
-        message,
-        taskKey,
-        sentAt: serverTimestamp(),
-      });
+      await writeNudgeDoc(taskKey, message);
       onProfileUpdate({
         ...currentUser,
         nudgeResetDate: todayStr,
@@ -246,15 +241,10 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
         totalPoints: Math.max(0, (currentUser.totalPoints ?? 0) - 10),
       });
     } catch {
-      // Write failed — clear the nudged marker so the user can retry.
       setNudgedTasks((prev) => { const next = new Set(prev); next.delete(taskKey); return next; });
       return;
     }
-    setTimeout(() => setNudgedTasks((prev) => {
-      const next = new Set(prev);
-      next.delete(taskKey);
-      return next;
-    }), 60_000);
+    scheduleNudgeClear(taskKey);
   }
 
   async function sendNudge(taskKey: string, message: string) {
@@ -293,7 +283,15 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
               (!outdoorRequired || !!merged.workoutTwoOutdoor) &&
               !!merged.dietCompleted && !!merged.waterCompleted &&
               !!merged.readingCompleted && !!merged.photoCompleted;
-            await updateDayEntry(activeUid, format(subDays(new Date(), 1), 'yyyy-MM-dd'), { ...patch, allCoreCompleted });
+            const finalEntry = { ...merged, allCoreCompleted };
+            const newPts = computeDayPoints(finalEntry, tasks);
+            const oldPts = yesterdayEntry.dailyPoints ?? 0;
+            const delta = newPts - oldPts;
+            const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+            await updateDayEntryWithPoints(activeUid, yesterday, { ...patch, allCoreCompleted, dailyPoints: newPts }, delta);
+            if (delta !== 0) {
+              onProfileUpdate({ ...currentUser, totalPoints: Math.max(0, (currentUser.totalPoints ?? 0) + delta) });
+            }
             setShowMissedDay(false);
           }}
           onDismiss={() => setShowMissedDay(false)}
@@ -393,36 +391,25 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
         ) : (
           <View style={styles.content}>
             <View style={styles.dayHeader}>
-              {(() => {
-                const notStarted = dayNum <= 0;
-                const daysUntil = notStarted ? Math.abs(dayNum) + 1 : 0;
-                return (
-                  <View style={styles.dayHeaderRow}>
-                    <View style={styles.dayHeaderLeft}>
-                      {notStarted ? (
-                        <>
-                          <Text style={styles.startsInLabel}>STARTS IN</Text>
-                          <Text style={styles.daysUntil}>{daysUntil} {daysUntil === 1 ? 'DAY' : 'DAYS'}</Text>
-                        </>
-                      ) : activeProfile.challengeMode === 'general' ? (
-                        <Text style={styles.dayNum}>{activeProfile.totalPoints ?? 0} PTS</Text>
-                      ) : (
-                        <View style={styles.dayNumRow}>
-                          <Text style={styles.dayNumSmall}>DAY {dayNum}</Text>
-                          {(activeProfile.totalPoints ?? 0) > 0 && (
-                            <>
-                              <Text style={styles.dayNumSep}>|</Text>
-                              <Text style={styles.dayNumSmall}>{activeProfile.totalPoints ?? 0} PTS</Text>
-                            </>
-                          )}
-                        </View>
-                      )}
-                      <Text style={styles.dateText}>{today}</Text>
-                    </View>
-                    <StreakBadge streak={streak} />
-                  </View>
-                );
-              })()}
+              {dayNum <= 0 ? (
+                <>
+                  <Text style={styles.startsInLabel}>STARTS IN</Text>
+                  <Text style={styles.daysUntil}>{Math.abs(dayNum) + 1} {Math.abs(dayNum) + 1 === 1 ? 'DAY' : 'DAYS'}</Text>
+                </>
+              ) : activeProfile.challengeMode === 'general' ? (
+                <Text style={styles.dayNum}>{activeProfile.totalPoints ?? 0} PTS</Text>
+              ) : (
+                <View style={styles.dayNumRow}>
+                  <Text style={styles.dayNumSmall}>DAY {dayNum}</Text>
+                  {(activeProfile.totalPoints ?? 0) > 0 && (
+                    <>
+                      <Text style={styles.dayNumSep}>|</Text>
+                      <Text style={styles.dayNumSmall}>{activeProfile.totalPoints ?? 0} PTS</Text>
+                    </>
+                  )}
+                </View>
+              )}
+              <Text style={styles.dateText}>{today}</Text>
               {dayEntry && dayEntry.dayNumber > 0 && <DailyProgress entry={dayEntry} />}
             </View>
 
@@ -602,18 +589,18 @@ const styles = StyleSheet.create({
   dayHeaderLeft: { flex: 1, marginRight: 12 },
   dayNum: {
     fontFamily: fonts.pixel, fontSize: 32, color: colors.accent, lineHeight: 44,
-    textShadowColor: 'rgba(91, 140, 240, 0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8,
+    textShadowColor: 'colors.accentGlow', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8,
   },
   startsInLabel: { fontFamily: fonts.pixel, fontSize: 16, color: colors.textMuted, lineHeight: 24 },
   daysUntil: {
     fontFamily: fonts.pixel, fontSize: 28, color: colors.accent, lineHeight: 36, marginTop: 4,
-    textShadowColor: 'rgba(91, 140, 240, 0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8,
+    textShadowColor: 'colors.accentGlow', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8,
   },
   dateText: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted, marginTop: 6 },
   dayNumRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   dayNumSmall: {
     fontFamily: fonts.pixel, fontSize: 26, color: colors.accent, lineHeight: 36,
-    textShadowColor: 'rgba(91, 140, 240, 0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8,
+    textShadowColor: 'colors.accentGlow', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8,
   },
   dayNumSep: { fontFamily: fonts.pixel, fontSize: 20, color: colors.textMuted, lineHeight: 36 },
   generalDayNum: { fontFamily: fonts.pixel, fontSize: 13, color: colors.textMuted, marginTop: 2 },

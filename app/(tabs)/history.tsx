@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
 import { useAllUsers } from '../../hooks/useAllUsers';
 import { getDayHistory, getUserProfile } from '../../lib/firestore';
+import { computeStreakFromHistory } from '../../lib/points';
 import { DayEntry, UserProfile } from '../../lib/types';
 import { getSessionCached } from '../../lib/cache';
 import { colors, fonts } from '../../lib/theme';
@@ -47,36 +48,6 @@ function tileBorder(entry: DayEntry | undefined, date: Date, startDate: string |
   ].filter(Boolean).length;
   if (done === 0) return isToday(date) ? colors.accent : colors.red;
   return colors.yellow;
-}
-
-function computeStreak(history: DayEntry[]): { current: number; longest: number } {
-  const sorted = [...history].sort((a, b) => b.date.localeCompare(a.date));
-  const today = format(new Date(), 'yyyy-MM-dd');
-  let current = 0, longest = 0, streak = 0;
-  const hasTodayComplete = sorted.some((e) => e.date === today && e.allCoreCompleted);
-  let expected = hasTodayComplete ? today : format(subDays(new Date(), 1), 'yyyy-MM-dd');
-  for (const entry of sorted) {
-    if (entry.date > today) continue;
-    if (entry.date < expected) {
-      if (current === 0) current = streak;
-      longest = Math.max(longest, streak);
-      streak = 0;
-      expected = format(subDays(parseISO(expected), 1), 'yyyy-MM-dd');
-      if (entry.date < expected) break;
-    }
-    if (!entry.allCoreCompleted) {
-      if (entry.date === today) { if (current === 0) current = streak; }
-      else { if (current === 0) current = streak; longest = Math.max(longest, streak); streak = 0; }
-      expected = format(subDays(parseISO(entry.date), 1), 'yyyy-MM-dd');
-      continue;
-    }
-    streak++;
-    longest = Math.max(longest, streak);
-    expected = format(subDays(parseISO(entry.date), 1), 'yyyy-MM-dd');
-  }
-  if (current === 0) current = streak;
-  longest = Math.max(longest, streak);
-  return { current, longest };
 }
 
 // ── Simple SVG bar chart ───────────────────────────────────────────────────────
@@ -495,7 +466,7 @@ function HistoryInner({ currentUser }: { currentUser: UserProfile }) {
   const viewProfile = users.find((u) => u.uid === viewUid);
   const { current: currentStreak, longest } = viewProfile
     ? { current: viewProfile.currentStreak ?? 0, longest: viewProfile.longestStreak ?? 0 }
-    : computeStreak(history);
+    : computeStreakFromHistory(history);
   const startDate = viewProfile?.challengeStartDate ?? null;
 
   return (

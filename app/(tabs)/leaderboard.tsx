@@ -109,7 +109,7 @@ function LeaderboardInner({ currentUser, onOptIn }: { currentUser: UserProfile; 
     invalidate('all-users');
     setLoadingGlobal(true);
     getGlobalLeaderboard()
-      .then((list) => setGlobalList(list.slice(0, 20)))
+      .then((list) => setGlobalList(list))
       .catch(() => {})
       .finally(() => setLoadingGlobal(false));
   }
@@ -120,13 +120,11 @@ function LeaderboardInner({ currentUser, onOptIn }: { currentUser: UserProfile; 
       await updateUserProfile(currentUser.uid, { leaderboardOptOut: false });
       const updatedUser = { ...currentUser, leaderboardOptOut: false };
       onOptIn();
-      // Fetch fresh list, then ensure current user appears even if cache is stale
       setLoadingGlobal(true);
       getGlobalLeaderboard()
         .then((list) => {
-          const sliced = list.slice(0, 20);
-          const alreadyIn = sliced.some((u) => u.uid === updatedUser.uid);
-          setGlobalList(alreadyIn ? sliced : [...sliced, updatedUser].sort((a, b) => (b.totalPoints ?? 0) - (a.totalPoints ?? 0)).slice(0, 20));
+          const alreadyIn = list.some((u) => u.uid === updatedUser.uid);
+          setGlobalList(alreadyIn ? list : [...list, updatedUser].sort((a, b) => (b.totalPoints ?? 0) - (a.totalPoints ?? 0)));
         })
         .catch(() => {})
         .finally(() => setLoadingGlobal(false));
