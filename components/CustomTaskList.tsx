@@ -21,6 +21,7 @@ export function CustomTaskList({ tasks, dayEntry, uid, readOnly, onDayUpdate, on
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<CustomTask | undefined>();
   const [defaultType, setDefaultType] = useState<'daily' | 'backlog'>('daily');
+  const [dailyOpen, setDailyOpen] = useState(true);
   const [backlogOpen, setBacklogOpen] = useState(true);
 
   const dailyTasks = tasks.filter((t) => t.type === 'daily' && !t.archived);
@@ -68,7 +69,10 @@ export function CustomTaskList({ tasks, dayEntry, uid, readOnly, onDayUpdate, on
       {/* Daily Tasks */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>YOUR TASKS</Text>
+          <TouchableOpacity onPress={() => setDailyOpen((o) => !o)} style={styles.backlogToggle}>
+            <Ionicons name={dailyOpen ? 'chevron-down' : 'chevron-forward'} size={12} color={colors.text} />
+            <Text style={styles.sectionTitle}>YOUR TASKS</Text>
+          </TouchableOpacity>
           {!readOnly && (
             <TouchableOpacity onPress={() => openEditor('daily')} style={styles.addBtn}>
               <Ionicons name="add" size={12} color={colors.accent} />
@@ -77,24 +81,26 @@ export function CustomTaskList({ tasks, dayEntry, uid, readOnly, onDayUpdate, on
           )}
         </View>
 
-        {dailyTasks.length === 0 ? (
-          <Text style={styles.empty}>No daily tasks yet</Text>
-        ) : (
-          <View style={styles.taskList}>
-            {dailyTasks.map((task) => (
-              <CustomTaskItem
-                key={task.id}
-                task={task}
-                completed={dayEntry.customTasksCompleted.includes(task.id)}
-                readOnly={readOnly}
-                onToggle={() => toggleDailyTask(task.id)}
-                onEdit={() => openEditor('daily', task)}
-                onDelete={() => archiveCustomTask(uid, task.id)}
-                onNudge={onNudge ? () => onNudge(`custom-${task.id}`, task.label) : undefined}
-                nudgedAlready={nudgedTasks?.has(`custom-${task.id}`)}
-              />
-            ))}
-          </View>
+        {dailyOpen && (
+          dailyTasks.length === 0 ? (
+            <Text style={styles.empty}>No daily tasks yet</Text>
+          ) : (
+            <View style={styles.taskList}>
+              {dailyTasks.map((task) => (
+                <CustomTaskItem
+                  key={task.id}
+                  task={task}
+                  completed={dayEntry.customTasksCompleted.includes(task.id)}
+                  readOnly={readOnly}
+                  onToggle={() => toggleDailyTask(task.id)}
+                  onEdit={() => openEditor('daily', task)}
+                  onDelete={() => archiveCustomTask(uid, task.id)}
+                  onNudge={onNudge ? () => onNudge(`custom-${task.id}`, task.label) : undefined}
+                  nudgedAlready={nudgedTasks?.has(`custom-${task.id}`)}
+                />
+              ))}
+            </View>
+          )
         )}
       </View>
 

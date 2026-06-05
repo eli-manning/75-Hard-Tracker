@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { format, differenceInDays, parseISO, subDays } from 'date-fns';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { Ionicons } from '@expo/vector-icons';
 import { getFirebaseDb } from '../../lib/firebase';
 import { useAuth } from '../../hooks/useAuth';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -64,6 +65,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
   const [profileError, setProfileError] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [pendingRequestCount, setPendingRequestCount] = useState(0);
+  const [coreOpen, setCoreOpen] = useState(true);
   const [nudgedTasks, setNudgedTasks] = useState<Set<string>>(new Set());
   const [pendingNudge, setPendingNudge] = useState<{ taskKey: string; message: string } | null>(null);
   const [dismissedMilestone, setDismissedMilestone] = useState<number | null>(null);
@@ -418,8 +420,11 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
             )}
 
             <View>
-              <Text style={styles.sectionLabel}>CORE TASKS</Text>
-              {dayEntry && (
+              <TouchableOpacity onPress={() => setCoreOpen((o) => !o)} style={styles.sectionToggle}>
+                <Ionicons name={coreOpen ? 'chevron-down' : 'chevron-forward'} size={12} color={colors.text} />
+                <Text style={styles.sectionLabel}>CORE TASKS</Text>
+              </TouchableOpacity>
+              {coreOpen && dayEntry && (
                 <ChallengeChecklist
                   entry={dayEntry}
                   readOnly={readOnly}
@@ -604,7 +609,8 @@ const styles = StyleSheet.create({
   },
   dayNumSep: { fontFamily: fonts.pixel, fontSize: 20, color: colors.textMuted, lineHeight: 36 },
   generalDayNum: { fontFamily: fonts.pixel, fontSize: 13, color: colors.textMuted, marginTop: 2 },
-  sectionLabel: { fontFamily: fonts.pixel, fontSize: 9, color: colors.textMuted, marginBottom: 10 },
+  sectionToggle: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 10 },
+  sectionLabel: { fontFamily: fonts.pixel, fontSize: 10, color: colors.text },
   skeletonContainer: { gap: 12, padding: 4 },
   skeletonHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   skeletonDayNum: { fontFamily: fonts.pixel, fontSize: 32, color: colors.accent, opacity: 0.3, lineHeight: 44 },
