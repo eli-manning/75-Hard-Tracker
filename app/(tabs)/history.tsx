@@ -359,7 +359,12 @@ function InsightsDashboard({ history, viewProfile }: { history: DayEntry[]; view
       {waterData.length >= 2 && (
         <ChartCard title="WATER INTAKE (30 DAYS)">
           <BarChart data={waterData} color={colors.accent} goalY={128} goalColor={colors.red} />
-          <Text style={styles.chartGoalLabel}>─ ─ goal: 128oz</Text>
+          <View style={styles.legend}>
+            <View style={[styles.legendDot, { backgroundColor: colors.accent }]} />
+            <Text style={styles.legendText}>Intake</Text>
+            <View style={[styles.legendDash, { borderColor: colors.red }]} />
+            <Text style={styles.legendText}>Goal (128oz)</Text>
+          </View>
         </ChartCard>
       )}
 
@@ -380,7 +385,12 @@ function InsightsDashboard({ history, viewProfile }: { history: DayEntry[]; view
       {readingData.length >= 2 && (
         <ChartCard title="PAGES READ (30 DAYS)">
           <BarChart data={readingData} color="#7a5230" goalY={10} goalColor="#ffffff" goalBorderColor="#1a2030" />
-          <Text style={[styles.chartGoalLabel, { color: colors.text }]}>─ ─ goal: 10pg</Text>
+          <View style={styles.legend}>
+            <View style={[styles.legendDot, { backgroundColor: '#7a5230' }]} />
+            <Text style={styles.legendText}>Pages</Text>
+            <View style={[styles.legendDash, { borderColor: colors.text }]} />
+            <Text style={styles.legendText}>Goal (10pg)</Text>
+          </View>
         </ChartCard>
       )}
 
@@ -661,6 +671,7 @@ const styles = StyleSheet.create({
   legendText: { fontFamily: fonts.inter, fontSize: 11, color: colors.textMuted },
   legend: { flexDirection: 'row', gap: 12, marginTop: 8, alignItems: 'center' },
   legendDot: { width: 10, height: 10 },
+  legendDash: { width: 16, height: 0, borderTopWidth: 2, borderStyle: 'dashed' },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 8 },
   statBox: {
     flex: 1, minWidth: '45%', padding: 12,
