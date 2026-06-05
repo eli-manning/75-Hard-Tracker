@@ -9,6 +9,8 @@ export function useCustomTasks(uid: string | null) {
 
   useEffect(() => {
     if (!uid) return;
+    setLoading(true);
+    setTasks([]);
 
     const q = query(
       collection(getFirebaseDb(), 'customTasks', uid, 'tasks'),
@@ -20,6 +22,7 @@ export function useCustomTasks(uid: string | null) {
       setLoading(false);
     }, (err) => {
       if (err.code !== 'permission-denied') console.error(err);
+      setLoading(false);
     });
 
     return unsub;
