@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { signIn, signUp, sendPasswordReset } from '../lib/auth';
+import { signIn, signUp, sendPasswordReset, processGoogleRedirectResult } from '../lib/auth';
 import { useGoogleAuth } from '../hooks/useGoogleAuth';
 import { useAuth } from '../hooks/useAuth';
 import { LoadingScreen } from '../components/LoadingScreen';
@@ -51,6 +51,28 @@ export default function LoginPage() {
       }
     }
   });
+
+  // Handle Google redirect sign-in result on mobile browsers
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    processGoogleRedirectResult()
+      .then((result) => {
+        if (!result) return;
+        signingUpRef.current = true;
+        if (result.isNewUser) {
+          router.replace('/onboarding' as any);
+        } else {
+          router.replace('/(tabs)/today');
+        }
+      })
+      .catch((err: unknown) => {
+        const code = (err as { code?: string }).code ?? '';
+        if (code !== 'auth/cancelled-popup-request') {
+          setError('Google sign-in failed. Try again.');
+        }
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!authLoading && user && !signingUpRef.current) router.replace('/(tabs)/today');

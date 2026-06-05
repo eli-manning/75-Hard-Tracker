@@ -549,7 +549,7 @@ export default function TodayPage() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
+  container: { flex: 1, backgroundColor: colors.bg, overflow: 'hidden' },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',

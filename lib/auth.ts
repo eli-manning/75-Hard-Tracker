@@ -6,12 +6,15 @@ import {
   onAuthStateChanged,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signInWithCredential,
   getAdditionalUserInfo,
   User,
   Unsubscribe,
   UserCredential,
 } from 'firebase/auth';
+import { Platform } from 'react-native';
 import { getFirebaseAuth } from './firebase';
 import { createUserProfile } from './firestore';
 import { generateSeed } from './avatar';
@@ -73,10 +76,35 @@ export async function signUp(
   return credential;
 }
 
-// Web: uses signInWithPopup (requires no extra packages)
+function isMobileBrowser(): boolean {
+  if (Platform.OS !== 'web') return false;
+  // PWA standalone mode handles popups fine
+  if (window.matchMedia('(display-mode: standalone)').matches) return false;
+  if ((window.navigator as any).standalone === true) return false;
+  const ua = navigator.userAgent;
+  const isMobile = /android|iphone|ipad|ipod/i.test(ua);
+  // Safari mobile already works with signInWithPopup; only redirect for Chrome and others
+  const isSafari = /safari/i.test(ua) && !/chrome|crios|fxios/i.test(ua);
+  return isMobile && !isSafari;
+}
+
+// Web: popup on desktop, redirect on mobile (popups are blocked by mobile browsers)
 export async function signInWithGoogle(): Promise<{ isNewUser: boolean }> {
   const provider = new GoogleAuthProvider();
+  if (isMobileBrowser()) {
+    await signInWithRedirect(getFirebaseAuth(), provider);
+    return { isNewUser: false }; // page navigates away; this line never runs
+  }
   const result = await signInWithPopup(getFirebaseAuth(), provider);
+  const isNew = getAdditionalUserInfo(result)?.isNewUser ?? false;
+  if (isNew) await handleNewGoogleUser(result.user);
+  return { isNewUser: isNew };
+}
+
+// Call on login page mount to complete a pending redirect sign-in
+export async function processGoogleRedirectResult(): Promise<{ isNewUser: boolean } | null> {
+  const result = await getRedirectResult(getFirebaseAuth());
+  if (!result) return null;
   const isNew = getAdditionalUserInfo(result)?.isNewUser ?? false;
   if (isNew) await handleNewGoogleUser(result.user);
   return { isNewUser: isNew };

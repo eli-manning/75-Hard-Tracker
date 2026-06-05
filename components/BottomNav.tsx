@@ -34,7 +34,7 @@ function WebBottomNav() {
         display: 'flex',
         backgroundColor: colors.surface,
         borderTop: `2px solid ${colors.border}`,
-        boxShadow: '0 -4px 0 #000',
+        boxShadow: '0 -3px 0 rgba(26,16,8,0.25)',
         zIndex: 9999,
         paddingBottom: 'max(env(safe-area-inset-bottom), 0px)',
       }}

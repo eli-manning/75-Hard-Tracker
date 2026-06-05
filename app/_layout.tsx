@@ -35,6 +35,14 @@ function AppShell() {
   }, []);
 
   useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const style = document.createElement('style');
+    style.textContent = '* { scrollbar-width: none; } *::-webkit-scrollbar { display: none; }';
+    document.head.appendChild(style);
+    return () => document.head.removeChild(style);
+  }, []);
+
+  useEffect(() => {
     if (fontsLoaded && !authLoading && minElapsed) {
       SplashScreen.hideAsync().catch(() => {});
     }
@@ -55,7 +63,7 @@ function AppShell() {
   // On web, show BottomNav as a sibling inside webFrame (avoids React Navigation
   // overflow:hidden clipping AND the body overflow:hidden + position:fixed iOS Safari bug).
   const showWebNav = Platform.OS === 'web' &&
-    ['/today', '/tasks', '/history'].some(p => pathname.startsWith(p));
+    ['/today', '/tasks', '/history', '/leaderboard'].some(p => pathname.startsWith(p));
 
 
   return (

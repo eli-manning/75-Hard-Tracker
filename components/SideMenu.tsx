@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, Image, TextInput, TouchableOpacity,
-  ScrollView, Animated, StyleSheet, Dimensions,
+  ScrollView, Animated, StyleSheet, Dimensions, Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -377,11 +377,15 @@ const styles = StyleSheet.create({
     borderLeftWidth: 2,
     borderLeftColor: colors.border,
     zIndex: 50,
-    shadowColor: '#000',
-    shadowOffset: { width: -4, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 8,
+    ...Platform.select({
+      native: {
+        shadowColor: '#000',
+        shadowOffset: { width: -4, height: 0 },
+        shadowOpacity: 1,
+        shadowRadius: 0,
+        elevation: 8,
+      },
+    }),
   },
   drawerHeader: {
     flexDirection: 'row',
