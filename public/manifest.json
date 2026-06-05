@@ -1,6 +1,6 @@
 {
   "name": "CrewDay",
-  "short_name": "CREWDAY",
+  "short_name": "CrewDay",
   "description": "Your crew. Your goals. Every day.",
   "start_url": "/",
   "display": "standalone",

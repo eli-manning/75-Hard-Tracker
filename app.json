@@ -32,7 +32,7 @@
       "output": "single",
       "favicon": "./assets/favicon.png",
       "name": "CrewDay",
-      "shortName": "CREWDAY",
+      "shortName": "CrewDay",
       "description": "Track your fitness challenge with your crew",
       "themeColor": "#ede0c4",
       "backgroundColor": "#ede0c4",
