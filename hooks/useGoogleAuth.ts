@@ -51,14 +51,11 @@ export function useGoogleAuth(onResult: (result: GoogleResult) => void) {
 
   const trigger = useCallback(async () => {
     setLoading(true);
-    console.log('[GoogleAuth] trigger called');
     try {
       const result = await signInWithGoogle();
-      console.log('[GoogleAuth] signInWithGoogle returned', result);
       onResultRef.current(result);
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? '';
-      console.error('[GoogleAuth] trigger caught error, code=', code, err);
       if (code !== 'auth/popup-closed-by-user' && code !== 'auth/cancelled-popup-request') {
         const msg =
           code === 'auth/account-exists-with-different-credential'

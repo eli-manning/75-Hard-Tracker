@@ -82,24 +82,17 @@ function isMobileBrowser(): boolean {
   const ua = navigator.userAgent;
   const isMobile = /android|iphone|ipad|ipod/i.test(ua);
   const isSafari = /safari/i.test(ua) && !/chrome|crios|fxios/i.test(ua);
-  const result = isMobile && !isSafari && !standalone;
-  console.log('[GoogleAuth] isMobileBrowser check', { ua, isMobile, isSafari, standalone, result });
-  return result;
+  return isMobile && !isSafari && !standalone;
 }
 
-// Web: popup on desktop, redirect on mobile (popups are blocked by mobile browsers)
+// Web: popup on desktop/Safari, redirect on Chrome mobile (Chrome tabs break window.opener)
 export async function signInWithGoogle(): Promise<{ isNewUser: boolean }> {
   const provider = new GoogleAuthProvider();
-  const usesRedirect = isMobileBrowser();
-  console.log('[GoogleAuth] signInWithGoogle called, usesRedirect=', usesRedirect);
-  if (usesRedirect) {
-    console.log('[GoogleAuth] calling signInWithRedirect...');
+  if (isMobileBrowser()) {
     await signInWithRedirect(getFirebaseAuth(), provider);
     return { isNewUser: false }; // page navigates away; this line never runs
   }
-  console.log('[GoogleAuth] calling signInWithPopup...');
   const result = await signInWithPopup(getFirebaseAuth(), provider);
-  console.log('[GoogleAuth] signInWithPopup resolved, isNewUser=', getAdditionalUserInfo(result)?.isNewUser);
   const isNew = getAdditionalUserInfo(result)?.isNewUser ?? false;
   if (isNew) await handleNewGoogleUser(result.user);
   return { isNewUser: isNew };
@@ -107,15 +100,7 @@ export async function signInWithGoogle(): Promise<{ isNewUser: boolean }> {
 
 // Call on login page mount to complete a pending redirect sign-in
 export async function processGoogleRedirectResult(): Promise<{ isNewUser: boolean } | null> {
-  console.log('[GoogleAuth] processGoogleRedirectResult called');
-  let result;
-  try {
-    result = await getRedirectResult(getFirebaseAuth());
-  } catch (err) {
-    console.error('[GoogleAuth] getRedirectResult threw:', err);
-    throw err;
-  }
-  console.log('[GoogleAuth] getRedirectResult resolved, result=', result);
+  const result = await getRedirectResult(getFirebaseAuth());
   if (!result) return null;
   const isNew = getAdditionalUserInfo(result)?.isNewUser ?? false;
   if (isNew) await handleNewGoogleUser(result.user);

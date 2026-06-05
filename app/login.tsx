@@ -55,10 +55,8 @@ export default function LoginPage() {
   // Handle Google redirect sign-in result on mobile browsers
   useEffect(() => {
     if (Platform.OS !== 'web') return;
-    console.log('[GoogleAuth] login mount: calling processGoogleRedirectResult');
     processGoogleRedirectResult()
       .then((result) => {
-        console.log('[GoogleAuth] login processGoogleRedirectResult result=', result);
         if (!result) return;
         signingUpRef.current = true;
         if (result.isNewUser) {
@@ -69,7 +67,6 @@ export default function LoginPage() {
       })
       .catch((err: unknown) => {
         const code = (err as { code?: string }).code ?? '';
-        console.error('[GoogleAuth] login processGoogleRedirectResult error, code=', code, err);
         if (code !== 'auth/cancelled-popup-request') {
           setError('Google sign-in failed. Try again.');
         }
