@@ -214,6 +214,11 @@ export async function getOrCreateDayEntry(
   return entry as DayEntry;
 }
 
+export async function getDayEntry(uid: string, date: string): Promise<DayEntry | null> {
+  const snap = await getDoc(doc(db(), 'days', uid, 'entries', date));
+  return snap.exists() ? (snap.data() as DayEntry) : null;
+}
+
 export async function updateDayEntry(
   uid: string,
   date: string,
