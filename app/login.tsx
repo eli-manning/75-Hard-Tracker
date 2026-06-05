@@ -131,7 +131,7 @@ export default function LoginPage() {
         {/* Title */}
         <View style={styles.titleSection}>
           <Text style={styles.title}>CrewDay</Text>
-          <Text style={styles.subtitle}>Your crew. Your goals. Every day.</Text>
+          <Text style={styles.subtitle}>{'Your crew. Your goals.\nEvery day.'}</Text>
         </View>
 
         {/* Card */}
@@ -348,6 +348,8 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: colors.textMuted,
     letterSpacing: 3,
+    textAlign: 'center',
+    lineHeight: 20,
   },
   card: {
     width: '100%',
