@@ -105,7 +105,7 @@ export function CustomTaskList({ tasks, dayEntry, uid, readOnly, onDayUpdate, on
       </View>
 
       {/* Backlog */}
-      <View style={[styles.section, { marginTop: 16 }]}>
+      <View style={[styles.section, { marginTop: dailyOpen ? 16 : 0 }]}>
         <View style={styles.sectionHeader}>
           <TouchableOpacity onPress={() => setBacklogOpen((o) => !o)} style={styles.backlogToggle}>
             <Ionicons
