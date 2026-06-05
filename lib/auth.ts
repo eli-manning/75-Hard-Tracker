@@ -4,6 +4,9 @@ import {
   sendPasswordResetEmail,
   signOut as firebaseSignOut,
   onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup,
+  getAdditionalUserInfo,
   User,
   Unsubscribe,
   UserCredential,
@@ -46,6 +49,35 @@ export async function signUp(
   setSessionCached('crewday-profile', newProfile);
   await createUserProfile(newProfile);
   return credential;
+}
+
+export async function signInWithGoogle(): Promise<{ isNewUser: boolean }> {
+  const provider = new GoogleAuthProvider();
+  const result = await signInWithPopup(getFirebaseAuth(), provider);
+  const isNew = getAdditionalUserInfo(result)?.isNewUser ?? false;
+
+  if (isNew) {
+    const { uid, email, displayName: googleName } = result.user;
+    const emailKey = (email ?? '').toLowerCase();
+    const isCustom = CUSTOM_AVATAR_EMAILS.has(emailKey);
+    const newProfile = {
+      uid,
+      displayName: (googleName ?? email?.split('@')[0] ?? 'User').trim().slice(0, 100),
+      avatarUrl: '/avatars/default.png',
+      ...(isCustom ? {} : { dicebearSeed: generateSeed() }),
+      email: email ?? '',
+      challengeStartDate: format(new Date(), 'yyyy-MM-dd'),
+      isActive: true,
+      currentStreak: 0,
+      longestStreak: 0,
+      onboardingComplete: false,
+    };
+    setCached(`profile-${uid}`, newProfile);
+    setSessionCached('crewday-profile', newProfile);
+    await createUserProfile(newProfile);
+  }
+
+  return { isNewUser: isNew };
 }
 
 export async function sendPasswordReset(email: string): Promise<void> {
