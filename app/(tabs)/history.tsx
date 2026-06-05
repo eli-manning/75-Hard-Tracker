@@ -61,21 +61,18 @@ function computeStreak(history: DayEntry[]): { current: number; longest: number 
       if (current === 0) current = streak;
       longest = Math.max(longest, streak);
       streak = 0;
-      const d = new Date(expected); d.setDate(d.getDate() - 1);
-      expected = format(d, 'yyyy-MM-dd');
+      expected = format(subDays(parseISO(expected), 1), 'yyyy-MM-dd');
       if (entry.date < expected) break;
     }
     if (!entry.allCoreCompleted) {
       if (entry.date === today) { if (current === 0) current = streak; }
       else { if (current === 0) current = streak; longest = Math.max(longest, streak); streak = 0; }
-      const d = new Date(entry.date); d.setDate(d.getDate() - 1);
-      expected = format(d, 'yyyy-MM-dd');
+      expected = format(subDays(parseISO(entry.date), 1), 'yyyy-MM-dd');
       continue;
     }
     streak++;
     longest = Math.max(longest, streak);
-    const d = new Date(entry.date); d.setDate(d.getDate() - 1);
-    expected = format(d, 'yyyy-MM-dd');
+    expected = format(subDays(parseISO(entry.date), 1), 'yyyy-MM-dd');
   }
   if (current === 0) current = streak;
   longest = Math.max(longest, streak);
@@ -176,8 +173,9 @@ function LineChartSvg({
 
   function toPath(data: { x: string; y: number }[]): string {
     if (data.length === 0) return '';
+    const divisor = maxLen > 1 ? maxLen - 1 : 1;
     return data.map((d, i) => {
-      const x = padLeft + (i / (maxLen - 1)) * (CHART_W - padLeft);
+      const x = padLeft + (i / divisor) * (CHART_W - padLeft);
       const y = chartH - ((d.y - minY) / range) * chartH;
       return `${i === 0 ? 'M' : 'L'}${x},${y}`;
     }).join(' ');
@@ -478,7 +476,7 @@ function HistoryInner({ currentUser }: { currentUser: UserProfile }) {
 
   useEffect(() => {
     setHistory([]);
-    getDayHistory(viewUid, 120).then(setHistory);
+    getDayHistory(viewUid, 120).then(setHistory).catch(() => {});
   }, [viewUid]);
 
   const entryMap = new Map(history.map((e) => [e.date, e]));
