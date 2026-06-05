@@ -4,9 +4,9 @@
     "slug": "crewday",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/75_logo.png",
+    "icon": "./assets/images/crew-day_logo_blue_bg.png",
     "splash": {
-      "image": "./assets/images/75_logo.png",
+      "image": "./assets/images/crew-day_logo_blue_bg.png",
       "resizeMode": "contain",
       "backgroundColor": "#0c0b08"
     },
@@ -49,7 +49,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/75_logo.png",
+          "icon": "./assets/images/crew-day_logo_blue_bg.png",
           "color": "#e8643a",
           "androidMode": "default"
         }
