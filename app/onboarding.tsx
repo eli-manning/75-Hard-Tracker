@@ -526,7 +526,7 @@ const styles = StyleSheet.create({
   dotDone: { backgroundColor: colors.green },
   titleSection: { alignItems: 'center', gap: 8 },
   welcomeLabel: { fontFamily: fonts.pixel, fontSize: 7, color: colors.textMuted, letterSpacing: 2 },
-  title: { fontFamily: fonts.pixel, fontSize: 20, color: colors.accent, lineHeight: 30, textShadowColor: 'rgba(91, 140, 240, 0.6)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 },
+  title: { fontFamily: fonts.pixel, fontSize: 20, color: colors.accent, lineHeight: 30, textShadowColor: 'colors.accentGlow', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 },
   stepTitle: { fontFamily: fonts.pixel, fontSize: 12, color: colors.accent, textAlign: 'center' },
   installHint: { fontFamily: fonts.inter, fontSize: 13, color: colors.textMuted, textAlign: 'center', lineHeight: 20 },
   installInstructions: { alignSelf: 'stretch', gap: 12 },

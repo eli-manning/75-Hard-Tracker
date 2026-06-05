@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
+import { colors } from '../lib/theme';
 import { Stack, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -40,7 +41,7 @@ function AppShell() {
   }, [fontsLoaded, authLoading, minElapsed]);
 
   const screens = (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0c1018' } }}>
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="login" />
       <Stack.Screen name="onboarding" />
@@ -85,12 +86,12 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#0c1018',
+    backgroundColor: colors.bg,
   },
   webCenter: {
     flex: 1,
     alignItems: 'center',
-    backgroundColor: '#0c1018',
+    backgroundColor: colors.bg,
     width: '100%',
   },
   webFrame: {

@@ -24,7 +24,7 @@ export function CustomTaskItem({ task, completed, readOnly, onToggle, onEdit, on
       <View style={[styles.checkbox, completed ? styles.checkboxDone : styles.checkboxEmpty]}>
         {completed && (
           <Svg width={12} height={10} viewBox="0 0 12 10" fill="none">
-            <Path d="M1 5l3 3 7-7" stroke="#0c1018" strokeWidth={2.5} strokeLinecap="square" />
+            <Path d="M1 5l3 3 7-7" stroke={colors.bg} strokeWidth={2.5} strokeLinecap="square" />
           </Svg>
         )}
       </View>

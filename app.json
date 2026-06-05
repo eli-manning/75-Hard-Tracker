@@ -8,7 +8,7 @@
     "splash": {
       "image": "./assets/images/crew-day_logo_blue_bg.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0c0b08"
+      "backgroundColor": "#07080f"
     },
     "scheme": "crewday",
     "userInterfaceStyle": "dark",
@@ -21,7 +21,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#0c0b08",
+        "backgroundColor": "#07080f",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png"
       },
@@ -34,8 +34,8 @@
       "name": "CrewDay",
       "shortName": "CREWDAY",
       "description": "Track your fitness challenge with your crew",
-      "themeColor": "#0c0b08",
-      "backgroundColor": "#0c0b08",
+      "themeColor": "#07080f",
+      "backgroundColor": "#07080f",
       "lang": "en",
       "scope": "/",
       "startUrl": "/",

@@ -6,86 +6,44 @@ interface StreakBadgeProps {
 }
 
 const GOLD = '#f0c040';
-const GOLD_BG = '#f0c04022';
 
 export function StreakBadge({ streak }: StreakBadgeProps) {
   if (streak === 0) return null;
 
   const label = streak >= 75 ? '75 COMPLETE' : `${streak} DAY STREAK`;
 
-  let badgeStyle;
-  let textColor;
+  let bg: string;
+  let border: string;
+  let textColor: string;
+  let glowColor: string;
+  let glowRadius: number;
 
   if (streak >= 75) {
-    // Tier 5: 75+ — gold, maximum glow
-    badgeStyle = {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      backgroundColor: GOLD_BG,
-      borderWidth: 3,
-      borderColor: GOLD,
-      shadowColor: GOLD,
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.9,
-      shadowRadius: 20,
-    };
-    textColor = GOLD;
+    bg = GOLD; border = GOLD; textColor = '#0a0800'; glowColor = GOLD; glowRadius = 20;
   } else if (streak >= 50) {
-    // Tier 4: 50–74 — bright gold, borderWidth 3, stronger glow
-    badgeStyle = {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      backgroundColor: GOLD_BG,
-      borderWidth: 3,
-      borderColor: GOLD,
-      shadowColor: GOLD,
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.8,
-      shadowRadius: 16,
-    };
-    textColor = GOLD;
+    bg = GOLD; border = GOLD; textColor = '#0a0800'; glowColor = GOLD; glowRadius = 16;
   } else if (streak >= 25) {
-    // Tier 3: 25–49 — gold color, gold background, gold border, stronger glow
-    badgeStyle = {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      backgroundColor: GOLD_BG,
-      borderWidth: 2,
-      borderColor: GOLD,
-      shadowColor: GOLD,
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.7,
-      shadowRadius: 12,
-    };
-    textColor = GOLD;
+    bg = GOLD; border = GOLD; textColor = '#0a0800'; glowColor = GOLD; glowRadius = 12;
   } else if (streak >= 10) {
-    // Tier 2: 10–24 — accent color + glow
-    badgeStyle = {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      backgroundColor: colors.accentLight,
-      borderWidth: 2,
-      borderColor: colors.accent,
-      shadowColor: colors.accent,
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.5,
-      shadowRadius: 8,
-    };
-    textColor = colors.accent;
+    bg = colors.accent; border = colors.accent; textColor = colors.white; glowColor = colors.accent; glowRadius = 10;
   } else {
-    // Tier 1: 1–9 — current style, no extra glow
-    badgeStyle = {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      backgroundColor: colors.accentLight,
-      borderWidth: 2,
-      borderColor: colors.accent,
-    };
-    textColor = colors.accent;
+    bg = colors.accent; border = colors.accent; textColor = colors.white; glowColor = colors.accent; glowRadius = 6;
   }
 
   return (
-    <View style={badgeStyle}>
+    <View style={{
+      alignSelf: 'flex-start',
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      backgroundColor: bg,
+      borderWidth: 2,
+      borderColor: border,
+      shadowColor: glowColor,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.7,
+      shadowRadius: glowRadius,
+      elevation: 4,
+    }}>
       <Text style={{ fontFamily: fonts.pixel, fontSize: 7, color: textColor, letterSpacing: 0.5 }}>
         {label}
       </Text>

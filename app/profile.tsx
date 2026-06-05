@@ -14,6 +14,7 @@ import { invalidate, getSessionCached } from '../lib/cache';
 import { LoadingScreen } from '../components/LoadingScreen';
 import { NotificationSettings } from '../components/NotificationSettings';
 import { RestartModal } from '../components/RestartModal';
+import { StreakFlame } from '../components/StreakFlame';
 import { colors, fonts, shadows } from '../lib/theme';
 import { format, parseISO } from 'date-fns';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -99,18 +100,21 @@ function ProfileInner({ currentUser }: { currentUser: UserProfile }) {
 
         {/* Avatar */}
         <View style={styles.avatarSection}>
-          <View style={styles.avatarFrame}>
-            {(() => {
-              const url = getAvatarUrl(profile);
-              const ratio = AVATAR_PORTRAIT_RATIO[url];
-              return (
-                <Image
-                  source={getAvatarSource(url)}
-                  style={{ width: 120, height: ratio ? 120 / ratio : 120 }}
-                  resizeMode={ratio ? 'stretch' : 'cover'}
-                />
-              );
-            })()}
+          <View style={styles.avatarWrapper}>
+            <View style={styles.avatarFrame}>
+              {(() => {
+                const url = getAvatarUrl(profile);
+                const ratio = AVATAR_PORTRAIT_RATIO[url];
+                return (
+                  <Image
+                    source={getAvatarSource(url)}
+                    style={{ width: 120, height: ratio ? 120 / ratio : 120 }}
+                    resizeMode={ratio ? 'stretch' : 'cover'}
+                  />
+                );
+              })()}
+            </View>
+            <StreakFlame streak={profile.currentStreak ?? 0} size="lg" />
           </View>
           {!isCustom && (
             <TouchableOpacity
@@ -331,6 +335,7 @@ const styles = StyleSheet.create({
   backText: { fontFamily: fonts.pixel, fontSize: 8, color: colors.accent },
   pageTitle: { fontFamily: fonts.pixel, fontSize: 14, color: colors.accent, marginBottom: 8 },
   avatarSection: { alignItems: 'center', gap: 12 },
+  avatarWrapper: { position: 'relative' },
   avatarFrame: {
     width: 120, height: 120,
     borderWidth: 3, borderColor: colors.accent,

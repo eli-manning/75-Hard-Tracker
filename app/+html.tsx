@@ -1,5 +1,6 @@
 import { ScrollViewStyleReset } from 'expo-router/html';
 import type { PropsWithChildren } from 'react';
+import { BG_COLOR } from '../lib/theme';
 
 export default function Root({ children }: PropsWithChildren) {
   return (
@@ -13,7 +14,7 @@ export default function Root({ children }: PropsWithChildren) {
         />
 
         {/* PWA */}
-        <meta name="theme-color" content="#0c1018" />
+        <meta name="theme-color" content={BG_COLOR} />
         <link rel="manifest" href="/manifest.json" />
 
         {/* iOS PWA */}
@@ -34,8 +35,7 @@ export default function Root({ children }: PropsWithChildren) {
             height: 100%;
             min-height: 100dvh;
             height: -webkit-fill-available;
-            /* Match nav surface color so any gap below the nav is invisible */
-            background-color: #161410;
+            background-color: ${BG_COLOR};
           }
           body {
             display: flex;
@@ -46,14 +46,14 @@ export default function Root({ children }: PropsWithChildren) {
             min-height: 100vh;
             min-height: 100dvh;
             min-height: -webkit-fill-available;
-            background-color: #161410;
+            background-color: ${BG_COLOR};
           }
           #root {
             display: flex;
             flex-direction: column;
             flex: 1;
             overflow: hidden;
-            background-color: #0c1018;
+            background-color: ${BG_COLOR};
           }
         `}</style>
       </head>
