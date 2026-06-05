@@ -593,7 +593,7 @@ const styles = StyleSheet.create({
   },
   errorBannerText: { fontFamily: fonts.pixel, fontSize: 7, color: colors.red },
   content: { gap: 24 },
-  dayHeader: { gap: 12 },
+  dayHeader: { gap: 4 },
   dayHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   dayHeaderLeft: { flex: 1, marginRight: 12 },
   dayNum: {
@@ -605,7 +605,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.pixel, fontSize: 28, color: colors.accent, lineHeight: 36, marginTop: 4,
     textShadowColor: colors.accentGlow, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 6,
   },
-  dateText: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted, marginTop: 6 },
+  dateText: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
   dayNumRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   dayNumSmall: {
     fontFamily: fonts.pixel, fontSize: 26, color: colors.accent, lineHeight: 36,
