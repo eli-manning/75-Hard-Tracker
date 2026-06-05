@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "75 Hard Tracker",
-    "slug": "75-hard-tracker",
+    "name": "CrewDay",
+    "slug": "crewday",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/75_logo.png",
@@ -10,13 +10,13 @@
       "resizeMode": "contain",
       "backgroundColor": "#0c0b08"
     },
-    "scheme": "sevenfivehard",
+    "scheme": "crewday",
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.elimanning.75hardtracker",
+      "bundleIdentifier": "com.elimanning.crewday",
       "infoPlist": {
-        "NSUserNotificationsUsageDescription": "We use notifications to remind you to complete your daily 75 Hard tasks."
+        "NSUserNotificationsUsageDescription": "We use notifications to remind you to complete your daily tasks."
       }
     },
     "android": {
@@ -25,15 +25,15 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png"
       },
-      "package": "com.elimanning.sevenfivehard"
+      "package": "com.elimanning.crewday"
     },
     "web": {
       "bundler": "metro",
       "output": "single",
       "favicon": "./assets/favicon.png",
-      "name": "75 Hard Tracker",
-      "shortName": "75 HARD",
-      "description": "Track your 75 Hard challenge",
+      "name": "CrewDay",
+      "shortName": "CREWDAY",
+      "description": "Track your fitness challenge with your crew",
       "themeColor": "#0c0b08",
       "backgroundColor": "#0c0b08",
       "lang": "en",
