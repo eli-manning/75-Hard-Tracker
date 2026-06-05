@@ -35,7 +35,7 @@ export function MissedDayModal({ visible, yesterdayEntry, onMissed, onSaved, onD
     if (!yesterdayEntry.waterCompleted) {
       const oz = parseInt(waterOz, 10);
       patch.waterOzLogged = isNaN(oz) ? 0 : oz;
-      patch.waterCompleted = !isNaN(oz) && oz >= 64;
+      patch.waterCompleted = !isNaN(oz) && oz >= 128;
     }
     if (!yesterdayEntry.readingCompleted) {
       const pages = parseInt(pagesRead, 10);
