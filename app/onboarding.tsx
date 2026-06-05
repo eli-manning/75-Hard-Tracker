@@ -160,8 +160,8 @@ function InstallStep({ onFinish, onBack, ProgressDots, insets }: {
             </View>
             <View style={styles.installSteps}>
               {[
-                { icon: 'share-outline' as const, text: 'Tap the Share button at the bottom of Safari' },
-                { icon: 'add-circle-outline' as const, text: 'Scroll down and tap "Add to Home Screen"' },
+                { icon: 'share-outline' as const, text: 'Tap the ••• -> Share button' },
+                { icon: 'add-circle-outline' as const, text: 'View More -> "Add to Home Screen"' },
                 { icon: 'checkmark-circle-outline' as const, text: 'Tap "Add" in the top right corner' },
               ].map(({ icon, text }, i) => (
                 <View key={i} style={styles.installStep}>

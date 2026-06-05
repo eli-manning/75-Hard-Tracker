@@ -1,0 +1,70 @@
+const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '';
+const reversedIosClientId = iosClientId
+  ? 'com.googleusercontent.apps.' + iosClientId.replace('.apps.googleusercontent.com', '')
+  : '';
+
+/** @type {import('expo/config').ExpoConfig} */
+module.exports = {
+  name: 'CrewDay',
+  slug: 'crewday',
+  version: '1.0.0',
+  orientation: 'portrait',
+  icon: './assets/images/crew-day_logo_blue_bg.png',
+  splash: {
+    image: './assets/images/crew-day_logo_transparent_bg.png',
+    resizeMode: 'contain',
+    backgroundColor: '#ede0c4',
+  },
+  scheme: 'crewday',
+  userInterfaceStyle: 'light',
+  ios: {
+    supportsTablet: false,
+    bundleIdentifier: 'com.elimanning.crewday',
+    infoPlist: {
+      NSUserNotificationsUsageDescription:
+        'We use notifications to remind you to complete your daily tasks.',
+      ...(reversedIosClientId && {
+        CFBundleURLTypes: [{ CFBundleURLSchemes: [reversedIosClientId] }],
+      }),
+    },
+  },
+  android: {
+    adaptiveIcon: {
+      backgroundColor: '#ede0c4',
+      foregroundImage: './assets/android-icon-foreground.png',
+      backgroundImage: './assets/android-icon-background.png',
+    },
+    package: 'com.elimanning.crewday',
+  },
+  web: {
+    bundler: 'metro',
+    output: 'single',
+    favicon: './assets/favicon.png',
+    name: 'CrewDay',
+    shortName: 'CrewDay',
+    description: 'Track your fitness challenge with your crew',
+    themeColor: '#ede0c4',
+    backgroundColor: '#ede0c4',
+    lang: 'en',
+    scope: '/',
+    startUrl: '/',
+    display: 'standalone',
+    orientation: 'portrait',
+  },
+  plugins: [
+    'expo-router',
+    'expo-font',
+    'expo-splash-screen',
+    [
+      'expo-notifications',
+      {
+        icon: './assets/images/crew-day_logo_blue_bg.png',
+        color: '#e8643a',
+        androidMode: 'default',
+      },
+    ],
+  ],
+  experiments: {
+    typedRoutes: false,
+  },
+};

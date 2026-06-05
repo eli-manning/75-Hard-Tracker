@@ -23,6 +23,7 @@ import { format } from 'date-fns';
 
 const CUSTOM_AVATAR_EMAILS = new Set([
   'eli@themannings.com',
+  'eli.patrick.manning@gmail.com',
   'rocketeloise@rocketmail.com',
 ]);
 

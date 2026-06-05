@@ -424,8 +424,8 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
                 <span style={{ ...pixelFont, fontSize: '6px', color: 'var(--accent)' }}>SAFARI ON IPHONE / IPAD</span>
               </div>
               {[
-                { icon: <Share2 size={14} />, text: 'Tap the Share button at the bottom of Safari (the box with an arrow)' },
-                { icon: <span style={{ ...pixelFont, fontSize: '8px' }}>+</span>, text: 'Scroll down and tap "Add to Home Screen"' },
+                { icon: <Share2 size={14} />, text: 'Tap the ••• -> Share button' },
+                { icon: <span style={{ ...pixelFont, fontSize: '8px' }}>+</span>, text: 'View More -> "Add to Home Screen"' },
                 { icon: <Check size={14} />, text: 'Tap "Add" in the top-right corner to confirm' },
               ].map((item, i) => (
                 <div key={i} className="flex gap-3 items-start">
