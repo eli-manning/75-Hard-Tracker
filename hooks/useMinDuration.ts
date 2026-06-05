@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-export function useMinDuration(loading: boolean, minMs = 600): boolean {
+export function useMinDuration(loading: boolean, minMs = 1000): boolean {
   const [visible, setVisible] = useState(loading);
 
   useEffect(() => {

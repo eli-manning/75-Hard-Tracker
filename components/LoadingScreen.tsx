@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { View, Text, Animated, StyleSheet, Platform } from 'react-native';
+import { View, Text, Animated, StyleSheet, Platform, Image } from 'react-native';
 import { colors, fonts } from '../lib/theme';
 
 const barFillGlow = Platform.OS === 'web'
@@ -11,7 +11,7 @@ const barFillGlow = Platform.OS === 'web'
       shadowRadius: 8,
     };
 
-export function LoadingScreen() {
+export function LoadingScreen({ showBar = true }: { showBar?: boolean }) {
   const [dots, setDots] = useState(0);
   const fillAnim = useRef(new Animated.Value(0)).current;
 
@@ -32,12 +32,23 @@ export function LoadingScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.barWrap}>
-        <View style={styles.barTrack}>
-          <Animated.View style={[styles.barFill, barFillGlow, { width: widthInterpolated }]} />
-        </View>
-        <Text style={styles.loadingText}>{'LOADING' + '.'.repeat(dots)}</Text>
+      <View style={styles.logoWrap}>
+        <Image
+          source={require('../assets/images/crew-day_logo_transparent_bg.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
       </View>
+      {showBar && (
+        <View style={styles.bottomSection}>
+          <View style={styles.barWrap}>
+            <View style={styles.barTrack}>
+              <Animated.View style={[styles.barFill, barFillGlow, { width: widthInterpolated }]} />
+            </View>
+            <Text style={styles.loadingText}>{'LOADING' + '.'.repeat(dots)}</Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -47,8 +58,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg,
     alignItems: 'center',
+  },
+  logoWrap: {
+    flex: 1,
+    alignItems: 'center',
     justifyContent: 'center',
-    gap: 32,
+  },
+  logo: {
+    width: 220,
+    height: 220,
+  },
+  bottomSection: {
+    paddingBottom: 80,
+    alignItems: 'center',
   },
   barWrap: {
     width: 220,

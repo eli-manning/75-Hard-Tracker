@@ -1,19 +1,21 @@
 import { useEffect, ReactNode } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../hooks/useAuth';
+import { useMinDuration } from '../hooks/useMinDuration';
 import { LoadingScreen } from './LoadingScreen';
 
 export function AuthGuard({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
+  const visible = useMinDuration(loading);
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!visible && !user) {
       router.replace('/login');
     }
-  }, [user, loading, router]);
+  }, [user, visible, router]);
 
-  if (loading || !user) return <LoadingScreen />;
+  if (visible || !user) return <LoadingScreen />;
 
   return <>{children}</>;
 }
