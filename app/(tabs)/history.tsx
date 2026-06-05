@@ -621,7 +621,7 @@ const styles = StyleSheet.create({
   calendarCard: {
     padding: 16, marginBottom: 24,
     backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.border,
-    shadowColor: colors.border, shadowOffset: { width: 2, height: 2 }, shadowOpacity: 1, shadowRadius: 0, elevation: 2,
+    shadowColor: '#1a1008', shadowOffset: { width: 2, height: 2 }, shadowOpacity: 0.3, shadowRadius: 0, elevation: 2,
   },
   calendarNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   navBtn: { padding: 4 },
@@ -647,7 +647,7 @@ const styles = StyleSheet.create({
   statBox: {
     flex: 1, minWidth: '45%', padding: 12,
     backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.border,
-    shadowColor: colors.border, shadowOffset: { width: 2, height: 2 }, shadowOpacity: 1, shadowRadius: 0, elevation: 2,
+    shadowColor: '#1a1008', shadowOffset: { width: 2, height: 2 }, shadowOpacity: 0.3, shadowRadius: 0, elevation: 2,
   },
   statBoxLabel: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted, marginBottom: 6 },
   statBoxValue: { fontFamily: fonts.pixel, fontSize: 12, color: colors.accent },
@@ -655,7 +655,7 @@ const styles = StyleSheet.create({
   chartCard: {
     padding: 16,
     backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.border,
-    shadowColor: colors.border, shadowOffset: { width: 2, height: 2 }, shadowOpacity: 1, shadowRadius: 0, elevation: 2,
+    shadowColor: '#1a1008', shadowOffset: { width: 2, height: 2 }, shadowOpacity: 0.3, shadowRadius: 0, elevation: 2,
   },
   chartTitle: { fontFamily: fonts.pixel, fontSize: 7, color: colors.textMuted, marginBottom: 12 },
   chartGoalLabel: { fontFamily: fonts.inter, fontSize: 10, color: colors.green, marginTop: 4 },
@@ -677,7 +677,7 @@ const styles = StyleSheet.create({
   statCard: {
     minWidth: 90, padding: 12,
     backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.border,
-    shadowColor: colors.border, shadowOffset: { width: 2, height: 2 }, shadowOpacity: 1, shadowRadius: 0,
+    shadowColor: '#1a1008', shadowOffset: { width: 2, height: 2 }, shadowOpacity: 0.3, shadowRadius: 0,
     alignItems: 'center', gap: 4,
   },
   statValue: { fontFamily: fonts.pixel, fontSize: 12, color: colors.accent, textAlign: 'center' },

@@ -8,7 +8,7 @@ const BG       = '#ede0c4';  // cream parchment (logo text/highlight colour)
 const SURFACE  = '#e0cfad';  // slightly deeper cream for cards
 const SURFACE2 = '#d4c09a';  // secondary surface
 const BORDER   = '#b8a07a';  // warm tan border
-const ACCENT   = '#2563eb';  // navy-blue from the shield
+const ACCENT   = '#2d4070';  // the shield's own navy — designed to sit on cream
 
 // Also update these files when changing BG:
 //   app.json        → expo.splash.backgroundColor, expo.web.themeColor / backgroundColor
@@ -48,31 +48,31 @@ export const fonts = {
 
 export const shadows = {
   pixel: {
-    shadowColor: '#000',
+    shadowColor: '#1a1008',  // warm near-black — softer than pure #000 on cream
     shadowOffset: { width: 2, height: 2 },
-    shadowOpacity: 1,
+    shadowOpacity: 0.35,
     shadowRadius: 0,
     elevation: 3,
   },
   pixelUp: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 1,
+    shadowColor: '#1a1008',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.25,
     shadowRadius: 0,
     elevation: 4,
   },
   glowAccent: {
     shadowColor: ACCENT,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
     elevation: 4,
   },
   glowGreen: {
-    shadowColor: '#4ecb6a',
+    shadowColor: '#1a6b35',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
     elevation: 4,
   },
 };

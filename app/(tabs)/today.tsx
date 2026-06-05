@@ -589,18 +589,18 @@ const styles = StyleSheet.create({
   dayHeaderLeft: { flex: 1, marginRight: 12 },
   dayNum: {
     fontFamily: fonts.pixel, fontSize: 32, color: colors.accent, lineHeight: 44,
-    textShadowColor: 'colors.accentGlow', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8,
+    textShadowColor: colors.accentGlow, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 6,
   },
   startsInLabel: { fontFamily: fonts.pixel, fontSize: 16, color: colors.textMuted, lineHeight: 24 },
   daysUntil: {
     fontFamily: fonts.pixel, fontSize: 28, color: colors.accent, lineHeight: 36, marginTop: 4,
-    textShadowColor: 'colors.accentGlow', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8,
+    textShadowColor: colors.accentGlow, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 6,
   },
   dateText: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted, marginTop: 6 },
   dayNumRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   dayNumSmall: {
     fontFamily: fonts.pixel, fontSize: 26, color: colors.accent, lineHeight: 36,
-    textShadowColor: 'colors.accentGlow', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8,
+    textShadowColor: colors.accentGlow, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 6,
   },
   dayNumSep: { fontFamily: fonts.pixel, fontSize: 20, color: colors.textMuted, lineHeight: 36 },
   generalDayNum: { fontFamily: fonts.pixel, fontSize: 13, color: colors.textMuted, marginTop: 2 },
