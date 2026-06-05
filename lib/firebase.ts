@@ -6,7 +6,12 @@ import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  // On web, use the hosting domain as authDomain so the redirect stays same-origin.
+  // Chrome mobile's storage partitioning blocks the cross-origin state that Firebase
+  // passes back through firebaseapp.com, causing getRedirectResult to return null.
+  authDomain: Platform.OS === 'web' && typeof window !== 'undefined'
+    ? window.location.hostname
+    : process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
   storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
