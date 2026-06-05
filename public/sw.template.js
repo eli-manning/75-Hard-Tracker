@@ -14,7 +14,7 @@ firebase.initializeApp({
 firebase.messaging();
 
 // ── Cache / Offline ───────────────────────────────────────────────────────
-const CACHE = '75hard-v3';
+const CACHE = 'crewday-v1';
 const PRECACHE = [
   '/',
   '/manifest.json',
