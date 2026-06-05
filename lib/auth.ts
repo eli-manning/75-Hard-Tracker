@@ -78,24 +78,28 @@ export async function signUp(
 
 function isMobileBrowser(): boolean {
   if (Platform.OS !== 'web') return false;
-  // PWA standalone mode handles popups fine
-  if (window.matchMedia('(display-mode: standalone)').matches) return false;
-  if ((window.navigator as any).standalone === true) return false;
+  const standalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
   const ua = navigator.userAgent;
   const isMobile = /android|iphone|ipad|ipod/i.test(ua);
-  // Safari mobile already works with signInWithPopup; only redirect for Chrome and others
   const isSafari = /safari/i.test(ua) && !/chrome|crios|fxios/i.test(ua);
-  return isMobile && !isSafari;
+  const result = isMobile && !isSafari && !standalone;
+  console.log('[GoogleAuth] isMobileBrowser check', { ua, isMobile, isSafari, standalone, result });
+  return result;
 }
 
 // Web: popup on desktop, redirect on mobile (popups are blocked by mobile browsers)
 export async function signInWithGoogle(): Promise<{ isNewUser: boolean }> {
   const provider = new GoogleAuthProvider();
-  if (isMobileBrowser()) {
+  const usesRedirect = isMobileBrowser();
+  console.log('[GoogleAuth] signInWithGoogle called, usesRedirect=', usesRedirect);
+  if (usesRedirect) {
+    console.log('[GoogleAuth] calling signInWithRedirect...');
     await signInWithRedirect(getFirebaseAuth(), provider);
     return { isNewUser: false }; // page navigates away; this line never runs
   }
+  console.log('[GoogleAuth] calling signInWithPopup...');
   const result = await signInWithPopup(getFirebaseAuth(), provider);
+  console.log('[GoogleAuth] signInWithPopup resolved, isNewUser=', getAdditionalUserInfo(result)?.isNewUser);
   const isNew = getAdditionalUserInfo(result)?.isNewUser ?? false;
   if (isNew) await handleNewGoogleUser(result.user);
   return { isNewUser: isNew };
@@ -103,7 +107,15 @@ export async function signInWithGoogle(): Promise<{ isNewUser: boolean }> {
 
 // Call on login page mount to complete a pending redirect sign-in
 export async function processGoogleRedirectResult(): Promise<{ isNewUser: boolean } | null> {
-  const result = await getRedirectResult(getFirebaseAuth());
+  console.log('[GoogleAuth] processGoogleRedirectResult called');
+  let result;
+  try {
+    result = await getRedirectResult(getFirebaseAuth());
+  } catch (err) {
+    console.error('[GoogleAuth] getRedirectResult threw:', err);
+    throw err;
+  }
+  console.log('[GoogleAuth] getRedirectResult resolved, result=', result);
   if (!result) return null;
   const isNew = getAdditionalUserInfo(result)?.isNewUser ?? false;
   if (isNew) await handleNewGoogleUser(result.user);
