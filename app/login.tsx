@@ -315,6 +315,16 @@ export default function LoginPage() {
                     {googleSubmitting ? 'CONNECTING...' : 'CONTINUE WITH GOOGLE'}
                   </Text>
                 </TouchableOpacity>
+
+                {mode === 'signup' && (
+                  <Text style={styles.legalText}>
+                    {'By creating an account, you agree to our '}
+                    <Text style={styles.legalLink} onPress={() => router.push('/terms' as any)}>Terms of Service</Text>
+                    {' and '}
+                    <Text style={styles.legalLink} onPress={() => router.push('/privacy' as any)}>Privacy Policy</Text>
+                    {'.'}
+                  </Text>
+                )}
               </View>
             </>
           )}
@@ -496,5 +506,16 @@ const styles = StyleSheet.create({
     fontFamily: fonts.pixel,
     fontSize: 7,
     color: colors.text,
+  },
+  legalText: {
+    fontFamily: fonts.inter,
+    fontSize: 11,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 17,
+  },
+  legalLink: {
+    color: colors.accent,
+    textDecorationLine: 'underline',
   },
 });
