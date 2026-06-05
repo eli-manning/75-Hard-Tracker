@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, deleteField } from 'firebase/firestore';
 import { getFirebaseDb, getFirebaseMessaging } from '../lib/firebase';
 
 Notifications.setNotificationHandler({
@@ -108,8 +108,8 @@ export function useNotifications(uid: string | undefined) {
   async function clearTokens() {
     if (!uid) return;
     try {
-      const patch: Record<string, null> = { expoPushToken: null };
-      if (Platform.OS === 'web') patch.fcmWebToken = null;
+      const patch: Record<string, ReturnType<typeof deleteField>> = { expoPushToken: deleteField() };
+      if (Platform.OS === 'web') patch.fcmWebToken = deleteField();
       await updateDoc(doc(getFirebaseDb(), 'users', uid), patch);
     } catch {}
   }

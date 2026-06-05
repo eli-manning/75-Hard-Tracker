@@ -31,9 +31,9 @@ export function getFirebaseAuth(): Auth {
       _auth = initializeAuth(app, {
         persistence: getReactNativePersistence(ReactNativeAsyncStorage),
       });
-    } catch (e: any) {
+    } catch (e: unknown) {
       // Already initialized on hot reload — reuse the existing instance
-      if (e?.code === 'auth/already-initialized') {
+      if ((e as { code?: string })?.code === 'auth/already-initialized') {
         _auth = getAuth(app);
       } else {
         throw e;

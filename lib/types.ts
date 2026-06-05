@@ -26,7 +26,7 @@ export interface UserProfile {
   notifFriendRequestsEnabled?: boolean;
   totalPoints?: number;
   challengeMode?: '75hard' | 'general';
-  leaderboardOptOut?: boolean; // default false (opted in)
+  leaderboardOptOut?: boolean; // undefined means not yet on leaderboard (opted out); false means explicitly opted in
   nudgesRemaining?: number;       // free nudges left today (max 5, default 5 if absent)
   purchasedNudgesToday?: number;  // paid nudges used today (max 5)
   nudgeResetDate?: string;        // "YYYY-MM-DD" — date of last reset
