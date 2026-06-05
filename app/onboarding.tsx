@@ -337,18 +337,26 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
       <Text style={styles.stepTitle}>HOW DO YOU WANT TO PLAY?</Text>
       <View style={styles.modeRow}>
         <TouchableOpacity
-          onPress={() => { setMode('75hard'); setStep(3); }}
+          onPress={() => setMode('75hard')}
           style={[styles.modeCard, mode === '75hard' && styles.modeCardActive]}
         >
           <Text style={[styles.modeTitle, mode === '75hard' && styles.modeTitleActive]}>75 HARD MODE</Text>
           <Text style={styles.modeDesc}>ALL 6 tasks daily. Miss a day, restart.</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => { setMode('general'); setStep(3); }}
+          onPress={() => setMode('general')}
           style={[styles.modeCard, mode === 'general' && styles.modeCardActive]}
         >
           <Text style={[styles.modeTitle, mode === 'general' && styles.modeTitleActive]}>GENERAL</Text>
           <Text style={styles.modeDesc}>Track habits your way. No failure, no pressure.</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.btnRow}>
+        <TouchableOpacity onPress={() => setStep(1)} style={[styles.secondaryBtn, styles.backBtn]}>
+          <Text style={styles.secondaryBtnText}>BACK</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setStep(3)} style={[styles.primaryBtn, { flex: 1 }]}>
+          <Text style={styles.primaryBtnText}>NEXT →</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -614,7 +622,7 @@ const styles = StyleSheet.create({
   modeRow: { flexDirection: 'column', gap: 16, width: '100%' },
   modeCard: {
     padding: 28, borderWidth: 2, borderColor: colors.border,
-    backgroundColor: colors.surface, gap: 14, ...shadows.pixel,
+    backgroundColor: colors.surface, gap: 14,
   },
   modeCardActive: { borderColor: colors.accent, backgroundColor: colors.accentLight },
   modeTitle: { fontFamily: fonts.pixel, fontSize: 14, color: colors.textMuted },
