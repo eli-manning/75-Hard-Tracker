@@ -4,11 +4,11 @@ function rgba(hex: string, alpha: number): string {
 }
 
 // ── Edit these to retheme the entire app ────────────────────────────────────
-const BG       = '#07080f';
-const SURFACE  = '#0d0f1c';
-const SURFACE2 = '#13172a';
-const BORDER   = '#1c2240';
-const ACCENT   = '#2563eb';
+const BG       = '#ede0c4';  // cream parchment (logo text/highlight colour)
+const SURFACE  = '#e0cfad';  // slightly deeper cream for cards
+const SURFACE2 = '#d4c09a';  // secondary surface
+const BORDER   = '#b8a07a';  // warm tan border
+const ACCENT   = '#2563eb';  // navy-blue from the shield
 
 // Also update these files when changing BG:
 //   app.json        → expo.splash.backgroundColor, expo.web.themeColor / backgroundColor
@@ -24,17 +24,17 @@ export const colors = {
   surface:     SURFACE,
   surface2:    SURFACE2,
   border:      BORDER,
-  text:        '#ede0c4',
-  textMuted:   '#6878a8',
+  text:        '#1a2030',     // dark navy (shield body colour)
+  textMuted:   '#5a6880',     // muted blue-grey readable on cream
   accent:      ACCENT,
-  accentLight: rgba(ACCENT, 0.12),
-  accentGlow:  rgba(ACCENT, 0.7),
-  green:       '#4ecb6a',
-  greenLight:  '#0a2210',
-  yellow:      '#e8b020',
-  yellowLight: '#1e1800',
-  red:         '#f04545',
-  redLight:    '#1f0808',
+  accentLight: rgba(ACCENT, 0.10),
+  accentGlow:  rgba(ACCENT, 0.5),
+  green:       '#1a6b35',     // darkened for contrast on light bg
+  greenLight:  '#d0f0dc',
+  yellow:      '#8a5f00',     // dark amber
+  yellowLight: '#f5e4a0',
+  red:         '#b02828',     // darkened for contrast on light bg
+  redLight:    '#f8d5d5',
   black:       '#000000',
   white:       '#ffffff',
 };

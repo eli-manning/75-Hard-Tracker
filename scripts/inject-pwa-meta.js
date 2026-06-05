@@ -24,7 +24,7 @@ const extraCss = `  <style>
     html {
       min-height: 100%;
       min-height: 100dvh;
-      background-color: #0c0b08;
+      background-color: #ede0c4;
     }
     body {
       display: flex;
@@ -33,12 +33,12 @@ const extraCss = `  <style>
       min-height: 100vh;
       min-height: 100dvh;
       overflow: hidden;
-      background-color: #0c0b08;
+      background-color: #ede0c4;
     }
     #root {
       min-height: 100vh;
       min-height: 100dvh;
-      background-color: #0c0b08;
+      background-color: #ede0c4;
     }
     @supports (-webkit-touch-callout: none) {
       html { height: -webkit-fill-available; }
@@ -50,7 +50,7 @@ const extraCss = `  <style>
       #root {
         height: 100dvh !important;
         min-height: 100dvh !important;
-        background-color: #0c0b08;
+        background-color: #ede0c4;
       }
     }
   </style>`;

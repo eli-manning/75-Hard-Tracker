@@ -6,12 +6,12 @@
     "orientation": "portrait",
     "icon": "./assets/images/crew-day_logo_blue_bg.png",
     "splash": {
-      "image": "./assets/images/crew-day_logo_blue_bg.png",
+      "image": "./assets/images/crew-day_logo_transparent_bg.png",
       "resizeMode": "contain",
-      "backgroundColor": "#07080f"
+      "backgroundColor": "#ede0c4"
     },
     "scheme": "crewday",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.elimanning.crewday",
@@ -21,7 +21,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#07080f",
+        "backgroundColor": "#ede0c4",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png"
       },
@@ -34,8 +34,8 @@
       "name": "CrewDay",
       "shortName": "CREWDAY",
       "description": "Track your fitness challenge with your crew",
-      "themeColor": "#07080f",
-      "backgroundColor": "#07080f",
+      "themeColor": "#ede0c4",
+      "backgroundColor": "#ede0c4",
       "lang": "en",
       "scope": "/",
       "startUrl": "/",
