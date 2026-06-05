@@ -20,7 +20,7 @@ export function useDayData(uid: string | null, challengeStartDate: string | null
 
   const today = format(new Date(), 'yyyy-MM-dd');
   const cacheKey = uid ? `day-${uid}-${today}` : null;
-  const sessionKey = uid ? `75hard-day-${uid}-${today}` : null;
+  const sessionKey = uid ? `crewday-day-${uid}-${today}` : null;
 
   const cached = cacheKey ? (getCached<DayEntry>(cacheKey) ?? getSessionCached<DayEntry>(sessionKey!)) : null;
   const [dayEntry, setDayEntry] = useState<DayEntry | null>(cached);

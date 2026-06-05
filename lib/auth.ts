@@ -43,7 +43,7 @@ export async function signUp(
   // Pre-populate caches before the Firestore write so the today page has the
   // profile immediately — onAuthStateChanged fires before createUserProfile resolves.
   setCached(`profile-${uid}`, newProfile);
-  setSessionCached('75hard-profile', newProfile);
+  setSessionCached('crewday-profile', newProfile);
   await createUserProfile(newProfile);
   return credential;
 }

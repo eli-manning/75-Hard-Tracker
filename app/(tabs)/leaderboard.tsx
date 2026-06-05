@@ -248,7 +248,7 @@ function LeaderboardInner({ currentUser, onOptIn }: { currentUser: UserProfile; 
 export default function LeaderboardPage() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(
-    () => getSessionCached<UserProfile>('75hard-profile')
+    () => getSessionCached<UserProfile>('crewday-profile')
   );
 
   useFocusEffect(

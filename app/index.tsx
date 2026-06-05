@@ -14,7 +14,7 @@ export default function IndexPage() {
     if (loading) return;
     if (user) {
       const profile =
-        getSessionCached<UserProfile>('75hard-profile') ??
+        getSessionCached<UserProfile>('crewday-profile') ??
         getCached<UserProfile>(`profile-${user.uid}`);
       if (profile?.onboardingComplete === false) {
         router.replace('/onboarding' as any);

@@ -309,7 +309,7 @@ function ProfileInner({ currentUser }: { currentUser: UserProfile }) {
 export default function ProfilePage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [profile, setProfile] = useState<UserProfile | null>(() => getSessionCached<UserProfile>('75hard-profile'));
+  const [profile, setProfile] = useState<UserProfile | null>(() => getSessionCached<UserProfile>('crewday-profile'));
 
   useEffect(() => {
     if (!authLoading && !user) router.replace('/login');

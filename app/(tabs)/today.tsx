@@ -464,7 +464,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
 }
 
 let _memProfile: UserProfile | null = null;
-const SESSION_KEY = '75hard-profile';
+const SESSION_KEY = 'crewday-profile';
 
 function getBootProfile(): UserProfile | null {
   if (_memProfile) return _memProfile;

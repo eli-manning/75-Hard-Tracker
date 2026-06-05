@@ -227,7 +227,7 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
       invalidate(`profile-${profile.uid}`);
       const updated = { ...profile, dicebearSeed: seed };
       setProfile(updated);
-      setSessionCached('75hard-profile', updated);
+      setSessionCached('crewday-profile', updated);
     } catch {
       // silently ignore
     } finally {
@@ -242,7 +242,7 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
       invalidate(`profile-${profile.uid}`);
       const updated = { ...profile, challengeStartDate: startDate, challengeMode: mode };
       setProfile(updated);
-      setSessionCached('75hard-profile', updated);
+      setSessionCached('crewday-profile', updated);
       setStep(4);
     } catch {
       // write failed; user can retry
@@ -262,7 +262,7 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
       invalidate(`profile-${profile.uid}`);
       const updated = { ...profile, ...updates };
       setProfile(updated);
-      setSessionCached('75hard-profile', updated);
+      setSessionCached('crewday-profile', updated);
       setStep(5);
     } catch {
       // write failed; user can retry
@@ -275,7 +275,7 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
     updateUserProfile(profile.uid, { onboardingComplete: true, challengeMode: mode }).catch(() => {});
     invalidate(`profile-${profile.uid}`);
     const updated = { ...profile, onboardingComplete: true, challengeMode: mode };
-    setSessionCached('75hard-profile', updated);
+    setSessionCached('crewday-profile', updated);
     router.replace('/(tabs)/today');
   }
 
@@ -495,13 +495,13 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
 export default function OnboardingPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [profile, setProfile] = useState<UserProfile | null>(() => getSessionCached<UserProfile>('75hard-profile'));
+  const [profile, setProfile] = useState<UserProfile | null>(() => getSessionCached<UserProfile>('crewday-profile'));
 
   useEffect(() => {
     if (!authLoading && !user) router.replace('/login');
     if (user && !profile) {
       getUserProfile(user.uid).then((p) => {
-        if (p) { setProfile(p); setSessionCached('75hard-profile', p); }
+        if (p) { setProfile(p); setSessionCached('crewday-profile', p); }
         else router.replace('/login');
       });
     }
