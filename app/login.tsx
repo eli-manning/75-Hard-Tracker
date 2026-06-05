@@ -5,7 +5,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { signIn, signUp, sendPasswordReset, signInWithGoogle } from '../lib/auth';
+import { signIn, signUp, sendPasswordReset } from '../lib/auth';
+import { useGoogleAuth } from '../hooks/useGoogleAuth';
 import { useAuth } from '../hooks/useAuth';
 import { LoadingScreen } from '../components/LoadingScreen';
 import { colors, fonts, shadows } from '../lib/theme';
@@ -36,8 +37,20 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [googleSubmitting, setGoogleSubmitting] = useState(false);
   const signingUpRef = useRef(false);
+
+  const { trigger: triggerGoogle, loading: googleSubmitting } = useGoogleAuth((result) => {
+    if ('error' in result) {
+      setError(result.error);
+    } else {
+      signingUpRef.current = true;
+      if (result.isNewUser) {
+        router.replace('/onboarding' as any);
+      } else {
+        router.replace('/(tabs)/today');
+      }
+    }
+  });
 
   useEffect(() => {
     if (!authLoading && user && !signingUpRef.current) router.replace('/(tabs)/today');
@@ -81,32 +94,6 @@ export default function LoginPage() {
       setError(ERROR_MAP[code] ?? 'Something went wrong. Try again.');
     } finally {
       setSubmitting(false);
-    }
-  }
-
-  async function handleGoogleSignIn() {
-    setError('');
-    setGoogleSubmitting(true);
-    try {
-      signingUpRef.current = true;
-      const { isNewUser } = await signInWithGoogle();
-      if (isNewUser) {
-        router.replace('/onboarding' as any);
-      } else {
-        router.replace('/(tabs)/today');
-      }
-    } catch (err: unknown) {
-      signingUpRef.current = false;
-      const code = (err as { code?: string }).code ?? '';
-      if (code === 'auth/account-exists-with-different-credential') {
-        setError('This email is registered with a password. Sign in with email instead.');
-      } else if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
-        // user dismissed — no error needed
-      } else {
-        setError(ERROR_MAP[code] ?? 'Google sign-in failed. Try again.');
-      }
-    } finally {
-      setGoogleSubmitting(false);
     }
   }
 
@@ -291,25 +278,21 @@ export default function LoginPage() {
                   </Text>
                 </TouchableOpacity>
 
-                {Platform.OS === 'web' && (
-                  <>
-                    <View style={styles.divider}>
-                      <View style={styles.dividerLine} />
-                      <Text style={styles.dividerText}>OR</Text>
-                      <View style={styles.dividerLine} />
-                    </View>
-                    <TouchableOpacity
-                      onPress={handleGoogleSignIn}
-                      disabled={googleSubmitting}
-                      style={[styles.googleBtn, googleSubmitting && styles.btnDisabled]}
-                    >
-                      <Text style={styles.googleBtnG}>G</Text>
-                      <Text style={styles.googleBtnText}>
-                        {googleSubmitting ? 'CONNECTING...' : 'CONTINUE WITH GOOGLE'}
-                      </Text>
-                    </TouchableOpacity>
-                  </>
-                )}
+                <View style={styles.divider}>
+                  <View style={styles.dividerLine} />
+                  <Text style={styles.dividerText}>OR</Text>
+                  <View style={styles.dividerLine} />
+                </View>
+                <TouchableOpacity
+                  onPress={triggerGoogle}
+                  disabled={googleSubmitting}
+                  style={[styles.googleBtn, googleSubmitting && styles.btnDisabled]}
+                >
+                  <Text style={styles.googleBtnG}>G</Text>
+                  <Text style={styles.googleBtnText}>
+                    {googleSubmitting ? 'CONNECTING...' : 'CONTINUE WITH GOOGLE'}
+                  </Text>
+                </TouchableOpacity>
               </View>
             </>
           )}
