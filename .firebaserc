@@ -1,6 +1,7 @@
 {
   "projects": {
-    "crewday": "summer-75-hard"
+    "crewday": "summer-75-hard",
+    "crew-day": "crew-day"
   },
   "targets": {},
   "etags": {}

@@ -47,6 +47,10 @@ nextjs/node_modules/
 # Generated service worker (built from public/sw.template.js via scripts/gen-sw.js)
 public/sw.js
 
+# Migration credentials and exports — never commit
+scripts/keys/
+users.json
+
 # Debug logs
 npm-debug.*
 yarn-debug.*
