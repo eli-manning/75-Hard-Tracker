@@ -21,7 +21,7 @@ import {
 import { getFirebaseDb } from './firebase';
 import { UserProfile, DayEntry, CustomTask } from './types';
 import { getCached, setCached, invalidate } from './cache';
-import { differenceInDays, parseISO, subDays } from 'date-fns';
+import { differenceInDays, format, parseISO, subDays } from 'date-fns';
 
 function db() {
   return getFirebaseDb();
@@ -97,7 +97,6 @@ export async function updateStreakOnProfile(uid: string): Promise<void> {
   invalidate(`history-${uid}`);
   const history = await getDayHistory(uid, 120);
   const sorted = [...history].sort((a, b) => b.date.localeCompare(a.date));
-  const { format } = await import('date-fns');
   const today = format(new Date(), 'yyyy-MM-dd');
 
   let current = 0;
@@ -111,14 +110,12 @@ export async function updateStreakOnProfile(uid: string): Promise<void> {
     if (entry.date < expected) { longest = Math.max(longest, streak); streak = 0; break; }
     if (!entry.allCoreCompleted) {
       if (entry.date !== today) { longest = Math.max(longest, streak); if (current === 0) current = streak; streak = 0; }
-      const d = new Date(entry.date); d.setDate(d.getDate() - 1);
-      expected = format(d, 'yyyy-MM-dd');
+      expected = format(subDays(parseISO(entry.date), 1), 'yyyy-MM-dd');
       continue;
     }
     streak++;
     longest = Math.max(longest, streak);
-    const d = new Date(entry.date); d.setDate(d.getDate() - 1);
-    expected = format(d, 'yyyy-MM-dd');
+    expected = format(subDays(parseISO(entry.date), 1), 'yyyy-MM-dd');
   }
   if (current === 0) current = streak;
   longest = Math.max(longest, streak);
@@ -154,15 +151,13 @@ export async function getPendingRequests(uid: string): Promise<string[]> {
 }
 
 export async function acceptFriendRequest(currentUid: string, fromUid: string): Promise<void> {
-  // Update status — triggers Cloud Function which sends notification and deletes the doc
-  // Add friends atomically in parallel
+  // Commit the friendship first so both users' friends arrays are updated before
+  // the Cloud Function fires (which it does when status becomes 'accepted').
   const batch = writeBatch(db());
   batch.update(doc(db(), 'users', currentUid), { friends: arrayUnion(fromUid) });
   batch.update(doc(db(), 'users', fromUid), { friends: arrayUnion(currentUid) });
-  await Promise.all([
-    updateDoc(doc(db(), 'friendRequests', currentUid, 'incoming', fromUid), { status: 'accepted' }),
-    batch.commit(),
-  ]);
+  await batch.commit();
+  await updateDoc(doc(db(), 'friendRequests', currentUid, 'incoming', fromUid), { status: 'accepted' });
   invalidate(`profile-${currentUid}`);
   invalidate(`profile-${fromUid}`);
   invalidate('all-users');
@@ -229,7 +224,6 @@ export async function updateDayEntry(
   date: string,
   updates: Partial<DayEntry>
 ): Promise<void> {
-  const { deleteField } = await import('firebase/firestore');
   // Firestore rejects undefined — convert to deleteField() to remove the field
   const safe: Record<string, unknown> = { updatedAt: serverTimestamp() };
   for (const [k, v] of Object.entries(updates)) {
