@@ -11,7 +11,17 @@ firebase.initializeApp({
   appId: '__FIREBASE_APP_ID__',
 });
 
-firebase.messaging();
+const messaging = firebase.messaging();
+
+messaging.onBackgroundMessage((payload) => {
+  const title = payload.notification?.title ?? 'CREWDAY';
+  const body = payload.notification?.body ?? '';
+  self.registration.showNotification(title, {
+    body,
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+  });
+});
 
 // ── Cache / Offline ───────────────────────────────────────────────────────
 const CACHE = 'crewday-v1';
