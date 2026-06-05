@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { signOut } from '../lib/auth';
 import {
   getUserProfile, getAllUsers, getPendingRequests,
-  sendFriendRequest, acceptFriendRequest, declineFriendRequest, removeFriend,
+  sendFriendRequest, acceptFriendRequest, declineFriendRequest, removeFriend, updateUserProfile,
 } from '../lib/firestore';
 import { UserProfile } from '../lib/types';
 import { getAvatarUrl } from '../lib/avatar';
@@ -139,6 +139,18 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSe
     }
   }
 
+  async function handleReorderFriend(friendUid: string, dir: -1 | 1) {
+    const current = profile.friends ?? [];
+    const idx = current.indexOf(friendUid);
+    if (idx < 0) return;
+    const next = idx + dir;
+    if (next < 0 || next >= current.length) return;
+    const reordered = [...current];
+    [reordered[idx], reordered[next]] = [reordered[next], reordered[idx]];
+    onProfileUpdate({ ...profile, friends: reordered });
+    await updateUserProfile(profile.uid, { friends: reordered }).catch(() => {});
+  }
+
   async function handleRemoveFriend(friendUid: string) {
     setFriendsActionUid(friendUid);
     try {
@@ -152,7 +164,10 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSe
   }
 
   const friendUids = new Set(profile.friends ?? []);
-  const friends = allUsers.filter((u) => friendUids.has(u.uid));
+  const friendOrder = new Map((profile.friends ?? []).map((uid, i) => [uid, i]));
+  const friends = allUsers
+    .filter((u) => friendUids.has(u.uid))
+    .sort((a, b) => (friendOrder.get(a.uid) ?? 999) - (friendOrder.get(b.uid) ?? 999));
   const requesters = allUsers.filter((u) => pendingRequests.includes(u.uid));
   const addCandidates = allUsers.filter(
     (u) => u.uid !== profile.uid && !friendUids.has(u.uid) && !pendingRequests.includes(u.uid)
@@ -246,12 +261,28 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSe
             {friends.length > 0 && (
               <View style={styles.subSection}>
                 <Text style={styles.subSectionLabel}>YOUR FRIENDS</Text>
-                {friends.map((u) => (
+                {friends.map((u, i) => (
                   <View key={u.uid} style={styles.userRow}>
                     <View style={styles.avatarFrameTiny}>
                       <AvatarImg url={getAvatarUrl(u)} size={28} />
                     </View>
                     <Text style={[styles.bodyText, { flex: 1 }]} numberOfLines={1}>{u.displayName}</Text>
+                    <View style={styles.reorderBtns}>
+                      <TouchableOpacity
+                        onPress={() => handleReorderFriend(u.uid, -1)}
+                        disabled={i === 0}
+                        style={{ opacity: i === 0 ? 0.2 : 0.5 }}
+                      >
+                        <Ionicons name="chevron-up" size={12} color={colors.text} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => handleReorderFriend(u.uid, 1)}
+                        disabled={i === friends.length - 1}
+                        style={{ opacity: i === friends.length - 1 ? 0.2 : 0.5 }}
+                      >
+                        <Ionicons name="chevron-down" size={12} color={colors.text} />
+                      </TouchableOpacity>
+                    </View>
                     <TouchableOpacity
                       onPress={() => handleRemoveFriend(u.uid)}
                       disabled={friendsActionUid === u.uid}
@@ -394,6 +425,7 @@ const styles = StyleSheet.create({
   subSection: { gap: 8 },
   subSectionLabel: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
   userRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  reorderBtns: { flexDirection: 'column', gap: 0 },
   avatarFrameSmall: { width: 36, height: 36, borderWidth: 2, borderColor: colors.accent, overflow: 'hidden', flexShrink: 0 },
   avatarFrameTiny: { width: 28, height: 28, borderWidth: 2, borderColor: colors.border, overflow: 'hidden', flexShrink: 0 },
   userName: { fontFamily: fonts.interSemiBold, fontSize: 13, color: colors.text, flex: 1 },

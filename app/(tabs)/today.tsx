@@ -47,10 +47,12 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
   const { users: allUsers } = useAllUsers();
   const users = useMemo(() => {
     const friendSet = new Set(currentUser.friends ?? []);
-    return [
-      ...allUsers.filter((u) => u.uid === currentUser.uid),
-      ...allUsers.filter((u) => u.uid !== currentUser.uid && friendSet.has(u.uid)),
-    ];
+    const friendOrder = new Map((currentUser.friends ?? []).map((uid, i) => [uid, i]));
+    const me = allUsers.filter((u) => u.uid === currentUser.uid);
+    const friendsSorted = allUsers
+      .filter((u) => u.uid !== currentUser.uid && friendSet.has(u.uid))
+      .sort((a, b) => (friendOrder.get(a.uid) ?? 999) - (friendOrder.get(b.uid) ?? 999));
+    return [...me, ...friendsSorted];
   }, [allUsers, currentUser.uid, currentUser.friends]);
 
   const [activeUid, setActiveUid] = useState(currentUser.uid);

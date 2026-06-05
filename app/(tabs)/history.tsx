@@ -53,12 +53,13 @@ function tileBorder(entry: DayEntry | undefined, date: Date, startDate: string |
 // ── Simple SVG bar chart ───────────────────────────────────────────────────────
 
 function BarChart({
-  data, color, goalY, goalColor, label,
+  data, color, goalY, goalColor, goalBorderColor, label,
 }: {
   data: { x: string; y: number }[];
   color: string;
   goalY?: number;
   goalColor?: string;
+  goalBorderColor?: string;
   label?: string;
 }) {
   if (data.length === 0) return null;
@@ -104,7 +105,14 @@ function BarChart({
           />
         );
       })}
-      {/* Goal line */}
+      {/* Goal line (optional border stroke behind for contrast) */}
+      {goalY !== undefined && goalBorderColor && (
+        <Line
+          x1={padLeft} y1={chartH - (goalY / maxY) * chartH}
+          x2={CHART_W} y2={chartH - (goalY / maxY) * chartH}
+          stroke={goalBorderColor} strokeWidth={3.5} strokeDasharray="4,4"
+        />
+      )}
       {goalY !== undefined && (
         <Line
           x1={padLeft}
@@ -210,7 +218,7 @@ function StackedBarChart({ data }: { data: { x: string; w1: number; w2: number }
         const h2 = (d.w2 / maxY) * chartH;
         return (
           <Fragment key={i}>
-            <Rect x={x} y={chartH - h1 - h2} width={barW} height={h1} fill={colors.accent} />
+            <Rect x={x} y={chartH - h1 - h2} width={barW} height={h1} fill="#7a8898" />
             <Rect x={x} y={chartH - h2} width={barW} height={h2} fill={colors.green} />
           </Fragment>
         );
@@ -350,7 +358,7 @@ function InsightsDashboard({ history, viewProfile }: { history: DayEntry[]; view
       {/* Water chart */}
       {waterData.length >= 2 && (
         <ChartCard title="WATER INTAKE (30 DAYS)">
-          <BarChart data={waterData} color={colors.accent} goalY={128} goalColor={colors.green} />
+          <BarChart data={waterData} color={colors.accent} goalY={128} goalColor={colors.red} />
           <Text style={styles.chartGoalLabel}>─ ─ goal: 128oz</Text>
         </ChartCard>
       )}
@@ -360,7 +368,7 @@ function InsightsDashboard({ history, viewProfile }: { history: DayEntry[]; view
         <ChartCard title="WORKOUT MINUTES (14 DAYS)">
           <StackedBarChart data={workoutData} />
           <View style={styles.legend}>
-            <View style={[styles.legendDot, { backgroundColor: colors.accent }]} />
+            <View style={[styles.legendDot, { backgroundColor: '#7a8898' }]} />
             <Text style={styles.legendText}>W1 (Indoor)</Text>
             <View style={[styles.legendDot, { backgroundColor: colors.green }]} />
             <Text style={styles.legendText}>W2 (Outdoor)</Text>
@@ -371,8 +379,8 @@ function InsightsDashboard({ history, viewProfile }: { history: DayEntry[]; view
       {/* Reading chart */}
       {readingData.length >= 2 && (
         <ChartCard title="PAGES READ (30 DAYS)">
-          <BarChart data={readingData} color={colors.accent} goalY={10} goalColor={colors.red} />
-          <Text style={[styles.chartGoalLabel, { color: colors.red }]}>─ ─ goal: 10pg</Text>
+          <BarChart data={readingData} color="#7a5230" goalY={10} goalColor="#ffffff" goalBorderColor="#1a2030" />
+          <Text style={[styles.chartGoalLabel, { color: colors.text }]}>─ ─ goal: 10pg</Text>
         </ChartCard>
       )}
 
@@ -443,7 +451,13 @@ function InsightsDashboard({ history, viewProfile }: { history: DayEntry[]; view
 function HistoryInner({ currentUser }: { currentUser: UserProfile }) {
   const { users: allUsers } = useAllUsers();
   const friendUids = new Set(currentUser.friends ?? []);
-  const users = allUsers.filter((u) => u.uid === currentUser.uid || friendUids.has(u.uid));
+  const friendOrder = new Map((currentUser.friends ?? []).map((uid, i) => [uid, i]));
+  const users = [
+    ...allUsers.filter((u) => u.uid === currentUser.uid),
+    ...allUsers
+      .filter((u) => u.uid !== currentUser.uid && friendUids.has(u.uid))
+      .sort((a, b) => (friendOrder.get(a.uid) ?? 999) - (friendOrder.get(b.uid) ?? 999)),
+  ];
   const [viewUid, setViewUid] = useState(currentUser.uid);
   const [history, setHistory] = useState<DayEntry[]>([]);
   const [month, setMonth] = useState(new Date());
