@@ -100,35 +100,55 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSe
 
   async function handleSendRequest(toUid: string) {
     setFriendsActionUid(toUid);
-    const autoAccepted = await sendFriendRequest(profile.uid, toUid);
-    if (autoAccepted) {
-      onProfileUpdate({ ...profile, friends: [...(profile.friends ?? []), toUid] });
-    } else {
-      setSentRequests((prev) => new Set(Array.from(prev).concat(toUid)));
+    try {
+      const autoAccepted = await sendFriendRequest(profile.uid, toUid);
+      if (autoAccepted) {
+        onProfileUpdate({ ...profile, friends: [...(profile.friends ?? []), toUid] });
+      } else {
+        setSentRequests((prev) => new Set(Array.from(prev).concat(toUid)));
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setFriendsActionUid(null);
     }
-    setFriendsActionUid(null);
   }
 
   async function handleAccept(fromUid: string) {
     setFriendsActionUid(fromUid);
-    await acceptFriendRequest(profile.uid, fromUid);
-    onProfileUpdate({ ...profile, friends: [...(profile.friends ?? []), fromUid] });
-    setPendingRequests((prev) => prev.filter((uid) => uid !== fromUid));
-    setFriendsActionUid(null);
+    try {
+      await acceptFriendRequest(profile.uid, fromUid);
+      onProfileUpdate({ ...profile, friends: [...(profile.friends ?? []), fromUid] });
+      setPendingRequests((prev) => prev.filter((uid) => uid !== fromUid));
+    } catch {
+      // silently fail
+    } finally {
+      setFriendsActionUid(null);
+    }
   }
 
   async function handleDecline(fromUid: string) {
     setFriendsActionUid(fromUid);
-    await declineFriendRequest(profile.uid, fromUid);
-    setPendingRequests((prev) => prev.filter((uid) => uid !== fromUid));
-    setFriendsActionUid(null);
+    try {
+      await declineFriendRequest(profile.uid, fromUid);
+      setPendingRequests((prev) => prev.filter((uid) => uid !== fromUid));
+    } catch {
+      // silently fail
+    } finally {
+      setFriendsActionUid(null);
+    }
   }
 
   async function handleRemoveFriend(friendUid: string) {
     setFriendsActionUid(friendUid);
-    await removeFriend(profile.uid, friendUid);
-    onProfileUpdate({ ...profile, friends: (profile.friends ?? []).filter((uid) => uid !== friendUid) });
-    setFriendsActionUid(null);
+    try {
+      await removeFriend(profile.uid, friendUid);
+      onProfileUpdate({ ...profile, friends: (profile.friends ?? []).filter((uid) => uid !== friendUid) });
+    } catch {
+      // silently fail
+    } finally {
+      setFriendsActionUid(null);
+    }
   }
 
   const friendUids = new Set(profile.friends ?? []);
