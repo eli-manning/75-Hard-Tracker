@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { DayEntry } from '../lib/types';
 import { ChallengeItem } from './ChallengeItem';
@@ -20,6 +20,10 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate, weightUnit = 'lb
   const [w2Duration, setW2Duration] = useState(String(entry.workoutTwoDuration));
   const [weightInput, setWeightInput] = useState(entry.bodyWeight ? String(entry.bodyWeight) : '');
   const [logExpanded, setLogExpanded] = useState(!!(entry.bodyWeight || entry.mood || entry.energyLevel));
+
+  useEffect(() => { setW1Duration(String(entry.workoutOneDuration)); }, [entry.workoutOneDuration]);
+  useEffect(() => { setW2Duration(String(entry.workoutTwoDuration)); }, [entry.workoutTwoDuration]);
+  useEffect(() => { if (entry.bodyWeight) setWeightInput(String(entry.bodyWeight)); }, [entry.bodyWeight]);
 
   function computeAllCore(updates: Partial<DayEntry> = {}): boolean {
     const e = { ...entry, ...updates };
