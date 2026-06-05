@@ -221,39 +221,54 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
 
   async function handleRandomize() {
     setRandomizing(true);
-    const seed = generateSeed();
-    await updateUserProfile(profile.uid, { dicebearSeed: seed });
-    invalidate(`profile-${profile.uid}`);
-    const updated = { ...profile, dicebearSeed: seed };
-    setProfile(updated);
-    setSessionCached('75hard-profile', updated);
-    setRandomizing(false);
+    try {
+      const seed = generateSeed();
+      await updateUserProfile(profile.uid, { dicebearSeed: seed });
+      invalidate(`profile-${profile.uid}`);
+      const updated = { ...profile, dicebearSeed: seed };
+      setProfile(updated);
+      setSessionCached('75hard-profile', updated);
+    } catch {
+      // silently ignore
+    } finally {
+      setRandomizing(false);
+    }
   }
 
   async function handleStep2Next() {
     setSaving(true);
-    await updateUserProfile(profile.uid, { challengeStartDate: startDate, challengeMode: mode });
-    invalidate(`profile-${profile.uid}`);
-    const updated = { ...profile, challengeStartDate: startDate, challengeMode: mode };
-    setProfile(updated);
-    setSessionCached('75hard-profile', updated);
-    setSaving(false);
-    setStep(4);
+    try {
+      await updateUserProfile(profile.uid, { challengeStartDate: startDate, challengeMode: mode });
+      invalidate(`profile-${profile.uid}`);
+      const updated = { ...profile, challengeStartDate: startDate, challengeMode: mode };
+      setProfile(updated);
+      setSessionCached('75hard-profile', updated);
+      setStep(4);
+    } catch {
+      // write failed; user can retry
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleStep3Next() {
     setSaving(true);
-    const updates: Partial<UserProfile> = { weightUnit };
-    const w = Number(startingWeight);
-    if (startingWeight && !isNaN(w) && w >= 10 && w <= 999) updates.startingWeight = w;
-    if (fitnessGoal) updates.fitnessGoal = fitnessGoal as UserProfile['fitnessGoal'];
-    await updateUserProfile(profile.uid, updates);
-    invalidate(`profile-${profile.uid}`);
-    const updated = { ...profile, ...updates };
-    setProfile(updated);
-    setSessionCached('75hard-profile', updated);
-    setSaving(false);
-    setStep(5);
+    try {
+      const updates: Partial<UserProfile> = { weightUnit };
+      const w = Number(startingWeight);
+      if (startingWeight && !isNaN(w) && w >= 10 && w <= 999) updates.startingWeight = w;
+      if (fitnessGoal) updates.fitnessGoal = fitnessGoal as UserProfile['fitnessGoal'];
+      await updateUserProfile(profile.uid, updates);
+      invalidate(`profile-${profile.uid}`);
+      const updated = { ...profile, ...updates };
+      setProfile(updated);
+      setSessionCached('75hard-profile', updated);
+      setStep(5);
+    } catch {
+      // write failed; user can retry
+    } finally {
+      setSaving(false);
+    }
   }
 
   function handleFinish() {
