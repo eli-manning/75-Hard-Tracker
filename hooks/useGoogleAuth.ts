@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { Platform } from 'react-native';
-import * as Google from 'expo-auth-session/providers/google';
-import * as WebBrowser from 'expo-web-browser';
-import { signInWithGoogle, signInWithGoogleCredential } from '../lib/auth';
+import { useRef, useState, useCallback } from 'react';
+// import { useEffect } from 'react';
+// import { Platform } from 'react-native';
+// import * as Google from 'expo-auth-session/providers/google';
+// import * as WebBrowser from 'expo-web-browser';
+import { signInWithGoogle } from '../lib/auth';
 
-WebBrowser.maybeCompleteAuthSession();
+// WebBrowser.maybeCompleteAuthSession();
 
 type GoogleResult = { isNewUser: boolean } | { error: string };
 
@@ -13,64 +14,59 @@ export function useGoogleAuth(onResult: (result: GoogleResult) => void) {
   const onResultRef = useRef(onResult);
   onResultRef.current = onResult;
 
-  const [, response, promptAsync] = Google.useAuthRequest({
-    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-  });
-
-  useEffect(() => {
-    if (Platform.OS === 'web' || !response) return;
-    if (response.type === 'success') {
-      const idToken = response.params.id_token;
-      if (!idToken) {
-        onResultRef.current({ error: 'Google sign-in failed. Try again.' });
-        setLoading(false);
-        return;
-      }
-      signInWithGoogleCredential(idToken)
-        .then((r) => onResultRef.current(r))
-        .catch((err: unknown) => {
-          const code = (err as { code?: string }).code ?? '';
-          const msg =
-            code === 'auth/account-exists-with-different-credential'
-              ? 'This email is registered with a password. Sign in with email instead.'
-              : 'Google sign-in failed. Try again.';
-          onResultRef.current({ error: msg });
-        })
-        .finally(() => setLoading(false));
-    } else if (response.type === 'error') {
-      onResultRef.current({ error: 'Google sign-in failed. Try again.' });
-      setLoading(false);
-    } else {
-      // dismissed/cancelled — no error shown
-      setLoading(false);
-    }
-  }, [response]);
+  // ── Native path (expo-auth-session) — re-enable after project migration ──
+  // const [, response, promptAsync] = Google.useAuthRequest({
+  //   iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+  //   androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+  //   webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  // });
+  //
+  // useEffect(() => {
+  //   if (Platform.OS === 'web' || !response) return;
+  //   if (response.type === 'success') {
+  //     const idToken = response.params.id_token;
+  //     if (!idToken) {
+  //       onResultRef.current({ error: 'Google sign-in failed. Try again.' });
+  //       setLoading(false);
+  //       return;
+  //     }
+  //     signInWithGoogleCredential(idToken)
+  //       .then((r) => onResultRef.current(r))
+  //       .catch((err: unknown) => {
+  //         const code = (err as { code?: string }).code ?? '';
+  //         const msg =
+  //           code === 'auth/account-exists-with-different-credential'
+  //             ? 'This email is registered with a password. Sign in with email instead.'
+  //             : 'Google sign-in failed. Try again.';
+  //         onResultRef.current({ error: msg });
+  //       })
+  //       .finally(() => setLoading(false));
+  //   } else if (response.type === 'error') {
+  //     onResultRef.current({ error: 'Google sign-in failed. Try again.' });
+  //     setLoading(false);
+  //   } else {
+  //     setLoading(false);
+  //   }
+  // }, [response]);
 
   const trigger = useCallback(async () => {
     setLoading(true);
-    if (Platform.OS === 'web') {
-      try {
-        const result = await signInWithGoogle();
-        onResultRef.current(result);
-      } catch (err: unknown) {
-        const code = (err as { code?: string }).code ?? '';
-        if (code !== 'auth/popup-closed-by-user' && code !== 'auth/cancelled-popup-request') {
-          const msg =
-            code === 'auth/account-exists-with-different-credential'
-              ? 'This email is registered with a password. Sign in with email instead.'
-              : 'Google sign-in failed. Try again.';
-          onResultRef.current({ error: msg });
-        }
-      } finally {
-        setLoading(false);
+    try {
+      const result = await signInWithGoogle();
+      onResultRef.current(result);
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code ?? '';
+      if (code !== 'auth/popup-closed-by-user' && code !== 'auth/cancelled-popup-request') {
+        const msg =
+          code === 'auth/account-exists-with-different-credential'
+            ? 'This email is registered with a password. Sign in with email instead.'
+            : 'Google sign-in failed. Try again.';
+        onResultRef.current({ error: msg });
       }
-    } else {
-      // loading is cleared in the useEffect above after response arrives
-      await promptAsync();
+    } finally {
+      setLoading(false);
     }
-  }, [promptAsync]);
+  }, []);
 
   return { trigger, loading };
 }
