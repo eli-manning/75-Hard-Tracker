@@ -6,7 +6,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
-import { subscribeToProfile, updateUserProfile } from '../lib/firestore';
+import { subscribeToProfile, updateUserProfile, getUserProfile } from '../lib/firestore';
 import { UserProfile } from '../lib/types';
 import { getAvatarUrl, generateSeed, hasCustomAvatar } from '../lib/avatar';
 import { getAvatarSource, AVATAR_PORTRAIT_RATIO } from '../lib/avatarMap';
@@ -39,31 +39,46 @@ function ProfileInner({ currentUser }: { currentUser: UserProfile }) {
     const trimmed = nameInput.trim().slice(0, 100);
     if (!trimmed || trimmed === profile.displayName) { setEditingName(false); return; }
     setSaving(true);
-    await updateUserProfile(profile.uid, { displayName: trimmed });
-    invalidate('all-users');
-    invalidate(`profile-${profile.uid}`);
-    setSaving(false);
-    setEditingName(false);
-    setProfile((p) => ({ ...p, displayName: trimmed }));
+    try {
+      await updateUserProfile(profile.uid, { displayName: trimmed });
+      invalidate('all-users');
+      invalidate(`profile-${profile.uid}`);
+      setEditingName(false);
+      setProfile((p) => ({ ...p, displayName: trimmed }));
+    } catch {
+      // write failed; user can retry
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleSaveStart() {
     if (!startInput || startInput === profile.challengeStartDate) { setEditingStart(false); return; }
     setSaving(true);
-    await updateUserProfile(profile.uid, { challengeStartDate: startInput });
-    invalidate(`profile-${profile.uid}`);
-    setSaving(false);
-    setEditingStart(false);
-    setProfile((p) => ({ ...p, challengeStartDate: startInput }));
+    try {
+      await updateUserProfile(profile.uid, { challengeStartDate: startInput });
+      invalidate(`profile-${profile.uid}`);
+      setEditingStart(false);
+      setProfile((p) => ({ ...p, challengeStartDate: startInput }));
+    } catch {
+      // write failed; user can retry
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleRandomize() {
     setRandomizing(true);
-    const seed = generateSeed();
-    await updateUserProfile(profile.uid, { dicebearSeed: seed });
-    invalidate(`profile-${profile.uid}`);
-    setProfile((p) => ({ ...p, dicebearSeed: seed }));
-    setRandomizing(false);
+    try {
+      const seed = generateSeed();
+      await updateUserProfile(profile.uid, { dicebearSeed: seed });
+      invalidate(`profile-${profile.uid}`);
+      setProfile((p) => ({ ...p, dicebearSeed: seed }));
+    } catch {
+      // silently ignore
+    } finally {
+      setRandomizing(false);
+    }
   }
 
   const isCustom = hasCustomAvatar(profile);
@@ -299,10 +314,9 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!authLoading && !user) router.replace('/login');
     if (user && !profile) {
-      const { getUserProfile } = require('../lib/firestore');
-      getUserProfile(user.uid).then((p: UserProfile | null) => {
+      getUserProfile(user.uid).then((p) => {
         if (p) setProfile(p);
-      });
+      }).catch(() => {});
     }
   }, [user, authLoading]);
 
