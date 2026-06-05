@@ -11,6 +11,7 @@ import { Inter_400Regular, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from '../context/AuthContext';
 import { useAuthContext } from '../context/AuthContext';
+import { NavVisibilityProvider, useNavVisibility } from '../context/NavVisibilityContext';
 import { BottomNav } from '../components/BottomNav';
 import { useNotifications } from '../hooks/useNotifications';
 
@@ -18,6 +19,7 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function AppShell() {
   const { loading: authLoading, user } = useAuthContext();
+  const { navHidden } = useNavVisibility();
   // Silently refresh push token on every app open for users who already granted permission
   useNotifications(user?.uid);
   const pathname = usePathname();
@@ -63,7 +65,7 @@ function AppShell() {
   // On web, show BottomNav as a sibling inside webFrame (avoids React Navigation
   // overflow:hidden clipping AND the body overflow:hidden + position:fixed iOS Safari bug).
   const showWebNav = Platform.OS === 'web' &&
-    fontsLoaded && !authLoading && minElapsed &&
+    fontsLoaded && !authLoading && minElapsed && !navHidden &&
     ['/today', '/tasks', '/history', '/leaderboard'].some(p => pathname.startsWith(p));
 
 
@@ -85,8 +87,10 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <StatusBar style="light" />
-        <AppShell />
+        <NavVisibilityProvider>
+          <StatusBar style="light" />
+          <AppShell />
+        </NavVisibilityProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

@@ -10,6 +10,7 @@ import { getAvatarUrl } from '../../lib/avatar';
 import { getAvatarSource } from '../../lib/avatarMap';
 import { colors, fonts, shadows } from '../../lib/theme';
 import { LoadingScreen } from '../../components/LoadingScreen';
+import { useHideNavWhileLoading } from '../../context/NavVisibilityContext';
 import { getSessionCached, invalidate } from '../../lib/cache';
 
 function LeaderboardRow({
@@ -247,6 +248,7 @@ export default function LeaderboardPage() {
   const [profile, setProfile] = useState<UserProfile | null>(
     () => getSessionCached<UserProfile>('crewday-profile')
   );
+  useHideNavWhileLoading(!profile);
 
   useFocusEffect(
     useCallback(() => {

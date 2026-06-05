@@ -14,6 +14,7 @@ import { getUserProfile, getAllUsers, getPendingRequests, getOrCreateDayEntry, g
 import { getCached, getSessionCached, setSessionCached, clearAll } from '../../lib/cache';
 import { UserProfile, DayEntry } from '../../lib/types';
 import { LoadingScreen } from '../../components/LoadingScreen';
+import { useHideNavWhileLoading } from '../../context/NavVisibilityContext';
 import { UserTabBar } from '../../components/UserTabBar';
 import { DailyProgress } from '../../components/DailyProgress';
 import { ChallengeChecklist } from '../../components/ChallengeChecklist';
@@ -472,6 +473,7 @@ export default function TodayPage() {
   const [error, setError] = useState(false);
 
   const showLoader = useMinDuration(authLoading || !profile, 600);
+  useHideNavWhileLoading(showLoader);
 
   useFocusEffect(
     useCallback(() => {

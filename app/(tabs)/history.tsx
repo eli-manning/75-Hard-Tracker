@@ -16,6 +16,7 @@ import { DayEntry, UserProfile } from '../../lib/types';
 import { getSessionCached } from '../../lib/cache';
 import { colors, fonts } from '../../lib/theme';
 import { LoadingScreen } from '../../components/LoadingScreen';
+import { useHideNavWhileLoading } from '../../context/NavVisibilityContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const SCREEN_W = Dimensions.get('window').width;
@@ -623,6 +624,7 @@ function HistoryInner({ currentUser }: { currentUser: UserProfile }) {
 export default function HistoryPage() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(() => getSessionCached<UserProfile>('crewday-profile'));
+  useHideNavWhileLoading(!profile);
 
   useEffect(() => {
     if (user) getUserProfile(user.uid).then(setProfile);
