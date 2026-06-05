@@ -22,11 +22,10 @@ function LeaderboardRow({
   isCurrentUser: boolean;
 }) {
   const avatarUrl = getAvatarUrl(profile);
-  const goldColor = '#f0c040';
   const isTopThree = rank <= 3;
   return (
     <View style={[rowStyles.row, isCurrentUser && rowStyles.rowSelf]}>
-      <Text style={[rowStyles.rank, isTopThree && { color: goldColor }]}>#{rank}</Text>
+      <Text style={[rowStyles.rank, isTopThree && { color: colors.yellow }]}>#{rank}</Text>
       <Image
         source={getAvatarSource(avatarUrl)}
         style={rowStyles.avatar}
@@ -38,8 +37,8 @@ function LeaderboardRow({
           <Text style={rowStyles.streak}>{profile.currentStreak} DAY STREAK</Text>
         )}
       </View>
-      <View style={[rowStyles.pointsChip, isTopThree && { borderColor: goldColor }]}>
-        <Text style={[rowStyles.pointsText, isTopThree && { color: goldColor }]}>
+      <View style={[rowStyles.pointsChip, isTopThree && { borderColor: colors.yellow, backgroundColor: colors.yellowLight }]}>
+        <Text style={[rowStyles.pointsText, isTopThree && { color: colors.yellow }]}>
           {profile.totalPoints ?? 0} PTS
         </Text>
       </View>
