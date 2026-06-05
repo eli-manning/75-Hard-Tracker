@@ -1,4 +1,4 @@
-import { View, Text } from 'react-native';
+import { View, Text, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { fonts } from '../lib/theme';
 
@@ -36,11 +36,15 @@ export function StreakFlame({ streak, size = 'sm' }: StreakFlameProps) {
         width: iconSize,
         height: iconSize,
         zIndex: 10,
-        shadowColor: color,
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.9,
-        shadowRadius: size === 'lg' ? 12 : 8,
-        elevation: 6,
+        ...(Platform.OS === 'web'
+          ? { filter: `drop-shadow(0 0 ${size === 'lg' ? 12 : 8}px ${color})` } as any
+          : {
+              shadowColor: color,
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.9,
+              shadowRadius: size === 'lg' ? 12 : 8,
+              elevation: 6,
+            }),
       }}
     >
       <Ionicons name="flame" size={iconSize} color={color} />
