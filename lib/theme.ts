@@ -31,8 +31,8 @@ export const colors = {
   accentGlow:  rgba(ACCENT, 0.5),
   green:       '#1a6b35',     // darkened for contrast on light bg
   greenLight:  '#d0f0dc',
-  yellow:      '#8a5f00',     // dark amber
-  yellowLight: '#f5e4a0',
+  yellow:      '#6b4400',     // deep amber — readable on cream
+  yellowLight: '#f0dfa0',
   red:         '#b02828',     // darkened for contrast on light bg
   redLight:    '#f8d5d5',
   black:       '#000000',
