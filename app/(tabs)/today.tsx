@@ -153,30 +153,34 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
     const delta = newPts - oldPts;
     await update({ ...patch, dailyPoints: newPts });
     if (delta !== 0) {
-      incrementUserPoints(activeUid, delta).catch(() => {});
+      await incrementUserPoints(activeUid, delta).catch(() => {});
       onProfileUpdate({ ...currentUser, totalPoints: Math.max(0, (currentUser.totalPoints ?? 0) + delta) });
     }
   }, [dayEntry, tasks, update, activeUid, currentUser, onProfileUpdate]);
 
   async function handleRestartConfirm({ keepPoints, keepLongestStreak }: { keepPoints: boolean; keepLongestStreak: boolean }) {
     const newStartDate = format(new Date(), 'yyyy-MM-dd');
-    await updateUserProfile(activeUid, {
-      challengeStartDate: newStartDate,
-      currentStreak: 0,
-      ...(keepLongestStreak ? {} : { longestStreak: 0 }),
-      ...(keepPoints ? {} : { totalPoints: 0 }),
-    });
-    clearAll();
-    onProfileUpdate({
-      ...currentUser,
-      challengeStartDate: newStartDate,
-      currentStreak: 0,
-      ...(keepLongestStreak ? {} : { longestStreak: 0 }),
-      ...(keepPoints ? {} : { totalPoints: 0 }),
-    });
-    setShowRestartModal(false);
-    setShowMissedDay(false);
-    setRestartForced(false);
+    try {
+      await updateUserProfile(activeUid, {
+        challengeStartDate: newStartDate,
+        currentStreak: 0,
+        ...(keepLongestStreak ? {} : { longestStreak: 0 }),
+        ...(keepPoints ? {} : { totalPoints: 0 }),
+      });
+      clearAll();
+      onProfileUpdate({
+        ...currentUser,
+        challengeStartDate: newStartDate,
+        currentStreak: 0,
+        ...(keepLongestStreak ? {} : { longestStreak: 0 }),
+        ...(keepPoints ? {} : { totalPoints: 0 }),
+      });
+      setShowRestartModal(false);
+      setShowMissedDay(false);
+      setRestartForced(false);
+    } catch {
+      // write failed; modals stay open so the user can retry
+    }
   }
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
@@ -208,7 +212,11 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
         nudgesRemaining: Math.max(0, nudgeQuota.remaining - 1),
         purchasedNudgesToday: nudgeQuota.purchased,
       });
-    } catch {}
+    } catch {
+      // Write failed — clear the nudged marker so the user can retry.
+      setNudgedTasks((prev) => { const next = new Set(prev); next.delete(taskKey); return next; });
+      return;
+    }
     setTimeout(() => setNudgedTasks((prev) => {
       const next = new Set(prev);
       next.delete(taskKey);
@@ -237,7 +245,11 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
         purchasedNudgesToday: nudgeQuota.purchased + 1,
         totalPoints: Math.max(0, (currentUser.totalPoints ?? 0) - 10),
       });
-    } catch {}
+    } catch {
+      // Write failed — clear the nudged marker so the user can retry.
+      setNudgedTasks((prev) => { const next = new Set(prev); next.delete(taskKey); return next; });
+      return;
+    }
     setTimeout(() => setNudgedTasks((prev) => {
       const next = new Set(prev);
       next.delete(taskKey);
@@ -274,7 +286,14 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
           onMissed={() => { setShowMissedDay(false); setRestartForced(true); setShowRestartModal(true); }}
           onSaved={async (patch) => {
             if (!yesterdayEntry) return;
-            await updateDayEntry(activeUid, format(subDays(new Date(), 1), 'yyyy-MM-dd'), patch);
+            const merged = { ...yesterdayEntry, ...patch };
+            const outdoorRequired = activeProfile.challengeMode !== 'general';
+            const allCoreCompleted =
+              !!merged.workoutOneCompleted && !!merged.workoutTwoCompleted &&
+              (!outdoorRequired || !!merged.workoutTwoOutdoor) &&
+              !!merged.dietCompleted && !!merged.waterCompleted &&
+              !!merged.readingCompleted && !!merged.photoCompleted;
+            await updateDayEntry(activeUid, format(subDays(new Date(), 1), 'yyyy-MM-dd'), { ...patch, allCoreCompleted });
             setShowMissedDay(false);
           }}
           onDismiss={() => setShowMissedDay(false)}
