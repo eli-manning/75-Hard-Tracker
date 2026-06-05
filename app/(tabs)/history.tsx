@@ -78,11 +78,13 @@ function BarChart({
           y1={chartH * (1 - f)}
           x2={CHART_W}
           y2={chartH * (1 - f)}
-          stroke={colors.border}
+          stroke="rgba(26,32,48,0.18)"
           strokeWidth={1}
           strokeDasharray="3,3"
         />
       ))}
+      {/* X-axis baseline */}
+      <Line x1={padLeft} y1={chartH} x2={CHART_W} y2={chartH} stroke="rgba(26,32,48,0.35)" strokeWidth={1} />
       {/* Y axis labels */}
       <SvgText x={padLeft - 4} y={chartH} fill={colors.textMuted} fontSize={8} textAnchor="end" fontFamily="Inter">0</SvgText>
       <SvgText x={padLeft - 4} y={chartH * 0.5} fill={colors.textMuted} fontSize={8} textAnchor="end" fontFamily="Inter">{Math.round(maxY / 2)}</SvgText>
@@ -155,8 +157,9 @@ function LineChartSvg({
   return (
     <Svg width={CHART_W} height={CHART_H}>
       {[0.25, 0.5, 0.75, 1].map((f) => (
-        <Line key={f} x1={padLeft} y1={chartH * (1 - f)} x2={CHART_W} y2={chartH * (1 - f)} stroke={colors.border} strokeWidth={1} strokeDasharray="3,3" />
+        <Line key={f} x1={padLeft} y1={chartH * (1 - f)} x2={CHART_W} y2={chartH * (1 - f)} stroke="rgba(26,32,48,0.18)" strokeWidth={1} strokeDasharray="3,3" />
       ))}
+      <Line x1={padLeft} y1={chartH} x2={CHART_W} y2={chartH} stroke="rgba(26,32,48,0.35)" strokeWidth={1} />
       <SvgText x={padLeft - 4} y={chartH} fill={colors.textMuted} fontSize={8} textAnchor="end" fontFamily="Inter">{Math.round(minY)}</SvgText>
       <SvgText x={padLeft - 4} y={8} fill={colors.textMuted} fontSize={8} textAnchor="end" fontFamily="Inter">{Math.round(maxY)}</SvgText>
       {goalY !== undefined && (
@@ -171,7 +174,7 @@ function LineChartSvg({
           key={di}
           d={toPath(ds.data)}
           stroke={ds.color}
-          strokeWidth={2}
+          strokeWidth={2.5}
           fill="none"
           strokeDasharray={ds.dashed ? '4,2' : undefined}
         />
@@ -198,8 +201,9 @@ function StackedBarChart({ data }: { data: { x: string; w1: number; w2: number }
   return (
     <Svg width={CHART_W} height={CHART_H}>
       {[0.25, 0.5, 0.75, 1].map((f) => (
-        <Line key={f} x1={padLeft} y1={chartH * (1 - f)} x2={CHART_W} y2={chartH * (1 - f)} stroke={colors.border} strokeWidth={1} strokeDasharray="3,3" />
+        <Line key={f} x1={padLeft} y1={chartH * (1 - f)} x2={CHART_W} y2={chartH * (1 - f)} stroke="rgba(26,32,48,0.18)" strokeWidth={1} strokeDasharray="3,3" />
       ))}
+      <Line x1={padLeft} y1={chartH} x2={CHART_W} y2={chartH} stroke="rgba(26,32,48,0.35)" strokeWidth={1} />
       {data.map((d, i) => {
         const x = padLeft + i * ((CHART_W - padLeft) / data.length) + 1;
         const h1 = (d.w1 / maxY) * chartH;
@@ -367,8 +371,8 @@ function InsightsDashboard({ history, viewProfile }: { history: DayEntry[]; view
       {/* Reading chart */}
       {readingData.length >= 2 && (
         <ChartCard title="PAGES READ (30 DAYS)">
-          <BarChart data={readingData} color={colors.yellow} goalY={10} goalColor={colors.yellow} />
-          <Text style={[styles.chartGoalLabel, { color: colors.yellow }]}>─ ─ goal: 10pg</Text>
+          <BarChart data={readingData} color={colors.accent} goalY={10} goalColor={colors.red} />
+          <Text style={[styles.chartGoalLabel, { color: colors.red }]}>─ ─ goal: 10pg</Text>
         </ChartCard>
       )}
 
