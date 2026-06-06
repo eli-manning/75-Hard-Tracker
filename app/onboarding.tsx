@@ -6,6 +6,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
+import { useNotifications } from '../hooks/useNotifications';
 import { getUserProfile, updateUserProfile } from '../lib/firestore';
 import { UserProfile } from '../lib/types';
 import { getAvatarUrl, generateSeed, hasCustomAvatar } from '../lib/avatar';
@@ -213,11 +214,25 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
 
   const [mode, setMode] = useState<'75hard' | 'general'>('general');
   const [startDate, setStartDate] = useState(initialProfile.challengeStartDate ?? format(new Date(), 'yyyy-MM-dd'));
+  const [countdown, setCountdown] = useState(4);
+  const { permissionGranted, requestPermission } = useNotifications(profile.uid);
   const [weightUnit, setWeightUnit] = useState<'lbs' | 'kg'>(initialProfile.weightUnit ?? 'lbs');
   const [startingWeight, setStartingWeight] = useState(initialProfile.startingWeight ? String(initialProfile.startingWeight) : '');
   const [fitnessGoal, setFitnessGoal] = useState<string>(initialProfile.fitnessGoal ?? '');
 
   const isCustom = hasCustomAvatar(profile);
+
+  useEffect(() => {
+    if (step !== 5) return;
+    setCountdown(4);
+    const interval = setInterval(() => {
+      setCountdown((n) => {
+        if (n <= 1) { clearInterval(interval); return 0; }
+        return n - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [step]);
 
   async function handleRandomize() {
     setRandomizing(true);
@@ -482,8 +497,31 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
           ))}
         </View>
 
-        <TouchableOpacity onPress={Platform.OS === 'web' ? () => setStep(6) : handleFinish} style={styles.primaryBtn}>
-          <Text style={styles.primaryBtnText}>LET'S GO! →</Text>
+        <View style={styles.notifSection}>
+          <Text style={styles.notifTitle}>NOTIFICATIONS</Text>
+          <Text style={styles.notifDesc}>
+            Get daily reminders to complete your tasks and stay on your streak.
+          </Text>
+          {permissionGranted ? (
+            <View style={styles.notifGranted}>
+              <Ionicons name="checkmark-circle" size={16} color={colors.accent} />
+              <Text style={styles.notifGrantedText}>NOTIFICATIONS ENABLED</Text>
+            </View>
+          ) : (
+            <TouchableOpacity style={styles.notifBtn} onPress={requestPermission}>
+              <Ionicons name="notifications-outline" size={14} color={colors.white} />
+              <Text style={styles.notifBtnText}>ENABLE NOTIFICATIONS</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <TouchableOpacity
+          onPress={countdown > 0 ? undefined : (Platform.OS === 'web' ? () => setStep(6) : handleFinish)}
+          style={[styles.primaryBtn, countdown > 0 && styles.btnDisabled]}
+        >
+          <Text style={styles.primaryBtnText}>
+            {countdown > 0 ? `ALMOST THERE... ${countdown}` : "LET'S GO! →"}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => setStep(4)}>
           <Text style={styles.ghostBtnText}>← BACK</Text>
@@ -590,7 +628,22 @@ const styles = StyleSheet.create({
   },
   secondaryBtnText: { fontFamily: fonts.pixel, fontSize: 8, color: colors.textMuted },
   ghostBtnText: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted, paddingVertical: 8 },
+  btnDisabled: { opacity: 0.5 },
   btnRow: { flexDirection: 'row', gap: 8, alignSelf: 'stretch' },
+  notifSection: {
+    width: '100%', gap: 10, padding: 16,
+    borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surface2,
+  },
+  notifTitle: { fontFamily: fonts.pixel, fontSize: 8, color: colors.text },
+  notifDesc: { fontFamily: fonts.inter, fontSize: 13, color: colors.textMuted, lineHeight: 20 },
+  notifBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    paddingVertical: 10, paddingHorizontal: 16,
+    backgroundColor: colors.accent,
+  },
+  notifBtnText: { fontFamily: fonts.pixel, fontSize: 7, color: colors.white },
+  notifGranted: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  notifGrantedText: { fontFamily: fonts.pixel, fontSize: 7, color: colors.accent },
   backBtn: { paddingHorizontal: 16, flexGrow: 0, flexShrink: 0, flexBasis: 'auto' },
   field: { width: '100%', gap: 8 },
   fieldLabel: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
