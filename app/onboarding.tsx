@@ -137,13 +137,15 @@ function DateSpinPicker({ value, onChange }: { value: string; onChange: (v: stri
   );
 }
 
-function InstallStep({ onFinish, onBack, ProgressDots, insets }: {
+function InstallStep({ onFinish, onBack, ProgressDots, insets, uid }: {
   onFinish: () => void;
   onBack: () => void;
   ProgressDots: () => React.JSX.Element;
   insets: { top: number; bottom: number };
+  uid: string;
 }) {
   const { isIOS, canInstall, triggerInstall } = useInstallPrompt();
+  const { permissionGranted, requestPermission } = useNotifications(uid);
   const isAndroid = Platform.OS === 'web' && !isIOS;
 
   return (
@@ -191,7 +193,26 @@ function InstallStep({ onFinish, onBack, ProgressDots, insets }: {
           </View>
         )}
 
-        <Text style={styles.installSkipHint}>Push notifications require the app to be installed.</Text>
+        <View style={styles.notifSection}>
+          <Text style={styles.notifTitle}>NOTIFICATIONS</Text>
+          <Text style={styles.notifDesc}>
+            Get daily reminders to complete your tasks and stay on your streak.
+          </Text>
+          {permissionGranted ? (
+            <View style={styles.notifGranted}>
+              <Ionicons name="checkmark-circle" size={16} color={colors.accent} />
+              <Text style={styles.notifGrantedText}>NOTIFICATIONS ENABLED</Text>
+            </View>
+          ) : (
+            <>
+              <TouchableOpacity style={styles.notifBtn} onPress={requestPermission}>
+                <Ionicons name="notifications-outline" size={14} color={colors.white} />
+                <Text style={styles.notifBtnText}>ENABLE NOTIFICATIONS</Text>
+              </TouchableOpacity>
+              <Text style={styles.notifSkip}>You can always turn this on later in Settings.</Text>
+            </>
+          )}
+        </View>
 
         <TouchableOpacity onPress={onFinish} style={[styles.primaryBtn, { marginTop: 8 }]}>
           <Text style={styles.primaryBtnText}>START CHALLENGE →</Text>
@@ -214,25 +235,11 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
 
   const [mode, setMode] = useState<'75hard' | 'general'>('general');
   const [startDate, setStartDate] = useState(initialProfile.challengeStartDate ?? format(new Date(), 'yyyy-MM-dd'));
-  const [countdown, setCountdown] = useState(4);
-  const { permissionGranted, requestPermission } = useNotifications(profile.uid);
   const [weightUnit, setWeightUnit] = useState<'lbs' | 'kg'>(initialProfile.weightUnit ?? 'lbs');
   const [startingWeight, setStartingWeight] = useState(initialProfile.startingWeight ? String(initialProfile.startingWeight) : '');
   const [fitnessGoal, setFitnessGoal] = useState<string>(initialProfile.fitnessGoal ?? '');
 
   const isCustom = hasCustomAvatar(profile);
-
-  useEffect(() => {
-    if (step !== 5) return;
-    setCountdown(4);
-    const interval = setInterval(() => {
-      setCountdown((n) => {
-        if (n <= 1) { clearInterval(interval); return 0; }
-        return n - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [step]);
 
   async function handleRandomize() {
     setRandomizing(true);
@@ -497,31 +504,8 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
           ))}
         </View>
 
-        <View style={styles.notifSection}>
-          <Text style={styles.notifTitle}>NOTIFICATIONS</Text>
-          <Text style={styles.notifDesc}>
-            Get daily reminders to complete your tasks and stay on your streak.
-          </Text>
-          {permissionGranted ? (
-            <View style={styles.notifGranted}>
-              <Ionicons name="checkmark-circle" size={16} color={colors.accent} />
-              <Text style={styles.notifGrantedText}>NOTIFICATIONS ENABLED</Text>
-            </View>
-          ) : (
-            <TouchableOpacity style={styles.notifBtn} onPress={requestPermission}>
-              <Ionicons name="notifications-outline" size={14} color={colors.white} />
-              <Text style={styles.notifBtnText}>ENABLE NOTIFICATIONS</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        <TouchableOpacity
-          onPress={countdown > 0 ? undefined : (Platform.OS === 'web' ? () => setStep(6) : handleFinish)}
-          style={[styles.primaryBtn, countdown > 0 && styles.btnDisabled]}
-        >
-          <Text style={styles.primaryBtnText}>
-            {countdown > 0 ? `ALMOST THERE... ${countdown}` : "LET'S GO! →"}
-          </Text>
+        <TouchableOpacity onPress={Platform.OS === 'web' ? () => setStep(6) : handleFinish} style={styles.primaryBtn}>
+          <Text style={styles.primaryBtnText}>LET'S GO! →</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => setStep(4)}>
           <Text style={styles.ghostBtnText}>← BACK</Text>
@@ -532,7 +516,7 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
 
   // Step 6: Install prompt (web only)
   if (step === 6) return (
-    <InstallStep onFinish={handleFinish} onBack={() => setStep(5)} ProgressDots={ProgressDots} insets={insets} />
+    <InstallStep onFinish={handleFinish} onBack={() => setStep(5)} ProgressDots={ProgressDots} insets={insets} uid={profile.uid} />
   );
 
   return null;
@@ -644,6 +628,7 @@ const styles = StyleSheet.create({
   notifBtnText: { fontFamily: fonts.pixel, fontSize: 7, color: colors.white },
   notifGranted: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   notifGrantedText: { fontFamily: fonts.pixel, fontSize: 7, color: colors.accent },
+  notifSkip: { fontFamily: fonts.inter, fontSize: 11, color: colors.textMuted, textAlign: 'center' },
   backBtn: { paddingHorizontal: 16, flexGrow: 0, flexShrink: 0, flexBasis: 'auto' },
   field: { width: '100%', gap: 8 },
   fieldLabel: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
