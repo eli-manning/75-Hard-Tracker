@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View, Text, Switch, Platform, StyleSheet, TouchableOpacity } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { UserProfile } from '../lib/types';
-import { useNotifications } from '../hooks/useNotifications';
+import { useNotificationsContext } from '../context/NotificationsContext';
 import { colors, fonts, shadows } from '../lib/theme';
 
 interface Props {
@@ -67,7 +67,7 @@ function ToggleSwitch({ value, onValueChange, disabled }: { value: boolean; onVa
 }
 
 export function NotificationSettings({ profile, onUpdate }: Props) {
-  const { requestPermission, clearTokens } = useNotifications(profile.uid);
+  const { requestPermission, clearTokens } = useNotificationsContext();
 
   const [allEnabled, setAllEnabled] = useState(profile.notifAllEnabled ?? false);
   const [daily, setDaily] = useState(profile.notifDailyEnabled ?? false);

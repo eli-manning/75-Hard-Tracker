@@ -12,8 +12,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from '../context/AuthContext';
 import { useAuthContext } from '../context/AuthContext';
 import { NavVisibilityProvider, useNavVisibility } from '../context/NavVisibilityContext';
+import { NotificationsProvider } from '../context/NotificationsContext';
 import { BottomNav } from '../components/BottomNav';
-import { useNotifications } from '../hooks/useNotifications';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -21,7 +21,6 @@ function AppShell() {
   const { loading: authLoading, user } = useAuthContext();
   const { navHidden } = useNavVisibility();
   // Silently refresh push token on every app open for users who already granted permission
-  useNotifications(user?.uid);
   const pathname = usePathname();
   const [fontsLoaded] = useFonts({
     PressStart2P_400Regular,
@@ -83,14 +82,23 @@ function AppShell() {
   );
 }
 
+function AppWithNotifications() {
+  const { user } = useAuthContext();
+  return (
+    <NotificationsProvider uid={user?.uid}>
+      <NavVisibilityProvider>
+        <StatusBar style="light" />
+        <AppShell />
+      </NavVisibilityProvider>
+    </NotificationsProvider>
+  );
+}
+
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <NavVisibilityProvider>
-          <StatusBar style="light" />
-          <AppShell />
-        </NavVisibilityProvider>
+        <AppWithNotifications />
       </AuthProvider>
     </SafeAreaProvider>
   );

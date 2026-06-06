@@ -6,7 +6,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
-import { useNotifications } from '../hooks/useNotifications';
+import { useNotificationsContext } from '../context/NotificationsContext';
 import { getUserProfile, updateUserProfile } from '../lib/firestore';
 import { UserProfile } from '../lib/types';
 import { getAvatarUrl, generateSeed, hasCustomAvatar } from '../lib/avatar';
@@ -145,7 +145,7 @@ function InstallStep({ onFinish, onBack, ProgressDots, insets, uid }: {
   uid: string;
 }) {
   const { isIOS, canInstall, triggerInstall } = useInstallPrompt();
-  const { permissionGranted, requestPermission } = useNotifications(uid);
+  const { permissionGranted, requestPermission } = useNotificationsContext();
   const isAndroid = Platform.OS === 'web' && !isIOS;
 
   return (
