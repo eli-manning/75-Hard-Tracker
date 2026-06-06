@@ -30,8 +30,11 @@ export async function sendPush(
   title: string,
   body: string,
 ): Promise<void> {
-  await Promise.allSettled([
-    expoPushToken ? sendExpoPush(expoPushToken, title, body) : Promise.resolve(),
-    fcmWebToken ? sendFcmPush(fcmWebToken, title, body) : Promise.resolve(),
-  ]);
+  // Prefer native Expo push; only fall back to FCM web push if no Expo token.
+  // Sending both causes duplicates when a user has tokens from both native and PWA.
+  if (expoPushToken) {
+    await sendExpoPush(expoPushToken, title, body);
+  } else if (fcmWebToken) {
+    await sendFcmPush(fcmWebToken, title, body);
+  }
 }

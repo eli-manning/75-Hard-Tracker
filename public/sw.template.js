@@ -14,8 +14,11 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
-  const title = payload.notification?.title ?? 'CrewDay';
-  const body = payload.notification?.body ?? '';
+  // Notification messages (with a `notification` field) are shown automatically
+  // by the browser — calling showNotification here too would cause duplicates.
+  if (payload.notification) return;
+  const title = payload.data?.title ?? 'CrewDay';
+  const body = payload.data?.body ?? '';
   self.registration.showNotification(title, {
     body,
     icon: '/icon-192.png',

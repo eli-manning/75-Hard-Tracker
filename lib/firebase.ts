@@ -1,6 +1,6 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { Auth, initializeAuth, getAuth, getReactNativePersistence } from 'firebase/auth';
-import { Firestore, getFirestore } from 'firebase/firestore';
+import { Firestore, getFirestore, initializeFirestore, persistentLocalCache } from 'firebase/firestore';
 import { Platform } from 'react-native';
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -51,7 +51,19 @@ export function getFirebaseAuth(): Auth {
 }
 
 export function getFirebaseDb(): Firestore {
-  if (!_db) _db = getFirestore(getApp());
+  if (!_db) {
+    const app = getApp();
+    if (Platform.OS === 'web') {
+      try {
+        _db = initializeFirestore(app, { localCache: persistentLocalCache() });
+      } catch {
+        // Already initialized (hot reload) — reuse existing instance
+        _db = getFirestore(app);
+      }
+    } else {
+      _db = getFirestore(app);
+    }
+  }
   return _db;
 }
 

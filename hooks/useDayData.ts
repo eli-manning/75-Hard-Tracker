@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { AppState } from 'react-native';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, Timestamp } from 'firebase/firestore';
 import { getFirebaseDb } from '../lib/firebase';
 import { DayEntry } from '../lib/types';
-import { getOrCreateDayEntry, updateDayEntry, updateStreakOnProfile } from '../lib/firestore';
+import { getOrCreateDayEntry, updateDayEntry, updateStreakOnProfile, defaultDayEntry } from '../lib/firestore';
 import { getCached, setCached, getSessionCached, setSessionCached } from '../lib/cache';
 import { format } from 'date-fns';
 
@@ -75,7 +75,18 @@ export function useDayData(uid: string | null, challengeStartDate: string | null
       // If cleanup ran before the snapshot was set up, unsubscribe immediately.
       if (cancelled) { stopSnapshot(); stopSnapshot = undefined; }
     }).catch(() => {
-      if (!cancelled) setLoading(false);
+      if (!cancelled) {
+        // Offline or permission denied — show a default entry so the UI renders.
+        // Writes are queued by the Firebase SDK and sync when back online.
+        if (!getCached<DayEntry>(cacheKey ?? '')) {
+          const fallback: DayEntry = {
+            ...defaultDayEntry(uid, today, challengeStartDate),
+            updatedAt: Timestamp.now(),
+          };
+          setDayEntry(fallback);
+        }
+        setLoading(false);
+      }
     });
 
     return () => {

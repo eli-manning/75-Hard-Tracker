@@ -17,6 +17,7 @@ import {
   arrayUnion,
   arrayRemove,
   deleteField,
+  PartialWithFieldValue,
 } from 'firebase/firestore';
 import { getFirebaseDb } from './firebase';
 import { UserProfile, DayEntry, CustomTask } from './types';
@@ -174,7 +175,7 @@ export async function removeFriend(currentUid: string, friendUid: string): Promi
 
 // ── Day Entries ───────────────────────────────────────────────────────────────
 
-function defaultDayEntry(uid: string, date: string, challengeStartDate: string): Omit<DayEntry, 'updatedAt'> {
+export function defaultDayEntry(uid: string, date: string, challengeStartDate: string): Omit<DayEntry, 'updatedAt'> {
   const dayNumber =
     differenceInDays(parseISO(date), parseISO(challengeStartDate)) + 1;
   return {
@@ -229,7 +230,9 @@ export async function updateDayEntry(
   for (const [k, v] of Object.entries(updates)) {
     safe[k] = v === undefined ? deleteField() : v;
   }
-  await updateDoc(doc(db(), 'days', uid, 'entries', date), safe);
+  // Use setDoc+merge instead of updateDoc so this works offline even if the
+  // entry was never flushed to Firestore (e.g. first open while offline).
+  await setDoc(doc(db(), 'days', uid, 'entries', date), safe as PartialWithFieldValue<DayEntry>, { merge: true });
   invalidateHistory(uid);
 }
 
@@ -253,13 +256,13 @@ export async function updateDayEntryWithPoints(
     await runTransaction(db(), async (tx) => {
       const userSnap = await tx.get(userRef);
       const current = (userSnap.data()?.totalPoints ?? 0) as number;
-      tx.update(entryRef, safe);
+      tx.set(entryRef, safe as PartialWithFieldValue<DayEntry>, { merge: true });
       tx.update(userRef, { totalPoints: Math.max(0, current + pointsDelta) });
     });
     invalidate(`profile-${uid}`);
     invalidate('all-users');
   } else {
-    await updateDoc(entryRef, safe);
+    await setDoc(entryRef, safe as PartialWithFieldValue<DayEntry>, { merge: true });
   }
   invalidateHistory(uid);
 }

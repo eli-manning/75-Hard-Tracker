@@ -10,8 +10,8 @@ import { useAllUsers } from '../../hooks/useAllUsers';
 import { useDayData } from '../../hooks/useDayData';
 import { useCustomTasks } from '../../hooks/useCustomTasks';
 import { useMinDuration } from '../../hooks/useMinDuration';
-import { getUserProfile, getAllUsers, getPendingRequests, getOrCreateDayEntry, getDayEntry, getDayHistory, updateUserProfile, updateDayEntryWithPoints } from '../../lib/firestore';
-import { getCached, getSessionCached, setSessionCached, clearAll } from '../../lib/cache';
+import { getUserProfile, getAllUsers, getPendingRequests, getDayEntry, getDayHistory, updateUserProfile, updateDayEntryWithPoints } from '../../lib/firestore';
+import { getCached, setCached, getSessionCached, setSessionCached, clearAll } from '../../lib/cache';
 import { UserProfile, DayEntry } from '../../lib/types';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { useHideNavWhileLoading } from '../../context/NavVisibilityContext';
@@ -98,7 +98,12 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
       if (friend.uid === currentUser.uid || !friend.challengeStartDate) continue;
       const key = `day-${friend.uid}-${today}`;
       if (!getCached<DayEntry>(key)) {
-        getOrCreateDayEntry(friend.uid, today, friend.challengeStartDate).catch(() => {});
+        // Read-only fetch — we don't have write permission on friends' entries.
+        // If they haven't opened the app yet today, getDayEntry returns null and
+        // useDayData will fall back to a default entry automatically.
+        getDayEntry(friend.uid, today).then((entry) => {
+          if (entry) setCached(key, entry);
+        }).catch(() => {});
       }
     }
   }, [users, currentUser.uid]);
