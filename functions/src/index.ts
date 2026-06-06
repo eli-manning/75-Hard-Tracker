@@ -127,26 +127,27 @@ export const onFriendRequestAccepted = onDocumentUpdated(
     if (before.status === after.status) return;
     if (after.status !== 'accepted') return;
 
-    const toUid = event.params.toUid;
-    const fromUid = event.params.fromUid;
+    // toUid = the one who accepted; fromUid = the original sender to notify
+    const accepterUid = event.params.toUid;
+    const requesterUid = event.params.fromUid;
 
-    const [senderSnap, accepterSnap] = await Promise.all([
-      db.doc(`users/${toUid}`).get(),
-      db.doc(`users/${fromUid}`).get(),
+    const [requesterSnap, accepterSnap] = await Promise.all([
+      db.doc(`users/${requesterUid}`).get(),
+      db.doc(`users/${accepterUid}`).get(),
     ]);
 
-    const senderData = senderSnap.data();
-    if (!senderData) return;
+    const requesterData = requesterSnap.data();
+    if (!requesterData) return;
 
-    if (senderData.notifAllEnabled === false) return;
-    if (senderData.notifFriendRequestsEnabled === false) return;
+    if (requesterData.notifAllEnabled === false) return;
+    if (requesterData.notifFriendRequestsEnabled === false) return;
 
     const accepterName: string = accepterSnap.get('displayName') ?? 'Someone';
 
     await Promise.all([
       sendPush(
-        senderData.expoPushToken,
-        senderData.fcmWebToken,
+        requesterData.expoPushToken,
+        requesterData.fcmWebToken,
         accepterName,
         'Accepted your friend request!',
       ),

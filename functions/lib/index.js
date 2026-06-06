@@ -143,22 +143,23 @@ exports.onFriendRequestAccepted = (0, firestore_1.onDocumentUpdated)('friendRequ
         return;
     if (after.status !== 'accepted')
         return;
-    const toUid = event.params.toUid;
-    const fromUid = event.params.fromUid;
-    const [senderSnap, accepterSnap] = await Promise.all([
-        db.doc(`users/${toUid}`).get(),
-        db.doc(`users/${fromUid}`).get(),
+    // toUid = the one who accepted; fromUid = the original sender to notify
+    const accepterUid = event.params.toUid;
+    const requesterUid = event.params.fromUid;
+    const [requesterSnap, accepterSnap] = await Promise.all([
+        db.doc(`users/${requesterUid}`).get(),
+        db.doc(`users/${accepterUid}`).get(),
     ]);
-    const senderData = senderSnap.data();
-    if (!senderData)
+    const requesterData = requesterSnap.data();
+    if (!requesterData)
         return;
-    if (senderData.notifAllEnabled === false)
+    if (requesterData.notifAllEnabled === false)
         return;
-    if (senderData.notifFriendRequestsEnabled === false)
+    if (requesterData.notifFriendRequestsEnabled === false)
         return;
     const accepterName = (_c = accepterSnap.get('displayName')) !== null && _c !== void 0 ? _c : 'Someone';
     await Promise.all([
-        (0, push_1.sendPush)(senderData.expoPushToken, senderData.fcmWebToken, accepterName, 'Accepted your friend request!'),
+        (0, push_1.sendPush)(requesterData.expoPushToken, requesterData.fcmWebToken, accepterName, 'Accepted your friend request!'),
         event.data.after.ref.delete(),
     ]);
 });
