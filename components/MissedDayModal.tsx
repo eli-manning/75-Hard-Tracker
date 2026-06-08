@@ -172,6 +172,7 @@ const styles = StyleSheet.create({
     borderColor: colors.accent,
     padding: 24,
     width: '100%',
+    maxWidth: 432,
     gap: 14,
     maxHeight: '80%',
   },

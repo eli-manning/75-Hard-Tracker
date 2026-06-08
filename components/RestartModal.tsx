@@ -99,6 +99,7 @@ const styles = StyleSheet.create({
     borderColor: colors.red,
     padding: 24,
     width: '100%',
+    maxWidth: 432,
     gap: 16,
     ...shadows.pixel,
   },

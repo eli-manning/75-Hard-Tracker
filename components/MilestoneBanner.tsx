@@ -83,6 +83,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 20,
     width: '100%',
+    maxWidth: 432,
     ...shadows.glowAccent,
   },
   modalHeading: {

@@ -81,6 +81,7 @@ export function DaySummaryModal({ visible, onDismiss, dayEntry, userProfile, dat
   return (
     <Modal visible={visible} animationType="slide" transparent={false} statusBarTranslucent>
       <View style={styles.container}>
+      <View style={styles.innerContainer}>
         {/* Section 1 — Celebration header */}
         <View style={styles.section1}>
           <Text style={styles.dayCompleteText}>DAY COMPLETE</Text>
@@ -169,12 +170,14 @@ export function DaySummaryModal({ visible, onDismiss, dayEntry, userProfile, dat
           </View>
         </View>
       </View>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.accent },
+  container: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
+  innerContainer: { flex: 1, width: '100%', maxWidth: 480, backgroundColor: colors.accent },
 
   // Section 1 — accent celebration area
   section1: {

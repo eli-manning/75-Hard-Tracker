@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.accent,
-    padding: 24, gap: 16, width: '100%',
+    padding: 24, gap: 16, width: '100%', maxWidth: 416,
   },
   modalTitle: { fontFamily: fonts.pixel, fontSize: 9, color: colors.accent },
   codeInput: {
