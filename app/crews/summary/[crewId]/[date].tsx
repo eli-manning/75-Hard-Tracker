@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.accent },
 
   section1: {
-    flex: 38,
+    flex: 23,
     backgroundColor: colors.accent,
     paddingHorizontal: 16,
     paddingBottom: 20,
@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
   section1StreakLabel: { fontFamily: fonts.pixel, fontSize: 6, color: colors.white, opacity: 0.8 },
 
   section2: {
-    flex: 62,
+    flex: 77,
     backgroundColor: colors.bg,
     borderTopWidth: 3,
     borderTopColor: colors.white,

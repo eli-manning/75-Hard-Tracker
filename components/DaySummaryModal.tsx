@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
 
   // Section 1 — accent celebration area
   section1: {
-    flex: 35,
+    flex: 21,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
 
   // Section 2 — cream stats area
   section2: {
-    flex: 65,
+    flex: 79,
     backgroundColor: colors.bg,
     borderTopWidth: 3,
     borderTopColor: colors.white,
