@@ -3,11 +3,11 @@ import { AppState } from 'react-native';
 import { doc, onSnapshot, Timestamp } from 'firebase/firestore';
 import { getFirebaseDb } from '../lib/firebase';
 import { DayEntry } from '../lib/types';
-import { getOrCreateDayEntry, updateDayEntry, updateStreakOnProfile, defaultDayEntry } from '../lib/firestore';
+import { getDayEntry, updateDayEntry, updateStreakOnProfile, defaultDayEntry } from '../lib/firestore';
 import { getCached, setCached, getSessionCached, setSessionCached } from '../lib/cache';
 import { format } from 'date-fns';
 
-export function useDayData(uid: string | null, challengeStartDate: string | null) {
+export function useDayData(uid: string | null, challengeStartDate: string | null, isOwn = true) {
   // Tick increments when the app returns to foreground so today is recomputed
   // and the effect re-runs if the date has changed (e.g. open past midnight).
   const [_tick, setTick] = useState(0);
@@ -29,7 +29,7 @@ export function useDayData(uid: string | null, challengeStartDate: string | null
   const activeUid = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!uid || !challengeStartDate) return;
+    if (!uid) return;
 
     activeUid.current = uid;
 
@@ -46,44 +46,51 @@ export function useDayData(uid: string | null, challengeStartDate: string | null
     let cancelled = false;
     let stopSnapshot: (() => void) | undefined;
 
-    getOrCreateDayEntry(uid, today, challengeStartDate).then((entry) => {
+    getDayEntry(uid, today).then((entry) => {
       if (cancelled) return;
-      if (cacheKey) setCached(cacheKey, entry);
-      if (sessionKey) setSessionCached(sessionKey, entry);
-      setDayEntry(entry);
+
+      const resolved: DayEntry = entry ?? {
+        ...defaultDayEntry(uid, today, challengeStartDate),
+        updatedAt: Timestamp.now(),
+      };
+
+      // Only cache if the document actually exists in Firestore
+      if (entry) {
+        if (cacheKey) setCached(cacheKey, entry);
+        if (sessionKey) setSessionCached(sessionKey, entry);
+      }
+
+      setDayEntry(resolved);
       setLoading(false);
-      prevAllCore.current = entry.allCoreCompleted;
+      prevAllCore.current = resolved.allCoreCompleted;
 
       stopSnapshot = onSnapshot(
         doc(getFirebaseDb(), 'days', uid, 'entries', today),
         (snap) => {
-          if (!snap.exists() || cancelled) return;
+          if (cancelled) return;
+          if (!snap.exists()) return; // document deleted or not yet created — keep in-memory default
           const data = snap.data() as DayEntry;
           if (cacheKey) setCached(cacheKey, data);
           if (sessionKey) setSessionCached(sessionKey, data);
           setDayEntry(data);
 
-          if (prevAllCore.current !== data.allCoreCompleted) {
+          if (isOwn && prevAllCore.current !== data.allCoreCompleted) {
             prevAllCore.current = data.allCoreCompleted;
-            updateStreakOnProfile(uid).catch(() => {});
+            updateStreakOnProfile(uid, challengeStartDate).catch(() => {});
           }
         },
         (err) => {
           if (err.code !== 'permission-denied') console.error(err);
         }
       );
-      // If cleanup ran before the snapshot was set up, unsubscribe immediately.
       if (cancelled) { stopSnapshot(); stopSnapshot = undefined; }
     }).catch(() => {
       if (!cancelled) {
-        // Offline or permission denied — show a default entry so the UI renders.
-        // Writes are queued by the Firebase SDK and sync when back online.
         if (!getCached<DayEntry>(cacheKey ?? '')) {
-          const fallback: DayEntry = {
+          setDayEntry({
             ...defaultDayEntry(uid, today, challengeStartDate),
             updatedAt: Timestamp.now(),
-          };
-          setDayEntry(fallback);
+          });
         }
         setLoading(false);
       }
