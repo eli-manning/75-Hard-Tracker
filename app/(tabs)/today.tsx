@@ -2,16 +2,20 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { format, differenceInDays, parseISO, subDays } from 'date-fns';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { Ionicons } from '@expo/vector-icons';
+import Svg, { Path } from 'react-native-svg';
 import { getFirebaseDb } from '../../lib/firebase';
 import { useAuth } from '../../hooks/useAuth';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useAllUsers } from '../../hooks/useAllUsers';
 import { useDayData } from '../../hooks/useDayData';
 import { useCustomTasks } from '../../hooks/useCustomTasks';
+import { useUserCrews } from '../../hooks/useUserCrews';
 import { useMinDuration } from '../../hooks/useMinDuration';
-import { getUserProfile, getAllUsers, getPendingRequests, getDayEntry, getDayHistory, updateUserProfile, updateDayEntryWithPoints } from '../../lib/firestore';
+import { getUserProfile, getAllUsers, getPendingRequests, getDayEntry, getDayHistory, updateUserProfile, updateDayEntryWithPoints, subscribeToProfile } from '../../lib/firestore';
 import { getCached, setCached, getSessionCached, setSessionCached, clearAll } from '../../lib/cache';
+import { getCrewIconIon } from '../../lib/crews';
 import { UserProfile, DayEntry } from '../../lib/types';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { useHideNavWhileLoading } from '../../context/NavVisibilityContext';
@@ -19,11 +23,12 @@ import { UserTabBar } from '../../components/UserTabBar';
 import { DailyProgress } from '../../components/DailyProgress';
 import { ChallengeChecklist } from '../../components/ChallengeChecklist';
 import { CustomTaskList } from '../../components/CustomTaskList';
+import { DaySummaryModal } from '../../components/DaySummaryModal';
 import { SideMenu } from '../../components/SideMenu';
 import { MilestoneBanner } from '../../components/MilestoneBanner';
 import { RestartModal } from '../../components/RestartModal';
 import { MissedDayModal } from '../../components/MissedDayModal';
-import { computeDayPoints } from '../../lib/points';
+import { computeDayPoints, computeAllCoreCompleted } from '../../lib/points';
 import { colors, fonts } from '../../lib/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -45,6 +50,7 @@ function DaySkeleton({ profile }: { profile: UserProfile }) {
 }
 
 function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile; onProfileUpdate: (p: UserProfile) => void }) {
+  const { crews } = useUserCrews(currentUser.uid);
   const { users: allUsers } = useAllUsers();
   const users = useMemo(() => {
     const friendSet = new Set(currentUser.friends ?? []);
@@ -64,6 +70,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
     setActiveUid(currentUser.uid);
     setActiveProfile(currentUser);
   }, [currentUser.uid]);
+
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -71,6 +78,10 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
   const [coreOpen, setCoreOpen] = useState(true);
   const [nudgedTasks, setNudgedTasks] = useState<Set<string>>(new Set());
   const [pendingNudge, setPendingNudge] = useState<{ taskKey: string; message: string } | null>(null);
+  const [showSummary, setShowSummary] = useState(false);
+  const [dayCompleted, setDayCompleted] = useState(false);
+  const summaryShownRef = useRef(false);
+  const prevAllCoreRef = useRef<boolean | null>(null);
   const [dismissedMilestone, setDismissedMilestone] = useState<number | null>(null);
   const [showRestartModal, setShowRestartModal] = useState(false);
   const [restartForced, setRestartForced] = useState(false);
@@ -86,8 +97,31 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
   }, [currentUser.uid]);
 
   const readOnly = activeUid !== currentUser.uid;
-  const { dayEntry, loading: dayLoading } = useDayData(activeUid, activeProfile.challengeStartDate);
+  const { dayEntry, loading: dayLoading } = useDayData(activeUid, activeProfile.challengeStartDate, activeUid === currentUser.uid);
   const { tasks } = useCustomTasks(activeUid);
+
+  // Reset prev-state tracking when switching between users so we don't false-trigger on return
+  useEffect(() => {
+    prevAllCoreRef.current = null;
+  }, [activeUid]);
+
+  // Detect own-day allCoreCompleted false→true transition and show summary modal
+  useEffect(() => {
+    if (!dayEntry || activeUid !== currentUser.uid || summaryShownRef.current) return;
+    const prev = prevAllCoreRef.current;
+    prevAllCoreRef.current = dayEntry.allCoreCompleted;
+    if (prev === false && dayEntry.allCoreCompleted) {
+      summaryShownRef.current = true;
+      setDayCompleted(true);
+      setShowSummary(true);
+      // Notify crew evaluation for each crew the user belongs to
+      const fn = httpsCallable(getFunctions(undefined, 'us-west2'), 'triggerCrewEvaluation');
+      for (const crew of crews) {
+        fn({ crewId: crew.id, date: todayStr }).catch(() => {});
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dayEntry?.allCoreCompleted, activeUid]);
 
   const isTabSwitch = activeUid !== currentUser.uid && profileLoading;
   const showSkeleton = useMinDuration(isTabSwitch || (dayLoading && !dayEntry), 600);
@@ -95,7 +129,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
   useEffect(() => {
     const today = format(new Date(), 'yyyy-MM-dd');
     for (const friend of users) {
-      if (friend.uid === currentUser.uid || !friend.challengeStartDate) continue;
+      if (friend.uid === currentUser.uid) continue;
       const key = `day-${friend.uid}-${today}`;
       if (!getCached<DayEntry>(key)) {
         // Read-only fetch — we don't have write permission on friends' entries.
@@ -156,7 +190,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
   const wrappedUpdate = useCallback(async (patch: Partial<DayEntry>) => {
     if (!dayEntry) return;
     const merged = { ...dayEntry, ...patch };
-    const newPts = computeDayPoints(merged, tasks);
+    const newPts = computeDayPoints(merged, tasks, currentUser);
     const oldPts = dayEntry.dailyPoints ?? 0;
     const delta = newPts - oldPts;
     await updateDayEntryWithPoints(activeUid, todayStr, { ...patch, dailyPoints: newPts }, delta);
@@ -273,6 +307,15 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
 
   return (
     <View style={styles.container}>
+      {showSummary && dayEntry && (
+        <DaySummaryModal
+          visible={showSummary}
+          onDismiss={() => setShowSummary(false)}
+          dayEntry={dayEntry}
+          userProfile={currentUser}
+          date={todayStr}
+        />
+      )}
       <RestartModal
         visible={showRestartModal}
         onConfirm={handleRestartConfirm}
@@ -287,12 +330,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
           onSaved={async (patch) => {
             if (!yesterdayEntry) return;
             const merged = { ...yesterdayEntry, ...patch };
-            const outdoorRequired = activeProfile.challengeMode !== 'general';
-            const allCoreCompleted =
-              !!merged.workoutOneCompleted && !!merged.workoutTwoCompleted &&
-              (!outdoorRequired || !!merged.workoutTwoOutdoor) &&
-              !!merged.dietCompleted && !!merged.waterCompleted &&
-              !!merged.readingCompleted && !!merged.photoCompleted;
+            const allCoreCompleted = computeAllCoreCompleted(merged, activeProfile);
             const finalEntry = { ...merged, allCoreCompleted };
             const newPts = computeDayPoints(finalEntry, tasks);
             const oldPts = yesterdayEntry.dailyPoints ?? 0;
@@ -400,14 +438,32 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
           <DaySkeleton profile={activeProfile} />
         ) : (
           <View style={styles.content}>
+            {!readOnly && dayCompleted && !showSummary && (
+              <TouchableOpacity
+                style={styles.summaryBanner}
+                onPress={() => setShowSummary(true)}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.summaryBannerText}>DAY COMPLETE — VIEW SUMMARY</Text>
+                <Ionicons name="chevron-forward" size={12} color={colors.white} />
+              </TouchableOpacity>
+            )}
             <View style={styles.dayHeader}>
-              {dayNum <= 0 ? (
+              {activeProfile.challengeMode === 'general' ? (
+                <View style={styles.dayNumRow}>
+                  <Text style={styles.generalDate}>{format(new Date(), 'EEE,MMM d').toUpperCase()}</Text>
+                  {(activeProfile.totalPoints ?? 0) > 0 && (
+                    <>
+                      <Text style={styles.dayNumSep}>|</Text>
+                      <Text style={styles.generalDate}>{activeProfile.totalPoints ?? 0} PTS</Text>
+                    </>
+                  )}
+                </View>
+              ) : dayNum <= 0 ? (
                 <>
-                  <Text style={styles.startsInLabel}>STARTS IN</Text>
-                  <Text style={styles.daysUntil}>{Math.abs(dayNum) + 1} {Math.abs(dayNum) + 1 === 1 ? 'DAY' : 'DAYS'}</Text>
+                  <Text style={styles.startsInLabel}>STARTING SOON</Text>
+                  <Text style={styles.daysUntil}>{Math.abs(dayNum) + 1} {Math.abs(dayNum) + 1 === 1 ? 'DAY' : 'DAYS'} AWAY</Text>
                 </>
-              ) : activeProfile.challengeMode === 'general' ? (
-                <Text style={styles.dayNum}>{activeProfile.totalPoints ?? 0} PTS</Text>
               ) : (
                 <View style={styles.dayNumRow}>
                   <Text style={styles.dayNumSmall}>DAY {dayNum}</Text>
@@ -419,7 +475,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
                   )}
                 </View>
               )}
-              <Text style={styles.dateText}>{today}</Text>
+              {activeProfile.challengeMode !== 'general' && <Text style={styles.dateText}>{today}</Text>}
               {dayEntry && dayEntry.dayNumber > 0 && <DailyProgress entry={dayEntry} />}
             </View>
 
@@ -441,6 +497,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
                   onNudge={readOnly ? sendNudge : undefined}
                   nudgedTasks={readOnly ? nudgedTasks : undefined}
                   challengeMode={activeProfile.challengeMode}
+                  hiddenCoreTasks={!readOnly ? currentUser.hiddenCoreTasks : undefined}
                 />
               )}
             </View>
@@ -451,10 +508,63 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
                 dayEntry={dayEntry}
                 uid={activeUid}
                 readOnly={readOnly}
+                hideActions={true}
                 onDayUpdate={wrappedUpdate}
                 onNudge={readOnly ? sendNudge : undefined}
                 nudgedTasks={readOnly ? nudgedTasks : undefined}
               />
+            )}
+
+            {!readOnly && dayEntry && crews.some((c) => c.customCrewTasks.length > 0) && (
+              <View style={styles.crewTasksSection}>
+                <Text style={styles.sectionLabel}>CREW TASKS</Text>
+                {crews.filter((c) => c.customCrewTasks.length > 0).map((crew) => (
+                  <View key={crew.id} style={styles.crewTaskGroup}>
+                    <View style={styles.crewTaskGroupHeader}>
+                      <Ionicons name={getCrewIconIon(crew.icon) as any} size={12} color={colors.textMuted} />
+                      <Text style={styles.crewTaskGroupName}>{crew.name.toUpperCase()}</Text>
+                    </View>
+                    <View style={styles.crewTaskList}>
+                      {crew.customCrewTasks.map((task) => {
+                        const completed = (dayEntry.crewTasksCompleted ?? []).includes(task.id);
+                        return (
+                          <TouchableOpacity
+                            key={task.id}
+                            activeOpacity={0.85}
+                            onPress={() => {
+                              const current = dayEntry.crewTasksCompleted ?? [];
+                              const updated = completed
+                                ? current.filter((id) => id !== task.id)
+                                : [...current, task.id];
+                              wrappedUpdate({ crewTasksCompleted: updated });
+                            }}
+                          >
+                            <View style={[styles.crewTaskCard, completed && styles.crewTaskCardDone]}>
+                              <View style={[styles.crewCheckbox, completed && styles.crewCheckboxDone]}>
+                                {completed && (
+                                  <Svg width={12} height={10} viewBox="0 0 12 10" fill="none">
+                                    <Path d="M1 5l3 3 7-7" stroke={colors.bg} strokeWidth={2.5} strokeLinecap="square" />
+                                  </Svg>
+                                )}
+                              </View>
+                              <Text style={[styles.crewTaskLabel, completed && styles.crewTaskLabelDone]} numberOfLines={2}>
+                                {task.label}
+                              </Text>
+                              {task.amount != null && (
+                                <View style={styles.crewAmountBadge}>
+                                  <Text style={styles.crewAmountText}>
+                                    {task.amount}{task.unit ? ` ${task.unit.toUpperCase()}` : ''}
+                                  </Text>
+                                </View>
+                              )}
+                            </View>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                ))}
+              </View>
             )}
           </View>
         )}
@@ -480,19 +590,16 @@ export default function TodayPage() {
   const showLoader = useMinDuration(authLoading || !profile, 600);
   useHideNavWhileLoading(showLoader);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!user) return;
-      getUserProfile(user.uid)
-        .then((p) => {
-          if (!p || p.onboardingComplete === false) return;
-          _memProfile = p;
-          setSessionCached(SESSION_KEY, p);
-          setProfile(p);
-        })
-        .catch(() => {});
-    }, [user?.uid])
-  );
+  // Real-time profile subscription — picks up saves from profile screen, points changes, etc.
+  useEffect(() => {
+    if (!user?.uid) return;
+    return subscribeToProfile(user.uid, (fresh) => {
+      if (!fresh || fresh.onboardingComplete === false) return;
+      _memProfile = fresh;
+      setSessionCached(SESSION_KEY, fresh);
+      setProfile(fresh);
+    });
+  }, [user?.uid]);
 
   useEffect(() => {
     if (!user) {
@@ -616,6 +723,10 @@ const styles = StyleSheet.create({
     fontFamily: fonts.pixel, fontSize: 26, color: colors.accent, lineHeight: 36,
     textShadowColor: colors.accentGlow, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 6,
   },
+  generalDate: {
+    fontFamily: fonts.vt323, fontSize: 36, color: colors.accent, lineHeight: 40,
+    textShadowColor: colors.accentGlow, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 6,
+  },
   dayNumSep: { fontFamily: fonts.pixel, fontSize: 20, color: colors.textMuted, lineHeight: 36 },
   generalDayNum: { fontFamily: fonts.pixel, fontSize: 13, color: colors.textMuted, marginTop: 2 },
   sectionToggle: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 10 },
@@ -629,4 +740,61 @@ const styles = StyleSheet.create({
   skeletonTask: { height: 52, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surface },
   errorScreen: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: colors.bg },
   errorScreenText: { fontFamily: fonts.vt323, fontSize: 22, color: colors.red, textAlign: 'center', lineHeight: 32 },
+
+  // Day complete banner
+  summaryBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: colors.accent,
+    borderWidth: 2,
+    borderColor: colors.accent,
+    ...{ shadowColor: colors.accent, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.35, shadowRadius: 6, elevation: 4 },
+  },
+  summaryBannerText: {
+    fontFamily: fonts.pixel,
+    fontSize: 7,
+    color: colors.white,
+    letterSpacing: 0.3,
+  },
+
+  // Crew tasks
+  crewTasksSection: { gap: 16 },
+  crewTaskGroup: { gap: 8 },
+  crewTaskGroupHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  crewTaskGroupName: { fontFamily: fonts.pixel, fontSize: 8, color: colors.textMuted },
+  crewTaskList: { gap: 4 },
+  crewTaskCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    padding: 12, borderWidth: 2, borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  crewTaskCardDone: {
+    borderColor: colors.green, backgroundColor: colors.greenLight,
+    shadowColor: colors.green, shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3, shadowRadius: 6,
+  },
+  crewCheckbox: {
+    width: 22, height: 22, borderWidth: 2, flexShrink: 0,
+    alignItems: 'center', justifyContent: 'center',
+    borderColor: colors.textMuted, backgroundColor: 'transparent',
+  },
+  crewCheckboxDone: {
+    borderColor: colors.green, backgroundColor: colors.green,
+    shadowColor: colors.green, shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6, shadowRadius: 8,
+  },
+  crewTaskLabel: {
+    flex: 1, fontFamily: fonts.vt323, fontSize: 20, color: colors.text, letterSpacing: 0.4,
+  },
+  crewTaskLabelDone: {
+    color: colors.green, opacity: 0.7, textDecorationLine: 'line-through',
+  },
+  crewAmountBadge: {
+    paddingHorizontal: 5, paddingVertical: 2,
+    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface2, flexShrink: 0,
+  },
+  crewAmountText: { fontFamily: fonts.pixel, fontSize: 5, color: colors.text },
 });
