@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput, Image,
-  StyleSheet, ActivityIndicator, Alert, Platform, Modal,
+  StyleSheet, ActivityIndicator, Platform, Modal,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -92,6 +92,33 @@ function IconPickerModal({ current, onSelect, onClose }: {
   );
 }
 
+function ConfirmModal({ title, message, confirmLabel = 'CONFIRM', cancelLabel = 'CANCEL', destructive = false, onConfirm, onCancel }: {
+  title: string; message?: string; confirmLabel?: string; cancelLabel?: string;
+  destructive?: boolean; onConfirm: () => void; onCancel: () => void;
+}) {
+  return (
+    <Modal transparent animationType="fade">
+      <View style={styles.modalBackdrop}>
+        <View style={styles.modalCard}>
+          <Text style={styles.modalTitle}>{title}</Text>
+          {message ? <Text style={styles.modalMessage}>{message}</Text> : null}
+          <View style={styles.modalBtns}>
+            <TouchableOpacity onPress={onCancel} style={styles.cancelBtn}>
+              <Text style={styles.cancelBtnText}>{cancelLabel}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={onConfirm}
+              style={[styles.cancelBtn, { borderColor: destructive ? colors.red : colors.accent, flex: 1 }]}
+            >
+              <Text style={[styles.cancelBtnText, { color: destructive ? colors.red : colors.accent }]}>{confirmLabel}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export default function CrewDetailPage() {
   const { crewId } = useLocalSearchParams<{ crewId: string }>();
   const { user } = useAuth();
@@ -110,6 +137,11 @@ export default function CrewDetailPage() {
   const [customTaskAmount, setCustomTaskAmount] = useState('');
   const [customTaskUnit, setCustomTaskUnit] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    title: string; message?: string; confirmLabel?: string; destructive?: boolean; onConfirm: () => void;
+  } | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [copiedCode, setCopiedCode] = useState(false);
   const nameInputRef = useRef<TextInput>(null);
 
   const isAdmin = crew ? crew.admins.includes(user?.uid ?? '') : false;
@@ -184,52 +216,64 @@ export default function CrewDetailPage() {
     return httpsCallable(getFunctions(undefined, 'us-west2'), name)(data);
   }
 
-  async function handleKick(targetUid: string, name: string) {
-    Alert.alert(`Remove ${name}?`, 'They will be removed from the crew.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: async () => {
+  function handleKick(targetUid: string, name: string) {
+    setConfirmModal({
+      title: `REMOVE ${name.toUpperCase()}?`,
+      message: 'They will be removed from the crew.',
+      confirmLabel: 'REMOVE',
+      destructive: true,
+      onConfirm: async () => {
+        setConfirmModal(null);
         setActionLoading(true);
         try { await callFn('kickMember', { crewId: crew!.id, targetUid }); }
-        catch (e: any) { Alert.alert('Error', e?.message ?? 'Failed'); }
+        catch (e: any) { setErrorMsg(e?.message ?? 'Failed to remove member.'); }
         finally { setActionLoading(false); }
-      }},
-    ]);
+      },
+    });
   }
 
   async function handlePromote(targetUid: string) {
     setActionLoading(true);
     try { await promoteToAdmin(crew!.id, targetUid); }
-    catch (e: any) { Alert.alert('Error', e?.message ?? 'Failed'); }
+    catch (e: any) { setErrorMsg(e?.message ?? 'Failed to promote.'); }
     finally { setActionLoading(false); }
   }
 
   async function handleDemote(targetUid: string) {
     setActionLoading(true);
     try { await demoteFromAdmin(crew!.id, targetUid); }
-    catch (e: any) { Alert.alert('Error', e?.message ?? 'Failed'); }
+    catch (e: any) { setErrorMsg(e?.message ?? 'Failed to demote.'); }
     finally { setActionLoading(false); }
   }
 
-  async function handleLeave() {
-    Alert.alert('Leave Crew', `Leave ${crew?.name}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Leave', style: 'destructive', onPress: async () => {
+  function handleLeave() {
+    setConfirmModal({
+      title: 'LEAVE CREW',
+      message: `Leave ${crew?.name}?`,
+      confirmLabel: 'LEAVE',
+      destructive: true,
+      onConfirm: async () => {
+        setConfirmModal(null);
         setActionLoading(true);
         try { await callFn('leaveCrew', { crewId: crew!.id }); router.replace('/(tabs)/crews' as any); }
-        catch (e: any) { Alert.alert('Error', e?.message ?? 'Failed'); setActionLoading(false); }
-      }},
-    ]);
+        catch (e: any) { setErrorMsg(e?.message ?? 'Failed to leave crew.'); setActionLoading(false); }
+      },
+    });
   }
 
-  async function handleDelete() {
-    Alert.alert('Delete Crew', `Permanently delete ${crew?.name} for all members?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete Forever', style: 'destructive', onPress: async () => {
+  function handleDelete() {
+    setConfirmModal({
+      title: 'DELETE CREW',
+      message: `Permanently delete ${crew?.name} for all members?`,
+      confirmLabel: 'DELETE FOREVER',
+      destructive: true,
+      onConfirm: async () => {
+        setConfirmModal(null);
         setActionLoading(true);
         try { await callFn('deleteCrew', { crewId: crew!.id }); router.replace('/(tabs)/crews' as any); }
-        catch (e: any) { Alert.alert('Error', e?.message ?? 'Failed'); setActionLoading(false); }
-      }},
-    ]);
+        catch (e: any) { setErrorMsg(e?.message ?? 'Failed to delete crew.'); setActionLoading(false); }
+      },
+    });
   }
 
   async function handleSaveName() {
@@ -263,7 +307,8 @@ export default function CrewDetailPage() {
     if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
       await navigator.clipboard.writeText(crew.joinCode);
     }
-    Alert.alert('Join Code', crew.joinCode, [{ text: 'OK' }]);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
   }
 
   if (loading || !crew) {
@@ -285,6 +330,29 @@ export default function CrewDetailPage() {
           onSelect={async (key) => { await updateCrewIcon(crew.id, key); setShowIconPicker(false); }}
           onClose={() => setShowIconPicker(false)}
         />
+      )}
+      {confirmModal && (
+        <ConfirmModal
+          title={confirmModal.title}
+          message={confirmModal.message}
+          confirmLabel={confirmModal.confirmLabel}
+          destructive={confirmModal.destructive}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={() => setConfirmModal(null)}
+        />
+      )}
+      {errorMsg && (
+        <Modal transparent animationType="fade">
+          <View style={styles.modalBackdrop}>
+            <View style={styles.modalCard}>
+              <Text style={styles.modalTitle}>ERROR</Text>
+              <Text style={styles.modalMessage}>{errorMsg}</Text>
+              <TouchableOpacity onPress={() => setErrorMsg(null)} style={[styles.cancelBtn, { marginTop: 4 }]}>
+                <Text style={styles.cancelBtnText}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       )}
 
       {/* Top bar */}
@@ -605,8 +673,8 @@ export default function CrewDetailPage() {
               </View>
             </View>
             <View style={styles.copyHint}>
-              <Ionicons name="copy-outline" size={13} color={colors.textMuted} />
-              <Text style={styles.copyHintText}>COPY</Text>
+              <Ionicons name={copiedCode ? 'checkmark-outline' : 'copy-outline'} size={13} color={copiedCode ? colors.green : colors.textMuted} />
+              <Text style={[styles.copyHintText, copiedCode && { color: colors.green }]}>{copiedCode ? 'COPIED!' : 'COPY'}</Text>
             </View>
           </TouchableOpacity>
           {!isCreator && (
@@ -824,6 +892,8 @@ const styles = StyleSheet.create({
     padding: 20, gap: 16, width: '100%', maxWidth: 432,
   },
   modalTitle: { fontFamily: fonts.pixel, fontSize: 9, color: colors.accent },
+  modalMessage: { fontFamily: fonts.inter, fontSize: 13, color: colors.textMuted, lineHeight: 18 },
+  modalBtns: { flexDirection: 'row', gap: 10 },
   iconGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   iconPickerCard: {
     width: 48, height: 48, alignItems: 'center', justifyContent: 'center',
