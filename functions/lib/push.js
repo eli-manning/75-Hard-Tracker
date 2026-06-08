@@ -41,7 +41,7 @@ exports.sendFcmPush = sendFcmPush;
 exports.sendPush = sendPush;
 const admin = __importStar(require("firebase-admin"));
 const node_fetch_1 = __importDefault(require("node-fetch"));
-async function sendExpoPush(to, title, body) {
+async function sendExpoPush(to, title, body, data) {
     if (!to.startsWith('ExponentPushToken['))
         return;
     await (0, node_fetch_1.default)('https://exp.host/--/api/v2/push/send', {
@@ -51,26 +51,22 @@ async function sendExpoPush(to, title, body) {
             Accept: 'application/json',
             'Accept-Encoding': 'gzip, deflate',
         },
-        body: JSON.stringify({ to, title, body, sound: 'default' }),
+        body: JSON.stringify(Object.assign({ to, title, body, sound: 'default' }, (data ? { data } : {}))),
     });
 }
-async function sendFcmPush(token, title, body) {
-    await admin.messaging().send({
-        token,
-        notification: { title, body },
-        webpush: {
+async function sendFcmPush(token, title, body, data) {
+    await admin.messaging().send(Object.assign(Object.assign({ token, notification: { title, body } }, (data ? { data } : {})), { webpush: {
             notification: { icon: '/icon-192.png', badge: '/icon-192.png' },
-        },
-    });
+        } }));
 }
-async function sendPush(expoPushToken, fcmWebToken, title, body) {
+async function sendPush(expoPushToken, fcmWebToken, title, body, data) {
     // Prefer native Expo push; only fall back to FCM web push if no Expo token.
     // Sending both causes duplicates when a user has tokens from both native and PWA.
     if (expoPushToken) {
-        await sendExpoPush(expoPushToken, title, body);
+        await sendExpoPush(expoPushToken, title, body, data);
     }
     else if (fcmWebToken) {
-        await sendFcmPush(fcmWebToken, title, body);
+        await sendFcmPush(fcmWebToken, title, body, data);
     }
 }
 //# sourceMappingURL=push.js.map
