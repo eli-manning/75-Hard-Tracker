@@ -5,10 +5,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts, shadows } from '../lib/theme';
 
 const NAV = [
-  { href: '/(tabs)/today', label: 'TODAY', icon: 'sunny-outline' as const },
-  { href: '/(tabs)/tasks', label: 'TASKS', icon: 'list-outline' as const },
-  { href: '/(tabs)/history', label: 'HISTORY', icon: 'calendar-outline' as const },
-  { href: '/(tabs)/leaderboard', label: 'RANKS', icon: 'trophy-outline' as const, match: 'leaderboard' },
+  { href: '/(tabs)/today', label: '', icon: 'home-outline' as const, match: 'today' },
+  { href: '/(tabs)/crews', label: '', icon: 'people-outline' as const, match: 'crews' },
+  { href: '/(tabs)/history', label: '', icon: 'calendar-outline' as const, match: 'history' },
+  { href: '/(tabs)/leaderboard', label: '', icon: 'trophy-outline' as const, match: 'leaderboard' },
 ];
 
 // Web: renders via a React DOM portal directly into document.body so it is
@@ -40,7 +40,8 @@ function WebBottomNav() {
       }}
     >
       {NAV.map(({ href, label, icon, match }) => {
-        const active = pathname.includes((match ?? label).toLowerCase());
+        const active = pathname.includes(match) ||
+          (match === 'today' && pathname.startsWith('/tasks'));
         return (
           <button
             key={href}
@@ -92,7 +93,8 @@ function NativeBottomNav() {
   return (
     <View style={[styles.nav, { bottom: -insets.bottom, paddingBottom: insets.bottom }]}>
       {NAV.map(({ href, label, icon, match }) => {
-        const active = pathname.includes((match ?? label).toLowerCase());
+        const active = pathname.includes(match) ||
+          (match === 'today' && pathname.startsWith('/tasks'));
         return (
           <TouchableOpacity
             key={href}
