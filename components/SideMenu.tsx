@@ -224,7 +224,7 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSe
 
           {/* Manage tasks */}
           <TouchableOpacity
-            onPress={() => { router.push('/(tabs)/tasks' as any); }}
+            onPress={() => { router.push('/tasks' as any); }}
             style={styles.menuRow}
           >
             <Ionicons name="list-outline" size={14} color={colors.textMuted} />
