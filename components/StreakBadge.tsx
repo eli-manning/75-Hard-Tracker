@@ -32,7 +32,6 @@ export function StreakBadge({ streak }: StreakBadgeProps) {
 
   return (
     <View style={{
-      alignSelf: 'flex-start',
       paddingHorizontal: 10,
       paddingVertical: 5,
       backgroundColor: bg,
