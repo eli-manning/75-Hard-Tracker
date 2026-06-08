@@ -7,6 +7,7 @@ import {
   deleteDoc,
   collection,
   query,
+  where,
   orderBy,
   limit,
   onSnapshot,
@@ -20,10 +21,10 @@ import {
   PartialWithFieldValue,
 } from 'firebase/firestore';
 import { getFirebaseDb } from './firebase';
-import { UserProfile, DayEntry, CustomTask } from './types';
+import { UserProfile, DayEntry, CustomTask, Crew, CrewTask, CrewDaySummary } from './types';
 import { getCached, setCached, invalidate } from './cache';
-import { computeStreakFromHistory } from './points';
-import { differenceInDays, parseISO } from 'date-fns';
+import { computeStreakFromHistory, computeAllCoreCompleted, computeDayPoints } from './points';
+import { differenceInDays, parseISO, format } from 'date-fns';
 
 function db() {
   return getFirebaseDb();
@@ -86,6 +87,28 @@ export function subscribeToProfile(
   });
 }
 
+export async function updateHiddenCoreTasks(
+  uid: string,
+  hidden: UserProfile['hiddenCoreTasks'],
+  currentProfile: UserProfile,
+  customTasks: CustomTask[]
+): Promise<void> {
+  const updates: Record<string, unknown> = { hiddenCoreTasks: hidden ?? deleteField() };
+  await updateDoc(doc(db(), 'users', uid), updates);
+  invalidate(`profile-${uid}`);
+
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const entry = await getDayEntry(uid, today);
+  if (!entry) return;
+  const updatedProfile = { ...currentProfile, hiddenCoreTasks: hidden };
+  const newAllCore = computeAllCoreCompleted(entry, updatedProfile);
+  const newPts = computeDayPoints({ ...entry, allCoreCompleted: newAllCore }, customTasks, updatedProfile);
+  const delta = newPts - (entry.dailyPoints ?? 0);
+  if (newAllCore !== entry.allCoreCompleted || delta !== 0) {
+    await updateDayEntryWithPoints(uid, today, { allCoreCompleted: newAllCore, dailyPoints: newPts }, delta);
+  }
+}
+
 export async function incrementUserPoints(uid: string, delta: number): Promise<void> {
   if (delta === 0) return;
   const userRef = doc(db(), 'users', uid);
@@ -108,10 +131,10 @@ export async function getGlobalLeaderboard(): Promise<UserProfile[]> {
     .filter((u) => u.isActive && u.leaderboardOptOut === false);
 }
 
-export async function updateStreakOnProfile(uid: string): Promise<void> {
+export async function updateStreakOnProfile(uid: string, challengeStartDate?: string | null): Promise<void> {
   invalidateHistory(uid);
   const history = await getDayHistory(uid, 120);
-  const { current, longest } = computeStreakFromHistory(history);
+  const { current, longest } = computeStreakFromHistory(history, challengeStartDate);
   await updateDoc(doc(db(), 'users', uid), { currentStreak: current, longestStreak: longest });
   invalidate(`profile-${uid}`);
   invalidate('all-users');
@@ -175,9 +198,10 @@ export async function removeFriend(currentUid: string, friendUid: string): Promi
 
 // ── Day Entries ───────────────────────────────────────────────────────────────
 
-export function defaultDayEntry(uid: string, date: string, challengeStartDate: string): Omit<DayEntry, 'updatedAt'> {
-  const dayNumber =
-    differenceInDays(parseISO(date), parseISO(challengeStartDate)) + 1;
+export function defaultDayEntry(uid: string, date: string, challengeStartDate: string | null): Omit<DayEntry, 'updatedAt'> {
+  const dayNumber = challengeStartDate
+    ? differenceInDays(parseISO(date), parseISO(challengeStartDate)) + 1
+    : 0;
   return {
     date,
     uid,
@@ -193,7 +217,9 @@ export function defaultDayEntry(uid: string, date: string, challengeStartDate: s
     readingCompleted: false,
     pagesRead: 0,
     customTasksCompleted: [],
-    dayNumber, // negative/zero means challenge hasn't started yet
+    crewTasksCompleted: [],
+    customTaskProgress: {},
+    dayNumber,
     allCoreCompleted: false,
   };
 }
@@ -201,7 +227,7 @@ export function defaultDayEntry(uid: string, date: string, challengeStartDate: s
 export async function getOrCreateDayEntry(
   uid: string,
   date: string,
-  challengeStartDate: string
+  challengeStartDate: string | null
 ): Promise<DayEntry> {
   const ref = doc(db(), 'days', uid, 'entries', date);
   const snap = await getDoc(ref);
@@ -332,4 +358,112 @@ export async function reorderCustomTasks(
     batch.update(doc(db(), 'customTasks', uid, 'tasks', id), { order: index });
   });
   await batch.commit();
+}
+
+// ── Crews ─────────────────────────────────────────────────────────────────────
+
+function generateJoinCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+}
+
+export async function getCrewById(crewId: string): Promise<Crew | null> {
+  const key = `crew-${crewId}`;
+  const cached = getCached<Crew>(key);
+  if (cached) return cached;
+  const snap = await getDoc(doc(db(), 'crews', crewId));
+  const crew = snap.exists() ? (snap.data() as Crew) : null;
+  if (crew) setCached(key, crew);
+  return crew;
+}
+
+export async function getUserCrews(uid: string): Promise<Crew[]> {
+  const key = `crews-${uid}`;
+  const cached = getCached<Crew[]>(key);
+  if (cached) return cached;
+  const q = query(collection(db(), 'crews'), where('members', 'array-contains', uid));
+  const snap = await getDocs(q);
+  const crews = snap.docs.map((d) => d.data() as Crew);
+  setCached(key, crews);
+  return crews;
+}
+
+export function invalidateUserCrews(uid: string): void {
+  invalidate(`crews-${uid}`);
+}
+
+export async function getCrewSummary(crewId: string, date: string): Promise<CrewDaySummary | null> {
+  const snap = await getDoc(doc(db(), 'crews', crewId, 'summaries', date));
+  return snap.exists() ? (snap.data() as CrewDaySummary) : null;
+}
+
+export async function createCrew(
+  crew: Omit<Crew, 'id' | 'createdAt'>,
+  creatorUid: string
+): Promise<string> {
+  const joinCode = generateJoinCode();
+  const ref = doc(collection(db(), 'crews'));
+  await setDoc(ref, { ...crew, id: ref.id, joinCode, createdAt: serverTimestamp() });
+  await setDoc(doc(db(), 'users', creatorUid), { crews: arrayUnion(ref.id) }, { merge: true });
+  invalidate(`crews-${creatorUid}`);
+  invalidate(`profile-${creatorUid}`);
+  return ref.id;
+}
+
+export async function updateCrewName(crewId: string, name: string): Promise<void> {
+  await setDoc(doc(db(), 'crews', crewId), { name }, { merge: true });
+  invalidate(`crew-${crewId}`);
+}
+
+export async function updateCrewIcon(crewId: string, icon: string): Promise<void> {
+  await setDoc(doc(db(), 'crews', crewId), { icon }, { merge: true });
+  invalidate(`crew-${crewId}`);
+}
+
+export async function updateCrewActiveTasks(
+  crewId: string,
+  activeTasks: Crew['activeTasks']
+): Promise<void> {
+  await setDoc(doc(db(), 'crews', crewId), { activeTasks }, { merge: true });
+  invalidate(`crew-${crewId}`);
+}
+
+export async function addCrewCustomTask(crewId: string, task: CrewTask): Promise<void> {
+  const crew = await getCrewById(crewId);
+  if (!crew) throw new Error('Crew not found');
+  const updated = [...crew.customCrewTasks, task];
+  await setDoc(doc(db(), 'crews', crewId), { customCrewTasks: updated }, { merge: true });
+  invalidate(`crew-${crewId}`);
+}
+
+export async function removeCrewCustomTask(crewId: string, taskId: string): Promise<void> {
+  const crew = await getCrewById(crewId);
+  if (!crew) throw new Error('Crew not found');
+  const updated = crew.customCrewTasks.filter((t) => t.id !== taskId);
+  await setDoc(doc(db(), 'crews', crewId), { customCrewTasks: updated }, { merge: true });
+  invalidate(`crew-${crewId}`);
+}
+
+export async function promoteToAdmin(crewId: string, targetUid: string): Promise<void> {
+  await setDoc(doc(db(), 'crews', crewId), { admins: arrayUnion(targetUid) }, { merge: true });
+  invalidate(`crew-${crewId}`);
+}
+
+export async function demoteFromAdmin(crewId: string, targetUid: string): Promise<void> {
+  await setDoc(doc(db(), 'crews', crewId), { admins: arrayRemove(targetUid) }, { merge: true });
+  invalidate(`crew-${crewId}`);
+}
+
+export function subscribeToCrewById(
+  crewId: string,
+  onChange: (crew: Crew) => void
+): () => void {
+  return onSnapshot(doc(db(), 'crews', crewId), (snap) => {
+    if (!snap.exists()) return;
+    const crew = snap.data() as Crew;
+    setCached(`crew-${crewId}`, crew);
+    onChange(crew);
+  }, (err) => {
+    if (err.code !== 'permission-denied') console.error(err);
+  });
 }
