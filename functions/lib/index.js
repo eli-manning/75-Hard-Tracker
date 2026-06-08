@@ -242,9 +242,11 @@ exports.triggerCrewEvaluation = (0, https_1.onCall)({ region: REGION }, async (r
     const { crewId, date } = request.data;
     if (!crewId || !date)
         throw new https_1.HttpsError('invalid-argument', 'crewId and date are required');
-    const today = new Date().toISOString().slice(0, 10);
-    if (date !== today)
-        throw new https_1.HttpsError('invalid-argument', 'Can only evaluate today');
+    // Accept any YYYY-MM-DD date string — the idempotency guard in evaluateCrewCompletion
+    // (lastSummaryDate) already prevents duplicate processing.
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        throw new https_1.HttpsError('invalid-argument', 'date must be YYYY-MM-DD');
+    }
     await evaluateCrewCompletion(crewId, date);
     return { ok: true };
 });

@@ -143,7 +143,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
       const wasComplete = prevCrewCompletedRef.current.get(crew.id) ?? false;
       prevCrewCompletedRef.current.set(crew.id, nowComplete);
       if (!wasComplete && nowComplete) {
-        fn({ crewId: crew.id, date: todayStr }).catch(() => {});
+        fn({ crewId: crew.id, date: todayStr }).catch(console.error);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

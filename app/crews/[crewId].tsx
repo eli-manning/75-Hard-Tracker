@@ -154,6 +154,32 @@ export default function CrewDetailPage() {
     if (crew?.members.length) fetchMemberDayEntries(crew.members);
   }, [user?.uid, crew?.members.join(',')]));
 
+  // When the crew page is loaded and all members are done, fire evaluation as a catch-all.
+  // The Cloud Function's idempotency guard (lastSummaryDate) prevents duplicate summaries.
+  useEffect(() => {
+    if (!crew || !user?.uid || !crew.members.includes(user.uid)) return;
+    const today = format(new Date(), 'yyyy-MM-dd');
+    if (crew.lastSummaryDate === today) return; // already processed
+
+    const activeTasks = crew.activeTasks ?? {};
+    const allDone = crew.members.every((uid) => {
+      const entry = memberDayEntries[uid];
+      if (!entry) return false;
+      const coreOk = Object.entries(activeTasks).every(
+        ([key, required]) => !required || !!(entry as Record<string, unknown>)[TASK_ENTRY_FIELD[key]]
+      );
+      const customOk = (crew.customCrewTasks ?? []).every((t) => (entry.crewTasksCompleted ?? []).includes(t.id));
+      return coreOk && customOk;
+    });
+
+    if (!allDone) return;
+
+    httpsCallable(getFunctions(undefined, 'us-west2'), 'triggerCrewEvaluation')({
+      crewId: crew.id,
+      date: today,
+    }).catch(console.error);
+  }, [crew?.lastSummaryDate, memberDayEntries, crew?.members.join(',')]);
+
   async function callFn(name: string, data: object) {
     return httpsCallable(getFunctions(undefined, 'us-west2'), name)(data);
   }
