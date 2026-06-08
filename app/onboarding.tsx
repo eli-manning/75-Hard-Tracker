@@ -234,7 +234,7 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
   const insets = useSafeAreaInsets();
 
   const [mode, setMode] = useState<'75hard' | 'general'>('general');
-  const [startDate, setStartDate] = useState(initialProfile.challengeStartDate ?? format(new Date(), 'yyyy-MM-dd'));
+  const [startDate, setStartDate] = useState(initialProfile.challengeStartDate ?? format(new Date(), 'yyyy-MM-dd') as string);
   const [weightUnit, setWeightUnit] = useState<'lbs' | 'kg'>(initialProfile.weightUnit ?? 'lbs');
   const [startingWeight, setStartingWeight] = useState(initialProfile.startingWeight ? String(initialProfile.startingWeight) : '');
   const [fitnessGoal, setFitnessGoal] = useState<string>(initialProfile.fitnessGoal ?? '');
@@ -263,6 +263,22 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
       await updateUserProfile(profile.uid, { challengeStartDate: startDate, challengeMode: mode });
       invalidate(`profile-${profile.uid}`);
       const updated = { ...profile, challengeStartDate: startDate, challengeMode: mode };
+      setProfile(updated);
+      setSessionCached('crewday-profile', updated);
+      setStep(4);
+    } catch {
+      // write failed; user can retry
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleStep2NextGeneral() {
+    setSaving(true);
+    try {
+      await updateUserProfile(profile.uid, { challengeStartDate: null, challengeMode: 'general' });
+      invalidate(`profile-${profile.uid}`);
+      const updated = { ...profile, challengeStartDate: null, challengeMode: 'general' as const };
       setProfile(updated);
       setSessionCached('crewday-profile', updated);
       setStep(4);
@@ -377,8 +393,12 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
         <TouchableOpacity onPress={() => setStep(1)} style={[styles.secondaryBtn, styles.backBtn]}>
           <Text style={styles.secondaryBtnText}>BACK</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setStep(3)} style={[styles.primaryBtn, { flex: 1 }]}>
-          <Text style={styles.primaryBtnText}>NEXT →</Text>
+        <TouchableOpacity
+          onPress={mode === 'general' ? handleStep2NextGeneral : () => setStep(3)}
+          disabled={saving}
+          style={[styles.primaryBtn, { flex: 1 }, saving && { opacity: 0.5 }]}
+        >
+          <Text style={styles.primaryBtnText}>{saving ? 'SAVING...' : 'NEXT →'}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -418,7 +438,7 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
         <ProgressDots />
         <Text style={styles.stepTitle}>FITNESS PROFILE</Text>
         <View style={styles.card}>
-          <Text style={styles.helperText}>Optional — helps track your progress throughout the challenge.</Text>
+          <Text style={styles.helperText}>Optional — helps track your progress.</Text>
 
           <View style={styles.field}>
             <Text style={styles.fieldLabel}>WEIGHT UNIT</Text>
@@ -463,7 +483,7 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
           </View>
 
           <View style={styles.btnRow}>
-            <TouchableOpacity onPress={() => setStep(3)} style={[styles.secondaryBtn, styles.backBtn]}>
+            <TouchableOpacity onPress={() => setStep(mode === 'general' ? 2 : 3)} style={[styles.secondaryBtn, styles.backBtn]}>
               <Text style={styles.secondaryBtnText}>BACK</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -492,7 +512,7 @@ function OnboardingInner({ profile: initialProfile }: { profile: UserProfile }) 
 
         <View style={styles.reviewRows}>
           {[
-            { label: 'START DATE', value: profile.challengeStartDate },
+            ...(profile.challengeStartDate ? [{ label: 'START DATE', value: profile.challengeStartDate }] : []),
             { label: 'WEIGHT UNIT', value: (profile.weightUnit ?? 'lbs').toUpperCase() },
             ...(profile.startingWeight ? [{ label: 'STARTING WEIGHT', value: `${profile.startingWeight} ${profile.weightUnit ?? 'lbs'}` }] : []),
             ...(profile.fitnessGoal ? [{ label: 'GOAL', value: profile.fitnessGoal.replace('_', ' ').toUpperCase() }] : []),
