@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal } from 'react-native';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { format, differenceInDays, parseISO, subDays } from 'date-fns';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
@@ -49,6 +49,92 @@ function DaySkeleton({ profile }: { profile: UserProfile }) {
   );
 }
 
+function CrewTaskCard({
+  task, completed, readOnly, progress,
+  onToggle, onSetProgress, onResetProgress,
+}: {
+  task: import('../../lib/types').CrewTask;
+  completed: boolean;
+  readOnly: boolean;
+  progress: number;
+  onToggle: () => void;
+  onSetProgress: (n: number) => void;
+  onResetProgress: () => void;
+}) {
+  const [input, setInput] = useState('');
+  const [inputError, setInputError] = useState(false);
+  const isGoal = task.amount != null;
+  const goalAmount = task.amount ?? 0;
+  const unitLabel = task.unit ? ` ${task.unit}` : '';
+  const fillPct = isGoal && goalAmount > 0 ? Math.min(100, (progress / goalAmount) * 100) : 0;
+
+  function handleSet() {
+    const n = parseInt(input, 10);
+    if (isNaN(n) || n < 0) { setInputError(true); return; }
+    setInputError(false);
+    setInput('');
+    onSetProgress(n);
+  }
+
+  const inner = (
+    <View style={[styles.crewTaskCard, completed && styles.crewTaskCardDone]}>
+      <View style={[styles.crewCheckbox, completed && styles.crewCheckboxDone]}>
+        {completed && (
+          <Svg width={12} height={10} viewBox="0 0 12 10" fill="none">
+            <Path d="M1 5l3 3 7-7" stroke={colors.bg} strokeWidth={2.5} strokeLinecap="square" />
+          </Svg>
+        )}
+      </View>
+      <View style={styles.crewTaskBody}>
+        <Text style={[styles.crewTaskLabel, completed && styles.crewTaskLabelDone]} numberOfLines={2}>
+          {task.label}
+        </Text>
+        {isGoal && (
+          <View style={styles.crewGoalArea}>
+            <View style={styles.crewBarRow}>
+              <View style={styles.crewBarTrack}>
+                <View style={[styles.crewBarFill, { width: `${fillPct}%` as any }, completed ? styles.crewBarFillDone : styles.crewBarFillAccent]} />
+              </View>
+              <Text style={[styles.crewProgressLabel, completed && styles.crewProgressLabelDone]}>
+                {progress}/{goalAmount}{unitLabel}
+              </Text>
+            </View>
+            {!readOnly && (
+              <View style={styles.crewSetRow}>
+                <TextInput
+                  value={input}
+                  onChangeText={(t) => { setInput(t.replace(/[^0-9]/g, '')); setInputError(false); }}
+                  keyboardType="number-pad"
+                  placeholder="0"
+                  placeholderTextColor={colors.textMuted}
+                  style={[styles.crewGoalInput, inputError && styles.crewGoalInputError]}
+                  maxLength={6}
+                  onSubmitEditing={handleSet}
+                />
+                <TouchableOpacity onPress={handleSet} style={styles.crewSetBtn}>
+                  <Text style={styles.crewSetBtnText}>SET</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={onResetProgress} style={styles.crewResetBtn}>
+                  <Text style={styles.crewResetBtnText}>RESET</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            {inputError && <Text style={styles.crewGoalErrorText}>ENTER A VALID NUMBER</Text>}
+          </View>
+        )}
+        {!isGoal && task.unit != null && (
+          <View style={styles.crewAmountBadge}>
+            <Text style={styles.crewAmountText}>{task.amount}{task.unit ? ` ${task.unit.toUpperCase()}` : ''}</Text>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+
+  if (readOnly || isGoal) return inner;
+  return <TouchableOpacity activeOpacity={0.85} onPress={onToggle}>{inner}</TouchableOpacity>;
+}
+
 function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile; onProfileUpdate: (p: UserProfile) => void }) {
   const { crews } = useUserCrews(currentUser.uid);
   const { users: allUsers } = useAllUsers();
@@ -76,6 +162,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
   const [menuOpen, setMenuOpen] = useState(false);
   const [pendingRequestCount, setPendingRequestCount] = useState(0);
   const [coreOpen, setCoreOpen] = useState(true);
+  const [crewOpen, setCrewOpen] = useState(true);
   const [nudgedTasks, setNudgedTasks] = useState<Set<string>>(new Set());
   const [pendingNudge, setPendingNudge] = useState<{ taskKey: string; message: string } | null>(null);
   const [showSummary, setShowSummary] = useState(false);
@@ -543,8 +630,11 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
 
             {!readOnly && dayEntry && crews.some((c) => c.customCrewTasks.length > 0) && (
               <View style={styles.crewTasksSection}>
-                <Text style={styles.sectionLabel}>CREW TASKS</Text>
-                {crews.filter((c) => c.customCrewTasks.length > 0).map((crew) => (
+                <TouchableOpacity onPress={() => setCrewOpen((o) => !o)} style={[styles.sectionToggle, { marginBottom: 0 }]}>
+                  <Ionicons name={crewOpen ? 'chevron-down' : 'chevron-forward'} size={12} color={colors.text} />
+                  <Text style={styles.sectionLabel}>CREW TASKS</Text>
+                </TouchableOpacity>
+                {crewOpen && <View style={styles.crewTaskGroups}>{crews.filter((c) => c.customCrewTasks.length > 0).map((crew) => (
                   <View key={crew.id} style={styles.crewTaskGroup}>
                     <View style={styles.crewTaskGroupHeader}>
                       <Ionicons name={getCrewIconIon(crew.icon) as any} size={12} color={colors.textMuted} />
@@ -553,43 +643,38 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
                     <View style={styles.crewTaskList}>
                       {crew.customCrewTasks.map((task) => {
                         const completed = (dayEntry.crewTasksCompleted ?? []).includes(task.id);
+                        const progress = dayEntry.customTaskProgress?.[task.id] ?? 0;
                         return (
-                          <TouchableOpacity
+                          <CrewTaskCard
                             key={task.id}
-                            activeOpacity={0.85}
-                            onPress={() => {
+                            task={task}
+                            completed={completed}
+                            readOnly={readOnly}
+                            progress={progress}
+                            onToggle={() => {
                               const current = dayEntry.crewTasksCompleted ?? [];
-                              const updated = completed
-                                ? current.filter((id) => id !== task.id)
-                                : [...current, task.id];
-                              wrappedUpdate({ crewTasksCompleted: updated });
+                              wrappedUpdate({ crewTasksCompleted: completed ? current.filter((id) => id !== task.id) : [...current, task.id] });
                             }}
-                          >
-                            <View style={[styles.crewTaskCard, completed && styles.crewTaskCardDone]}>
-                              <View style={[styles.crewCheckbox, completed && styles.crewCheckboxDone]}>
-                                {completed && (
-                                  <Svg width={12} height={10} viewBox="0 0 12 10" fill="none">
-                                    <Path d="M1 5l3 3 7-7" stroke={colors.bg} strokeWidth={2.5} strokeLinecap="square" />
-                                  </Svg>
-                                )}
-                              </View>
-                              <Text style={[styles.crewTaskLabel, completed && styles.crewTaskLabelDone]} numberOfLines={2}>
-                                {task.label}
-                              </Text>
-                              {task.amount != null && (
-                                <View style={styles.crewAmountBadge}>
-                                  <Text style={styles.crewAmountText}>
-                                    {task.amount}{task.unit ? ` ${task.unit.toUpperCase()}` : ''}
-                                  </Text>
-                                </View>
-                              )}
-                            </View>
-                          </TouchableOpacity>
+                            onSetProgress={(n) => {
+                              const goalAmount = task.amount!;
+                              const newProgress = { ...(dayEntry.customTaskProgress ?? {}), [task.id]: n };
+                              const current = dayEntry.crewTasksCompleted ?? [];
+                              const newCompleted = n >= goalAmount
+                                ? current.includes(task.id) ? current : [...current, task.id]
+                                : current.filter((id) => id !== task.id);
+                              wrappedUpdate({ customTaskProgress: newProgress, crewTasksCompleted: newCompleted });
+                            }}
+                            onResetProgress={() => {
+                              const newProgress = { ...(dayEntry.customTaskProgress ?? {}), [task.id]: 0 };
+                              const newCompleted = (dayEntry.crewTasksCompleted ?? []).filter((id) => id !== task.id);
+                              wrappedUpdate({ customTaskProgress: newProgress, crewTasksCompleted: newCompleted });
+                            }}
+                          />
                         );
                       })}
                     </View>
                   </View>
-                ))}
+                ))}</View>}
               </View>
             )}
           </View>
@@ -715,7 +800,7 @@ const styles = StyleSheet.create({
   viewingBannerText: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
   nudgeQuotaText: { fontFamily: fonts.pixel, fontSize: 5, color: colors.textMuted, marginTop: 2, opacity: 0.7 },
   spendBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', padding: 32 },
-  spendCard: { backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.accent, padding: 24, gap: 16, width: '100%' },
+  spendCard: { backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.accent, padding: 24, gap: 16, width: '100%', maxWidth: 416 },
   spendTitle: { fontFamily: fonts.pixel, fontSize: 9, color: colors.accent },
   spendBody: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted, lineHeight: 12 },
   spendBtns: { flexDirection: 'row', gap: 8 },
@@ -787,16 +872,44 @@ const styles = StyleSheet.create({
   },
 
   // Crew tasks
-  crewTasksSection: { gap: 16 },
+  crewTasksSection: { gap: 0 },
+  crewTaskGroups: { gap: 16, marginTop: 10 },
   crewTaskGroup: { gap: 8 },
   crewTaskGroupHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   crewTaskGroupName: { fontFamily: fonts.pixel, fontSize: 8, color: colors.textMuted },
   crewTaskList: { gap: 4 },
   crewTaskCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
+    flexDirection: 'row', alignItems: 'flex-start', gap: 12,
     padding: 12, borderWidth: 2, borderColor: colors.border,
     backgroundColor: colors.surface,
   },
+  crewTaskBody: { flex: 1, minWidth: 0, gap: 6 },
+  crewGoalArea: { gap: 6 },
+  crewBarRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  crewBarTrack: { flex: 1, height: 10, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.bg },
+  crewBarFill: { height: '100%' },
+  crewBarFillAccent: { backgroundColor: colors.accent },
+  crewBarFillDone: { backgroundColor: colors.green },
+  crewProgressLabel: { fontFamily: fonts.pixel, fontSize: 5, color: colors.textMuted, minWidth: 40, textAlign: 'right' },
+  crewProgressLabelDone: { color: colors.green },
+  crewSetRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  crewGoalInput: {
+    width: 56, fontFamily: fonts.pixel, fontSize: 7,
+    borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surface2,
+    color: colors.text, paddingHorizontal: 6, paddingVertical: 3,
+  },
+  crewGoalInputError: { borderColor: colors.red },
+  crewSetBtn: {
+    paddingHorizontal: 8, paddingVertical: 4, borderWidth: 2,
+    borderColor: colors.accent, backgroundColor: colors.accentLight,
+  },
+  crewSetBtnText: { fontFamily: fonts.pixel, fontSize: 5, color: colors.accent },
+  crewResetBtn: {
+    paddingHorizontal: 8, paddingVertical: 4, borderWidth: 2,
+    borderColor: colors.border, backgroundColor: colors.surface2,
+  },
+  crewResetBtnText: { fontFamily: fonts.pixel, fontSize: 5, color: colors.textMuted },
+  crewGoalErrorText: { fontFamily: fonts.pixel, fontSize: 5, color: colors.red },
   crewTaskCardDone: {
     borderColor: colors.green, backgroundColor: colors.greenLight,
     shadowColor: colors.green, shadowOffset: { width: 0, height: 0 },
@@ -813,7 +926,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.6, shadowRadius: 8,
   },
   crewTaskLabel: {
-    flex: 1, fontFamily: fonts.vt323, fontSize: 20, color: colors.text, letterSpacing: 0.4,
+    fontFamily: fonts.vt323, fontSize: 20, color: colors.text, letterSpacing: 0.4,
   },
   crewTaskLabelDone: {
     color: colors.green, opacity: 0.7, textDecorationLine: 'line-through',
