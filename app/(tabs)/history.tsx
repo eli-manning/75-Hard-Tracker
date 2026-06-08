@@ -299,9 +299,10 @@ function InsightsDashboard({ history, viewProfile }: { history: DayEntry[]; view
 
   const totalWaterOz = sorted.reduce((s, e) => s + (e.waterOzLogged || 0), 0);
   const totalPages = sorted.reduce((s, e) => s + (e.pagesRead || 0), 0);
-  const totalWorkoutMins = sorted.reduce((s, e) => s + (e.workoutOneDuration || 0) + (e.workoutTwoCompleted ? (e.workoutTwoDuration || 0) : 0), 0);
-  const avgWorkoutMins = sorted.filter((e) => e.workoutOneCompleted).length > 0
-    ? Math.round(sorted.reduce((s, e) => s + (e.workoutOneDuration || 0), 0) / sorted.filter((e) => e.workoutOneCompleted).length)
+  const totalWorkoutMins = sorted.reduce((s, e) => s + (e.workoutOneCompleted ? (e.workoutOneDuration || 0) : 0) + (e.workoutTwoCompleted ? (e.workoutTwoDuration || 0) : 0), 0);
+  const w1CompletedDays = sorted.filter((e) => e.workoutOneCompleted);
+  const avgWorkoutMins = w1CompletedDays.length > 0
+    ? Math.round(w1CompletedDays.reduce((s, e) => s + (e.workoutOneDuration || 0), 0) / w1CompletedDays.length)
     : 0;
 
   const summaryStats = [
