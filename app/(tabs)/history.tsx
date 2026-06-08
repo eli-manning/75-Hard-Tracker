@@ -14,41 +14,44 @@ import { getDayHistory, getUserProfile } from '../../lib/firestore';
 import { computeStreakFromHistory } from '../../lib/points';
 import { DayEntry, UserProfile } from '../../lib/types';
 import { getSessionCached } from '../../lib/cache';
-import { colors, fonts } from '../../lib/theme';
+import { fonts } from '../../lib/theme';
+import { useTheme } from '../../context/ThemeContext';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { useHideNavWhileLoading } from '../../context/NavVisibilityContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const SCREEN_W = Dimensions.get('window').width;
-const CHART_W = SCREEN_W - 64; // accounting for padding + card border
+const CHART_W = SCREEN_W - 64;
 const CHART_H = 160;
 
-function tileColor(entry: DayEntry | undefined, date: Date, startDate: string | null): string {
-  if (isFuture(date) && !isToday(date)) return colors.surface;
-  if (isToday(date) && (!entry || !entry.allCoreCompleted)) return colors.accentLight;
-  if (!entry && (!startDate || format(date, 'yyyy-MM-dd') <= startDate)) return colors.surface;
-  if (!entry) return colors.redLight;
-  if (entry.allCoreCompleted) return colors.greenLight;
+type Theme = ReturnType<typeof useTheme>['theme'];
+
+function tileColor(entry: DayEntry | undefined, date: Date, startDate: string | null, theme: Theme): string {
+  if (isFuture(date) && !isToday(date)) return theme.surface;
+  if (isToday(date) && (!entry || !entry.allCoreCompleted)) return theme.accentLight;
+  if (!entry && (!startDate || format(date, 'yyyy-MM-dd') <= startDate)) return theme.surface;
+  if (!entry) return theme.redLight;
+  if (entry.allCoreCompleted) return theme.greenLight;
   const done = [
     entry.workoutOneCompleted, entry.workoutTwoCompleted && entry.workoutTwoOutdoor,
     entry.dietCompleted, entry.waterCompleted, entry.readingCompleted, entry.photoCompleted,
   ].filter(Boolean).length;
-  if (done === 0) return isToday(date) ? colors.accentLight : colors.redLight;
-  return colors.yellowLight;
+  if (done === 0) return isToday(date) ? theme.accentLight : theme.redLight;
+  return theme.yellowLight;
 }
 
-function tileBorder(entry: DayEntry | undefined, date: Date, startDate: string | null): string {
-  if (isFuture(date) && !isToday(date)) return colors.border;
-  if (isToday(date) && (!entry || !entry.allCoreCompleted)) return colors.accent;
-  if (!entry && (!startDate || format(date, 'yyyy-MM-dd') <= startDate)) return colors.border;
-  if (!entry) return colors.red;
-  if (entry.allCoreCompleted) return colors.green;
+function tileBorder(entry: DayEntry | undefined, date: Date, startDate: string | null, theme: Theme): string {
+  if (isFuture(date) && !isToday(date)) return theme.border;
+  if (isToday(date) && (!entry || !entry.allCoreCompleted)) return theme.accent;
+  if (!entry && (!startDate || format(date, 'yyyy-MM-dd') <= startDate)) return theme.border;
+  if (!entry) return theme.red;
+  if (entry.allCoreCompleted) return theme.green;
   const done = [
     entry.workoutOneCompleted, entry.workoutTwoCompleted && entry.workoutTwoOutdoor,
     entry.dietCompleted, entry.waterCompleted, entry.readingCompleted, entry.photoCompleted,
   ].filter(Boolean).length;
-  if (done === 0) return isToday(date) ? colors.accent : colors.red;
-  return colors.yellow;
+  if (done === 0) return isToday(date) ? theme.accent : theme.red;
+  return theme.yellowLight;
 }
 
 // ── Simple SVG bar chart ───────────────────────────────────────────────────────
@@ -63,6 +66,7 @@ function BarChart({
   goalBorderColor?: string;
   label?: string;
 }) {
+  const { theme } = useTheme();
   if (data.length === 0) return null;
   const maxY = Math.max(...data.map((d) => d.y), goalY ?? 0, 1);
   const barW = Math.max(2, (CHART_W - 30) / data.length - 2);
@@ -72,41 +76,23 @@ function BarChart({
 
   return (
     <Svg width={CHART_W} height={CHART_H}>
-      {/* Grid lines */}
       {[0.25, 0.5, 0.75, 1].map((f) => (
         <Line
           key={f}
-          x1={padLeft}
-          y1={chartH * (1 - f)}
-          x2={CHART_W}
-          y2={chartH * (1 - f)}
-          stroke="rgba(26,32,48,0.18)"
-          strokeWidth={1}
-          strokeDasharray="3,3"
+          x1={padLeft} y1={chartH * (1 - f)}
+          x2={CHART_W} y2={chartH * (1 - f)}
+          stroke="rgba(26,32,48,0.18)" strokeWidth={1} strokeDasharray="3,3"
         />
       ))}
-      {/* X-axis baseline */}
       <Line x1={padLeft} y1={chartH} x2={CHART_W} y2={chartH} stroke="rgba(26,32,48,0.35)" strokeWidth={1} />
-      {/* Y axis labels */}
-      <SvgText x={padLeft - 4} y={chartH} fill={colors.textMuted} fontSize={8} textAnchor="end" fontFamily="Inter">0</SvgText>
-      <SvgText x={padLeft - 4} y={chartH * 0.5} fill={colors.textMuted} fontSize={8} textAnchor="end" fontFamily="Inter">{Math.round(maxY / 2)}</SvgText>
-      <SvgText x={padLeft - 4} y={8} fill={colors.textMuted} fontSize={8} textAnchor="end" fontFamily="Inter">{Math.round(maxY)}</SvgText>
-      {/* Bars */}
+      <SvgText x={padLeft - 4} y={chartH} fill={theme.textMuted} fontSize={8} textAnchor="end" fontFamily="Inter">0</SvgText>
+      <SvgText x={padLeft - 4} y={chartH * 0.5} fill={theme.textMuted} fontSize={8} textAnchor="end" fontFamily="Inter">{Math.round(maxY / 2)}</SvgText>
+      <SvgText x={padLeft - 4} y={8} fill={theme.textMuted} fontSize={8} textAnchor="end" fontFamily="Inter">{Math.round(maxY)}</SvgText>
       {data.map((d, i) => {
         const x = padLeft + i * ((CHART_W - padLeft) / data.length) + 1;
         const h = Math.max(1, (d.y / maxY) * chartH);
-        return (
-          <Rect
-            key={i}
-            x={x}
-            y={chartH - h}
-            width={barW}
-            height={h}
-            fill={color}
-          />
-        );
+        return <Rect key={i} x={x} y={chartH - h} width={barW} height={h} fill={color} />;
       })}
-      {/* Goal line (optional border stroke behind for contrast) */}
       {goalY !== undefined && goalBorderColor && (
         <Line
           x1={padLeft} y1={chartH - (goalY / maxY) * chartH}
@@ -116,20 +102,15 @@ function BarChart({
       )}
       {goalY !== undefined && (
         <Line
-          x1={padLeft}
-          y1={chartH - (goalY / maxY) * chartH}
-          x2={CHART_W}
-          y2={chartH - (goalY / maxY) * chartH}
-          stroke={goalColor ?? colors.green}
-          strokeWidth={1.5}
-          strokeDasharray="4,4"
+          x1={padLeft} y1={chartH - (goalY / maxY) * chartH}
+          x2={CHART_W} y2={chartH - (goalY / maxY) * chartH}
+          stroke={goalColor ?? theme.green} strokeWidth={1.5} strokeDasharray="4,4"
         />
       )}
-      {/* X axis labels (first and last) */}
       {data.length > 0 && (
         <>
-          <SvgText x={padLeft + 2} y={CHART_H} fill={colors.textMuted} fontSize={8} fontFamily="Inter">{data[0].x}</SvgText>
-          <SvgText x={CHART_W - 4} y={CHART_H} fill={colors.textMuted} fontSize={8} textAnchor="end" fontFamily="Inter">{data[data.length - 1].x}</SvgText>
+          <SvgText x={padLeft + 2} y={CHART_H} fill={theme.textMuted} fontSize={8} fontFamily="Inter">{data[0].x}</SvgText>
+          <SvgText x={CHART_W - 4} y={CHART_H} fill={theme.textMuted} fontSize={8} textAnchor="end" fontFamily="Inter">{data[data.length - 1].x}</SvgText>
         </>
       )}
     </Svg>
@@ -143,6 +124,7 @@ function LineChartSvg({
   goalY?: number;
   goalColor?: string;
 }) {
+  const { theme } = useTheme();
   const allValues = datasets.flatMap((ds) => ds.data.map((d) => d.y));
   if (allValues.length === 0) return null;
   const maxY = Math.max(...allValues, goalY ?? 0, 1);
@@ -169,13 +151,13 @@ function LineChartSvg({
         <Line key={f} x1={padLeft} y1={chartH * (1 - f)} x2={CHART_W} y2={chartH * (1 - f)} stroke="rgba(26,32,48,0.18)" strokeWidth={1} strokeDasharray="3,3" />
       ))}
       <Line x1={padLeft} y1={chartH} x2={CHART_W} y2={chartH} stroke="rgba(26,32,48,0.35)" strokeWidth={1} />
-      <SvgText x={padLeft - 4} y={chartH} fill={colors.textMuted} fontSize={8} textAnchor="end" fontFamily="Inter">{Math.round(minY)}</SvgText>
-      <SvgText x={padLeft - 4} y={8} fill={colors.textMuted} fontSize={8} textAnchor="end" fontFamily="Inter">{Math.round(maxY)}</SvgText>
+      <SvgText x={padLeft - 4} y={chartH} fill={theme.textMuted} fontSize={8} textAnchor="end" fontFamily="Inter">{Math.round(minY)}</SvgText>
+      <SvgText x={padLeft - 4} y={8} fill={theme.textMuted} fontSize={8} textAnchor="end" fontFamily="Inter">{Math.round(maxY)}</SvgText>
       {goalY !== undefined && (
         <Line
           x1={padLeft} y1={chartH - ((goalY - minY) / range) * chartH}
           x2={CHART_W} y2={chartH - ((goalY - minY) / range) * chartH}
-          stroke={goalColor ?? colors.green} strokeWidth={1.5} strokeDasharray="4,4"
+          stroke={goalColor ?? theme.green} strokeWidth={1.5} strokeDasharray="4,4"
         />
       )}
       {datasets.map((ds, di) => (
@@ -188,11 +170,10 @@ function LineChartSvg({
           strokeDasharray={ds.dashed ? '4,2' : undefined}
         />
       ))}
-      {/* X labels */}
       {datasets[0]?.data.length > 0 && (
         <>
-          <SvgText x={padLeft + 2} y={CHART_H} fill={colors.textMuted} fontSize={8} fontFamily="Inter">{datasets[0].data[0].x}</SvgText>
-          <SvgText x={CHART_W - 4} y={CHART_H} fill={colors.textMuted} fontSize={8} textAnchor="end" fontFamily="Inter">{datasets[0].data[datasets[0].data.length - 1].x}</SvgText>
+          <SvgText x={padLeft + 2} y={CHART_H} fill={theme.textMuted} fontSize={8} fontFamily="Inter">{datasets[0].data[0].x}</SvgText>
+          <SvgText x={CHART_W - 4} y={CHART_H} fill={theme.textMuted} fontSize={8} textAnchor="end" fontFamily="Inter">{datasets[0].data[datasets[0].data.length - 1].x}</SvgText>
         </>
       )}
     </Svg>
@@ -200,6 +181,7 @@ function LineChartSvg({
 }
 
 function StackedBarChart({ data }: { data: { x: string; w1: number; w2: number }[] }) {
+  const { theme } = useTheme();
   if (data.length === 0) return null;
   const maxY = Math.max(...data.map((d) => d.w1 + d.w2), 1);
   const barW = Math.max(2, (CHART_W - 30) / data.length - 2);
@@ -220,16 +202,16 @@ function StackedBarChart({ data }: { data: { x: string; w1: number; w2: number }
         return (
           <Fragment key={i}>
             <Rect x={x} y={chartH - h1 - h2} width={barW} height={h1} fill="#7a8898" />
-            <Rect x={x} y={chartH - h2} width={barW} height={h2} fill={colors.green} />
+            <Rect x={x} y={chartH - h2} width={barW} height={h2} fill={theme.green} />
           </Fragment>
         );
       })}
-      <SvgText x={padLeft - 4} y={chartH} fill={colors.textMuted} fontSize={8} textAnchor="end" fontFamily="Inter">0</SvgText>
-      <SvgText x={padLeft - 4} y={8} fill={colors.textMuted} fontSize={8} textAnchor="end" fontFamily="Inter">{Math.round(maxY)}</SvgText>
+      <SvgText x={padLeft - 4} y={chartH} fill={theme.textMuted} fontSize={8} textAnchor="end" fontFamily="Inter">0</SvgText>
+      <SvgText x={padLeft - 4} y={8} fill={theme.textMuted} fontSize={8} textAnchor="end" fontFamily="Inter">{Math.round(maxY)}</SvgText>
       {data.length > 0 && (
         <>
-          <SvgText x={padLeft + 2} y={CHART_H} fill={colors.textMuted} fontSize={8} fontFamily="Inter">{data[0].x}</SvgText>
-          <SvgText x={CHART_W - 4} y={CHART_H} fill={colors.textMuted} fontSize={8} textAnchor="end" fontFamily="Inter">{data[data.length - 1].x}</SvgText>
+          <SvgText x={padLeft + 2} y={CHART_H} fill={theme.textMuted} fontSize={8} fontFamily="Inter">{data[0].x}</SvgText>
+          <SvgText x={CHART_W - 4} y={CHART_H} fill={theme.textMuted} fontSize={8} textAnchor="end" fontFamily="Inter">{data[data.length - 1].x}</SvgText>
         </>
       )}
     </Svg>
@@ -239,9 +221,10 @@ function StackedBarChart({ data }: { data: { x: string; w1: number; w2: number }
 // ── Chart card wrapper ─────────────────────────────────────────────────────────
 
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
+  const { theme } = useTheme();
   return (
-    <View style={styles.chartCard}>
-      <Text style={styles.chartTitle}>{title}</Text>
+    <View style={[styles.chartCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+      <Text style={[styles.chartTitle, { color: theme.textMuted }]}>{title}</Text>
       {children}
     </View>
   );
@@ -250,6 +233,7 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
 // ── Insights dashboard ─────────────────────────────────────────────────────────
 
 function InsightsDashboard({ history, viewProfile }: { history: DayEntry[]; viewProfile: UserProfile | undefined }) {
+  const { theme } = useTheme();
   const today = format(new Date(), 'yyyy-MM-dd');
   const pastHistory = useMemo(
     () => history.filter((e) => !isFuture(parseISO(e.date)) && e.date !== today),
@@ -309,7 +293,7 @@ function InsightsDashboard({ history, viewProfile }: { history: DayEntry[]; view
     { icon: 'water-outline' as const, label: 'TOTAL WATER', value: `${(totalWaterOz / 128).toFixed(1)}gal` },
     { icon: 'book-outline' as const, label: 'TOTAL PAGES', value: String(totalPages) },
     { icon: 'timer-outline' as const, label: 'WORKOUT MINS', value: String(totalWorkoutMins) },
-{ icon: 'barbell-outline' as const, label: 'AVG WORKOUT', value: `${avgWorkoutMins}min` },
+    { icon: 'barbell-outline' as const, label: 'AVG WORKOUT', value: `${avgWorkoutMins}min` },
   ];
 
   if (sorted.length === 0) return null;
@@ -319,38 +303,38 @@ function InsightsDashboard({ history, viewProfile }: { history: DayEntry[]; view
       {/* Challenge Progress */}
       <ChartCard title="CHALLENGE PROGRESS">
         <View style={styles.progressHeader}>
-          <Text style={styles.progressDay}>DAY {challengeDay} / 75</Text>
-          <Text style={styles.progressComplete}>{completedDays} COMPLETE</Text>
+          <Text style={[styles.progressDay, { color: theme.accent }]}>DAY {challengeDay} / 75</Text>
+          <Text style={[styles.progressComplete, { color: theme.textMuted }]}>{completedDays} COMPLETE</Text>
         </View>
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${challengePct}%` as any }]} />
+        <View style={[styles.progressTrack, { borderColor: theme.border, backgroundColor: theme.bg }]}>
+          <View style={[styles.progressFill, { width: `${challengePct}%` as any, backgroundColor: theme.accent, shadowColor: theme.accent }]} />
         </View>
         <View style={styles.progressFooter}>
-          <Text style={styles.progressLabel}>DAY 1</Text>
-          <Text style={[styles.progressLabel, { color: colors.accent }]}>{Math.round(challengePct)}%</Text>
-          <Text style={styles.progressLabel}>DAY 75</Text>
+          <Text style={[styles.progressLabel, { color: theme.textMuted }]}>DAY 1</Text>
+          <Text style={[styles.progressLabel, { color: theme.accent }]}>{Math.round(challengePct)}%</Text>
+          <Text style={[styles.progressLabel, { color: theme.textMuted }]}>DAY 75</Text>
         </View>
       </ChartCard>
 
       {/* Lifetime stats */}
       <View>
-        <Text style={styles.sectionHeader}>LIFETIME STATS</Text>
+        <Text style={[styles.sectionHeader, { color: theme.textMuted }]}>LIFETIME STATS</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={styles.statCards}>
             {summaryStats.map(({ icon, label, value }) => (
-              <View key={label} style={styles.statCard}>
-                <Ionicons name={icon} size={18} color={colors.textMuted} />
-                <Text style={styles.statValue}>{value}</Text>
-                <Text style={styles.statLabel}>{label}</Text>
+              <View key={label} style={[styles.statCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                <Ionicons name={icon} size={18} color={theme.textMuted} />
+                <Text style={[styles.statValue, { color: theme.accent }]}>{value}</Text>
+                <Text style={[styles.statLabel, { color: theme.textMuted }]}>{label}</Text>
               </View>
             ))}
             {weightChange != null && (
-              <View style={styles.statCard}>
-                <Ionicons name="scale-outline" size={18} color={colors.textMuted} />
-                <Text style={[styles.statValue, { color: weightChange <= 0 ? colors.green : colors.red }]}>
+              <View style={[styles.statCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                <Ionicons name="scale-outline" size={18} color={theme.textMuted} />
+                <Text style={[styles.statValue, { color: weightChange <= 0 ? theme.green : theme.red }]}>
                   {weightChange >= 0 ? '+' : ''}{weightChange.toFixed(1)}{weightUnit}
                 </Text>
-                <Text style={styles.statLabel}>WEIGHT CHANGE</Text>
+                <Text style={[styles.statLabel, { color: theme.textMuted }]}>WEIGHT CHANGE</Text>
               </View>
             )}
           </View>
@@ -360,12 +344,12 @@ function InsightsDashboard({ history, viewProfile }: { history: DayEntry[]; view
       {/* Water chart */}
       {waterData.length >= 2 && (
         <ChartCard title="WATER INTAKE (30 DAYS)">
-          <BarChart data={waterData} color={colors.accent} goalY={128} goalColor={colors.red} />
+          <BarChart data={waterData} color={theme.accent} goalY={128} goalColor={theme.red} />
           <View style={styles.legend}>
-            <View style={[styles.legendDot, { backgroundColor: colors.accent }]} />
-            <Text style={styles.legendText}>Intake</Text>
-            <View style={[styles.legendDash, { borderColor: colors.red }]} />
-            <Text style={styles.legendText}>Goal (128oz)</Text>
+            <View style={[styles.legendDot, { backgroundColor: theme.accent }]} />
+            <Text style={[styles.legendText, { color: theme.textMuted }]}>Intake</Text>
+            <View style={[styles.legendDash, { borderColor: theme.red }]} />
+            <Text style={[styles.legendText, { color: theme.textMuted }]}>Goal (128oz)</Text>
           </View>
         </ChartCard>
       )}
@@ -376,9 +360,9 @@ function InsightsDashboard({ history, viewProfile }: { history: DayEntry[]; view
           <StackedBarChart data={workoutData} />
           <View style={styles.legend}>
             <View style={[styles.legendDot, { backgroundColor: '#7a8898' }]} />
-            <Text style={styles.legendText}>W1 (Indoor)</Text>
-            <View style={[styles.legendDot, { backgroundColor: colors.green }]} />
-            <Text style={styles.legendText}>W2 (Outdoor)</Text>
+            <Text style={[styles.legendText, { color: theme.textMuted }]}>W1 (Indoor)</Text>
+            <View style={[styles.legendDot, { backgroundColor: theme.green }]} />
+            <Text style={[styles.legendText, { color: theme.textMuted }]}>W2 (Outdoor)</Text>
           </View>
         </ChartCard>
       )}
@@ -386,12 +370,12 @@ function InsightsDashboard({ history, viewProfile }: { history: DayEntry[]; view
       {/* Reading chart */}
       {readingData.length >= 2 && (
         <ChartCard title="PAGES READ (30 DAYS)">
-          <BarChart data={readingData} color="#7a5230" goalY={10} goalColor="#ffffff" goalBorderColor="#1a2030" />
+          <BarChart data={readingData} color="#7a5230" goalY={10} goalColor={theme.white} goalBorderColor={theme.bg} />
           <View style={styles.legend}>
             <View style={[styles.legendDot, { backgroundColor: '#7a5230' }]} />
-            <Text style={styles.legendText}>Pages</Text>
-            <View style={[styles.legendDash, { borderColor: colors.text }]} />
-            <Text style={styles.legendText}>Goal (10pg)</Text>
+            <Text style={[styles.legendText, { color: theme.textMuted }]}>Pages</Text>
+            <View style={[styles.legendDash, { borderColor: theme.text }]} />
+            <Text style={[styles.legendText, { color: theme.textMuted }]}>Goal (10pg)</Text>
           </View>
         </ChartCard>
       )}
@@ -401,16 +385,16 @@ function InsightsDashboard({ history, viewProfile }: { history: DayEntry[]; view
         <ChartCard title={`WEIGHT TREND (${weightUnit.toUpperCase()})`}>
           {weightChange != null && (
             <View style={styles.weightChangeRow}>
-              <Text style={[styles.weightChangeVal, { color: weightChange <= 0 ? colors.green : colors.red }]}>
+              <Text style={[styles.weightChangeVal, { color: weightChange <= 0 ? theme.green : theme.red }]}>
                 {weightChange >= 0 ? '+' : ''}{weightChange.toFixed(1)} {weightUnit}
               </Text>
-              <Text style={styles.progressLabel}>SINCE START</Text>
+              <Text style={[styles.progressLabel, { color: theme.textMuted }]}>SINCE START</Text>
             </View>
           )}
           <LineChartSvg
-            datasets={[{ data: weightData, color: colors.green }]}
+            datasets={[{ data: weightData, color: theme.green }]}
             goalY={startingWeight}
-            goalColor={colors.textMuted}
+            goalColor={theme.textMuted}
           />
         </ChartCard>
       )}
@@ -420,15 +404,15 @@ function InsightsDashboard({ history, viewProfile }: { history: DayEntry[]; view
         <ChartCard title="MOOD & ENERGY (30 DAYS)">
           <LineChartSvg
             datasets={[
-              { data: moodData, color: colors.accent },
-              { data: energyData.filter((d) => d.y > 0), color: colors.green, dashed: true },
+              { data: moodData, color: theme.accent },
+              { data: energyData.filter((d) => d.y > 0), color: theme.green, dashed: true },
             ]}
           />
           <View style={styles.legend}>
-            <View style={[styles.legendDot, { backgroundColor: colors.accent }]} />
-            <Text style={styles.legendText}>Mood</Text>
-            <View style={[styles.legendDot, { backgroundColor: colors.green }]} />
-            <Text style={styles.legendText}>Energy</Text>
+            <View style={[styles.legendDot, { backgroundColor: theme.accent }]} />
+            <Text style={[styles.legendText, { color: theme.textMuted }]}>Mood</Text>
+            <View style={[styles.legendDot, { backgroundColor: theme.green }]} />
+            <Text style={[styles.legendText, { color: theme.textMuted }]}>Energy</Text>
           </View>
         </ChartCard>
       )}
@@ -438,14 +422,14 @@ function InsightsDashboard({ history, viewProfile }: { history: DayEntry[]; view
         <ChartCard title="TASK COMPLETION RATE">
           <View style={styles.breakdown}>
             {taskBreakdown.map(({ name, pct }) => {
-              const barColor = pct >= 90 ? '#3a8f52' : pct >= 60 ? colors.yellow : colors.red;
+              const barColor = pct >= 90 ? '#3a8f52' : pct >= 60 ? theme.yellow : theme.red;
               return (
                 <View key={name} style={styles.breakdownRow}>
                   <View style={styles.breakdownHeader}>
-                    <Text style={styles.breakdownName}>{name}</Text>
+                    <Text style={[styles.breakdownName, { color: theme.text }]}>{name}</Text>
                     <Text style={[styles.breakdownPct, { color: barColor }]}>{pct}%</Text>
                   </View>
-                  <View style={styles.breakdownTrack}>
+                  <View style={[styles.breakdownTrack, { backgroundColor: theme.bg, borderColor: theme.border }]}>
                     <View style={[styles.breakdownFill, { width: `${pct}%` as any, backgroundColor: barColor }]} />
                   </View>
                 </View>
@@ -461,6 +445,7 @@ function InsightsDashboard({ history, viewProfile }: { history: DayEntry[]; view
 // ── Main history page ──────────────────────────────────────────────────────────
 
 function HistoryInner({ currentUser }: { currentUser: UserProfile }) {
+  const { theme, isRocketMode } = useTheme();
   const { users: allUsers } = useAllUsers();
   const friendUids = new Set(currentUser.friends ?? []);
   const friendOrder = new Map((currentUser.friends ?? []).map((uid, i) => [uid, i]));
@@ -500,12 +485,12 @@ function HistoryInner({ currentUser }: { currentUser: UserProfile }) {
   const startDate = viewProfile?.challengeStartDate ?? null;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top, backgroundColor: theme.bg }]}>
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.pageTitle}>HISTORY</Text>
+        <Text style={[styles.pageTitle, { color: theme.accent }]}>HISTORY</Text>
 
         {/* User switcher */}
         {users.length > 1 && (
@@ -514,9 +499,17 @@ function HistoryInner({ currentUser }: { currentUser: UserProfile }) {
               <TouchableOpacity
                 key={u.uid}
                 onPress={() => setViewUid(u.uid)}
-                style={[styles.userBtn, viewUid === u.uid && styles.userBtnActive]}
+                style={[
+                  styles.userBtn,
+                  { borderColor: theme.border, backgroundColor: theme.surface },
+                  viewUid === u.uid && { backgroundColor: theme.accent, borderColor: theme.accent },
+                ]}
               >
-                <Text style={[styles.userBtnText, viewUid === u.uid && styles.userBtnTextActive]}>
+                <Text style={[
+                  styles.userBtnText,
+                  { color: theme.text },
+                  viewUid === u.uid && { color: theme.white },
+                ]}>
                   {u.displayName.toUpperCase()}
                 </Text>
               </TouchableOpacity>
@@ -525,24 +518,24 @@ function HistoryInner({ currentUser }: { currentUser: UserProfile }) {
         )}
 
         {viewProfile && viewUid !== currentUser.uid && (
-          <Text style={styles.viewingLabel}>VIEWING {viewProfile.displayName.toUpperCase()}'S HISTORY</Text>
+          <Text style={[styles.viewingLabel, { color: theme.textMuted }]}>VIEWING {viewProfile.displayName.toUpperCase()}'S HISTORY</Text>
         )}
 
         {/* Calendar */}
-        <View style={styles.calendarCard}>
+        <View style={[styles.calendarCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <View style={styles.calendarNav}>
             <TouchableOpacity onPress={() => setMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1))} style={styles.navBtn}>
-              <Ionicons name="chevron-back" size={16} color={colors.text} />
+              <Ionicons name="chevron-back" size={16} color={theme.text} />
             </TouchableOpacity>
-            <Text style={styles.monthLabel}>{format(month, 'MMM yyyy').toUpperCase()}</Text>
+            <Text style={[styles.monthLabel, { color: theme.text }]}>{format(month, 'MMM yyyy').toUpperCase()}</Text>
             <TouchableOpacity onPress={() => setMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1))} style={styles.navBtn}>
-              <Ionicons name="chevron-forward" size={16} color={colors.text} />
+              <Ionicons name="chevron-forward" size={16} color={theme.text} />
             </TouchableOpacity>
           </View>
 
           <View style={styles.dayLabels}>
             {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-              <Text key={i} style={styles.dayLabel}>{d}</Text>
+              <Text key={i} style={[styles.dayLabel, { color: theme.textMuted }]}>{d}</Text>
             ))}
           </View>
 
@@ -550,7 +543,7 @@ function HistoryInner({ currentUser }: { currentUser: UserProfile }) {
             {(() => {
               const allCells: React.ReactNode[] = [];
               for (let i = 0; i < startPad; i++) {
-                allCells.push(<View key={`pad-${i}`} style={styles.calendarCell} />);
+                allCells.push(<View key={`pad-${i}`} style={[styles.calendarCell, { borderColor: theme.border, backgroundColor: theme.surface }]} />);
               }
               days.forEach((day) => {
                 const dateStr = format(day, 'yyyy-MM-dd');
@@ -560,21 +553,19 @@ function HistoryInner({ currentUser }: { currentUser: UserProfile }) {
                     key={dateStr}
                     style={[
                       styles.calendarCell,
-                      { backgroundColor: tileColor(entry, day, startDate), borderColor: tileBorder(entry, day, startDate) },
+                      { backgroundColor: tileColor(entry, day, startDate, theme), borderColor: tileBorder(entry, day, startDate, theme) },
                     ]}
                   >
-                    <Text style={styles.calendarDayNum}>{day.getDate()}</Text>
+                    <Text style={[styles.calendarDayNum, { color: theme.text }]}>{day.getDate()}</Text>
                   </View>
                 );
               });
-              // Pad the last row to always have 7 cells
               const remainder = allCells.length % 7;
               if (remainder !== 0) {
                 for (let i = 0; i < 7 - remainder; i++) {
-                  allCells.push(<View key={`trail-${i}`} style={styles.calendarCell} />);
+                  allCells.push(<View key={`trail-${i}`} style={[styles.calendarCell, { borderColor: theme.border, backgroundColor: theme.surface }]} />);
                 }
               }
-              // Render in rows of 7
               const rows: React.ReactNode[] = [];
               for (let r = 0; r < allCells.length; r += 7) {
                 rows.push(
@@ -589,13 +580,13 @@ function HistoryInner({ currentUser }: { currentUser: UserProfile }) {
 
           <View style={styles.calendarLegend}>
             {[
-              { bg: colors.greenLight, border: colors.green, label: 'Done' },
-              { bg: colors.yellowLight, border: colors.yellow, label: 'Partial' },
-              { bg: colors.redLight, border: colors.red, label: 'Missed' },
+              { bg: theme.greenLight, border: theme.green, label: 'Done' },
+              { bg: theme.yellowLight, border: theme.yellow, label: 'Partial' },
+              { bg: theme.redLight, border: theme.red, label: 'Missed' },
             ].map(({ bg, border, label }) => (
               <View key={label} style={styles.legendItem}>
                 <View style={[styles.legendTile, { backgroundColor: bg, borderColor: border }]} />
-                <Text style={styles.legendText}>{label}</Text>
+                <Text style={[styles.legendText, { color: theme.textMuted }]}>{label}</Text>
               </View>
             ))}
           </View>
@@ -609,9 +600,9 @@ function HistoryInner({ currentUser }: { currentUser: UserProfile }) {
             { label: 'DAYS COMPLETE', value: String(completed) },
             { label: 'COMPLETION %', value: total > 0 ? `${Math.round((completed / total) * 100)}%` : '—' },
           ].map(({ label, value }) => (
-            <View key={label} style={styles.statBox}>
-              <Text style={styles.statBoxLabel}>{label}</Text>
-              <Text style={styles.statBoxValue}>{value}</Text>
+            <View key={label} style={[styles.statBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+              <Text style={[styles.statBoxLabel, { color: theme.textMuted }]}>{label}</Text>
+              <Text style={[styles.statBoxValue, { color: theme.accent }]}>{value}</Text>
             </View>
           ))}
         </View>
@@ -636,91 +627,83 @@ export default function HistoryPage() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
+  container: { flex: 1 },
   scrollContent: { paddingHorizontal: 16, paddingTop: 16 },
-  pageTitle: { fontFamily: fonts.pixel, fontSize: 14, color: colors.accent, marginBottom: 24 },
+  pageTitle: { fontFamily: fonts.pixel, fontSize: 14, marginBottom: 24 },
   userSwitcher: { flexDirection: 'row', gap: 8, marginBottom: 24, paddingRight: 16 },
-  userBtn: {
-    paddingHorizontal: 12, paddingVertical: 6,
-    borderWidth: 2, borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  userBtnActive: { backgroundColor: colors.accent, borderColor: colors.accent },
-  userBtnText: { fontFamily: fonts.pixel, fontSize: 8, color: colors.text },
-  userBtnTextActive: { color: colors.white },
-  viewingLabel: { fontFamily: fonts.pixel, fontSize: 7, color: colors.textMuted, marginBottom: 16 },
+  userBtn: { paddingHorizontal: 12, paddingVertical: 6, borderWidth: 2 },
+  userBtnText: { fontFamily: fonts.pixel, fontSize: 8 },
+  viewingLabel: { fontFamily: fonts.pixel, fontSize: 7, marginBottom: 16 },
   calendarCard: {
     padding: 16, marginBottom: 24,
-    backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.border,
+    borderWidth: 2,
     shadowColor: '#1a1008', shadowOffset: { width: 2, height: 2 }, shadowOpacity: 0.3, shadowRadius: 0, elevation: 2,
   },
   calendarNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   navBtn: { padding: 4 },
-  monthLabel: { fontFamily: fonts.pixel, fontSize: 9, color: colors.text },
+  monthLabel: { fontFamily: fonts.pixel, fontSize: 9 },
   dayLabels: { flexDirection: 'row', marginBottom: 4 },
-  dayLabel: { flex: 1, textAlign: 'center', fontFamily: fonts.pixel, fontSize: 7, color: colors.textMuted },
+  dayLabel: { flex: 1, textAlign: 'center', fontFamily: fonts.pixel, fontSize: 7 },
   calendarGrid: { flexDirection: 'column' },
   calendarRow: { flexDirection: 'row' },
   calendarCell: {
     flex: 1, aspectRatio: 1,
-    borderWidth: 1, borderColor: colors.border,
-    backgroundColor: colors.surface,
+    borderWidth: 1,
     alignItems: 'center', justifyContent: 'center',
   },
-  calendarDayNum: { fontFamily: fonts.interSemiBold, fontSize: 12, color: colors.text, textAlign: 'center' },
+  calendarDayNum: { fontFamily: fonts.interSemiBold, fontSize: 12, textAlign: 'center' },
   calendarLegend: { flexDirection: 'row', gap: 12, marginTop: 12, flexWrap: 'wrap' },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   legendTile: { width: 12, height: 12, borderWidth: 2 },
-  legendText: { fontFamily: fonts.inter, fontSize: 11, color: colors.textMuted },
+  legendText: { fontFamily: fonts.inter, fontSize: 11 },
   legend: { flexDirection: 'row', gap: 12, marginTop: 8, alignItems: 'center' },
   legendDot: { width: 10, height: 10 },
   legendDash: { width: 16, height: 0, borderTopWidth: 2, borderStyle: 'dashed' },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 8 },
   statBox: {
     flex: 1, minWidth: '45%', padding: 12,
-    backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.border,
+    borderWidth: 2,
     shadowColor: '#1a1008', shadowOffset: { width: 2, height: 2 }, shadowOpacity: 0.3, shadowRadius: 0, elevation: 2,
   },
-  statBoxLabel: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted, marginBottom: 6 },
-  statBoxValue: { fontFamily: fonts.pixel, fontSize: 12, color: colors.accent },
+  statBoxLabel: { fontFamily: fonts.pixel, fontSize: 6, marginBottom: 6 },
+  statBoxValue: { fontFamily: fonts.pixel, fontSize: 12 },
   insights: { gap: 16, marginTop: 8 },
   chartCard: {
     padding: 16,
-    backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.border,
+    borderWidth: 2,
     shadowColor: '#1a1008', shadowOffset: { width: 2, height: 2 }, shadowOpacity: 0.3, shadowRadius: 0, elevation: 2,
   },
-  chartTitle: { fontFamily: fonts.pixel, fontSize: 7, color: colors.textMuted, marginBottom: 12 },
-  chartGoalLabel: { fontFamily: fonts.inter, fontSize: 10, color: colors.green, marginTop: 4 },
+  chartTitle: { fontFamily: fonts.pixel, fontSize: 7, marginBottom: 12 },
   progressHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  progressDay: { fontFamily: fonts.vt323, fontSize: 22, color: colors.accent },
-  progressComplete: { fontFamily: fonts.vt323, fontSize: 18, color: colors.textMuted },
+  progressDay: { fontFamily: fonts.vt323, fontSize: 22 },
+  progressComplete: { fontFamily: fonts.vt323, fontSize: 18 },
   progressTrack: {
-    height: 24, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.bg,
+    height: 24, borderWidth: 2,
     marginBottom: 4,
   },
   progressFill: {
-    height: '100%', backgroundColor: colors.accent,
-    shadowColor: colors.accent, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 8,
+    height: '100%',
+    shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 8,
   },
   progressFooter: { flexDirection: 'row', justifyContent: 'space-between' },
-  progressLabel: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
-  sectionHeader: { fontFamily: fonts.pixel, fontSize: 7, color: colors.textMuted, marginBottom: 8 },
+  progressLabel: { fontFamily: fonts.pixel, fontSize: 6 },
+  sectionHeader: { fontFamily: fonts.pixel, fontSize: 7, marginBottom: 8 },
   statCards: { flexDirection: 'row', gap: 12 },
   statCard: {
     minWidth: 90, padding: 12,
-    backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.border,
+    borderWidth: 2,
     shadowColor: '#1a1008', shadowOffset: { width: 2, height: 2 }, shadowOpacity: 0.3, shadowRadius: 0,
     alignItems: 'center', gap: 4,
   },
-  statValue: { fontFamily: fonts.pixel, fontSize: 12, color: colors.accent, textAlign: 'center' },
-  statLabel: { fontFamily: fonts.pixel, fontSize: 5, color: colors.textMuted, textAlign: 'center', lineHeight: 8 },
+  statValue: { fontFamily: fonts.pixel, fontSize: 12, textAlign: 'center' },
+  statLabel: { fontFamily: fonts.pixel, fontSize: 5, textAlign: 'center', lineHeight: 8 },
   weightChangeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   weightChangeVal: { fontFamily: fonts.vt323, fontSize: 20 },
   breakdown: { gap: 8 },
   breakdownRow: { gap: 4 },
   breakdownHeader: { flexDirection: 'row', justifyContent: 'space-between' },
-  breakdownName: { fontFamily: fonts.pixel, fontSize: 6, color: colors.text },
+  breakdownName: { fontFamily: fonts.pixel, fontSize: 6 },
   breakdownPct: { fontFamily: fonts.pixel, fontSize: 6 },
-  breakdownTrack: { height: 12, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border },
+  breakdownTrack: { height: 12, borderWidth: 1 },
   breakdownFill: { height: '100%' },
 });

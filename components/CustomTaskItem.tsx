@@ -3,7 +3,8 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-nativ
 import Svg, { Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomTask } from '../lib/types';
-import { colors, fonts, shadows } from '../lib/theme';
+import { fonts, shadows } from '../lib/theme';
+import { useTheme } from '../context/ThemeContext';
 
 interface CustomTaskItemProps {
   task: CustomTask;
@@ -25,6 +26,7 @@ export function CustomTaskItem({
   onToggle, onEdit, onDelete, onSetProgress, onResetProgress,
   onNudge, nudgedAlready,
 }: CustomTaskItemProps) {
+  const { theme } = useTheme();
   const [whyExpanded, setWhyExpanded] = useState(false);
   const [goalInput, setGoalInput] = useState('');
   const [goalError, setGoalError] = useState(false);
@@ -42,12 +44,24 @@ export function CustomTaskItem({
     onSetProgress?.(n);
   }
 
+  const inputStyle = [styles.goalInput, { borderColor: theme.border, backgroundColor: theme.surface2, color: theme.text }];
+
   const card = (
-    <View style={[styles.card, completed ? styles.cardDone : styles.cardDefault]}>
-      <View style={[styles.checkbox, completed ? styles.checkboxDone : styles.checkboxEmpty]}>
+    <View style={[
+      styles.card,
+      completed
+        ? { borderColor: theme.green, backgroundColor: theme.greenLight, ...shadows.glowGreen }
+        : { borderColor: theme.border, backgroundColor: theme.surface },
+    ]}>
+      <View style={[
+        styles.checkbox,
+        completed
+          ? { borderColor: theme.green, backgroundColor: theme.green, shadowColor: theme.green, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 8 }
+          : { borderColor: theme.textMuted, backgroundColor: 'transparent' },
+      ]}>
         {completed && (
           <Svg width={12} height={10} viewBox="0 0 12 10" fill="none">
-            <Path d="M1 5l3 3 7-7" stroke={colors.bg} strokeWidth={2.5} strokeLinecap="square" />
+            <Path d="M1 5l3 3 7-7" stroke={theme.bg} strokeWidth={2.5} strokeLinecap="square" />
           </Svg>
         )}
       </View>
@@ -56,21 +70,22 @@ export function CustomTaskItem({
         <View style={styles.labelRow}>
           <Text style={[
             styles.label,
-            completed && styles.labelDone,
+            { color: completed ? theme.green : theme.text },
             completed && !isGoalTask && styles.labelStrike,
+            completed && { opacity: 0.7 },
           ]} numberOfLines={2}>
             {task.label}
           </Text>
           {task.amount != null && !isGoalTask && (
-            <View style={styles.amountBadge}>
-              <Text style={styles.amountBadgeText}>
+            <View style={[styles.amountBadge, { borderColor: theme.border, backgroundColor: theme.surface2 }]}>
+              <Text style={[styles.amountBadgeText, { color: theme.text }]}>
                 {task.amount}{task.unit ? ` ${task.unit.toUpperCase()}` : ''}
               </Text>
             </View>
           )}
           {task.points && !completed && (
-            <View style={styles.pointsBadge}>
-              <Text style={styles.pointsBadgeText}>+{task.points} PTS</Text>
+            <View style={[styles.pointsBadge, { borderColor: theme.accent, backgroundColor: theme.accentLight }]}>
+              <Text style={[styles.pointsBadgeText, { color: theme.accent }]}>+{task.points} PTS</Text>
             </View>
           )}
         </View>
@@ -78,14 +93,14 @@ export function CustomTaskItem({
         {isGoalTask && (
           <View style={styles.goalArea}>
             <View style={styles.barRow}>
-              <View style={styles.barTrack}>
+              <View style={[styles.barTrack, { borderColor: theme.border, backgroundColor: theme.bg }]}>
                 <View style={[
                   styles.barFill,
                   { width: `${fillPct}%` as any },
-                  completed ? styles.barFillDone : styles.barFillAccent,
+                  { backgroundColor: completed ? theme.green : theme.accent },
                 ]} />
               </View>
-              <Text style={[styles.progressLabel, completed && styles.progressLabelDone]}>
+              <Text style={[styles.progressLabel, { color: completed ? theme.green : theme.textMuted }]}>
                 {progressAmount}/{goalAmount}{unitLabel}
               </Text>
             </View>
@@ -96,20 +111,26 @@ export function CustomTaskItem({
                   onChangeText={(t) => { setGoalInput(t.replace(/[^0-9]/g, '')); setGoalError(false); }}
                   keyboardType="number-pad"
                   placeholder="0"
-                  placeholderTextColor={colors.textMuted}
-                  style={[styles.goalInput, goalError && styles.goalInputError]}
+                  placeholderTextColor={theme.textMuted}
+                  style={[inputStyle, goalError && { borderColor: theme.red }]}
                   maxLength={6}
                   onSubmitEditing={handleSet}
                 />
-                <TouchableOpacity onPress={handleSet} style={styles.setBtn}>
-                  <Text style={styles.setBtnText}>SET</Text>
+                <TouchableOpacity
+                  onPress={handleSet}
+                  style={[styles.setBtn, { borderColor: theme.accent, backgroundColor: theme.accentLight }]}
+                >
+                  <Text style={[styles.setBtnText, { color: theme.accent }]}>SET</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={onResetProgress} style={styles.resetBtn}>
-                  <Text style={styles.resetBtnText}>RESET</Text>
+                <TouchableOpacity
+                  onPress={onResetProgress}
+                  style={[styles.resetBtn, { borderColor: theme.border, backgroundColor: theme.surface2 }]}
+                >
+                  <Text style={[styles.resetBtnText, { color: theme.textMuted }]}>RESET</Text>
                 </TouchableOpacity>
               </View>
             )}
-            {goalError && <Text style={styles.goalErrorText}>ENTER A VALID NUMBER</Text>}
+            {goalError && <Text style={[styles.goalErrorText, { color: theme.red }]}>ENTER A VALID NUMBER</Text>}
           </View>
         )}
 
@@ -119,11 +140,11 @@ export function CustomTaskItem({
             style={styles.whyHint}
             activeOpacity={0.7}
           >
-            <Text style={styles.whyHintText}>{whyExpanded ? 'HIDE WHY' : 'WHY?'}</Text>
+            <Text style={[styles.whyHintText, { color: theme.textMuted }]}>{whyExpanded ? 'HIDE WHY' : 'WHY?'}</Text>
           </TouchableOpacity>
         )}
         {whyExpanded && task.why && (
-          <Text style={styles.whyText}>{task.why}</Text>
+          <Text style={[styles.whyText, { color: theme.textMuted }]}>{task.why}</Text>
         )}
       </View>
 
@@ -131,38 +152,32 @@ export function CustomTaskItem({
         <TouchableOpacity
           onPress={onNudge}
           disabled={nudgedAlready}
-          style={[styles.nudgeBtn, nudgedAlready && styles.nudgeBtnDone]}
+          style={[
+            styles.nudgeBtn,
+            nudgedAlready
+              ? { borderColor: theme.border, backgroundColor: theme.surface2 }
+              : { borderColor: theme.accent, backgroundColor: theme.accentLight },
+          ]}
         >
-          <Text style={[styles.nudgeBtnText, nudgedAlready && styles.nudgeBtnTextDone]}>
+          <Text style={[styles.nudgeBtnText, { color: nudgedAlready ? theme.textMuted : theme.accent }]}>
             {nudgedAlready ? 'NUDGED' : 'NUDGE'}
           </Text>
         </TouchableOpacity>
       )}
 
-      {!readOnly && !hideActions && !isGoalTask && (
+      {!readOnly && !hideActions && (
         <View style={styles.actions}>
           <TouchableOpacity onPress={onEdit} style={styles.actionBtn}>
-            <Ionicons name="pencil-outline" size={14} color={colors.text} style={{ opacity: 0.3 }} />
+            <Ionicons name="pencil-outline" size={14} color={theme.text} style={{ opacity: 0.3 }} />
           </TouchableOpacity>
           <TouchableOpacity onPress={onDelete} style={styles.actionBtn}>
-            <Ionicons name="trash-outline" size={14} color={colors.red} style={{ opacity: 0.3 }} />
-          </TouchableOpacity>
-        </View>
-      )}
-      {!readOnly && !hideActions && isGoalTask && (
-        <View style={styles.actions}>
-          <TouchableOpacity onPress={onEdit} style={styles.actionBtn}>
-            <Ionicons name="pencil-outline" size={14} color={colors.text} style={{ opacity: 0.3 }} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={onDelete} style={styles.actionBtn}>
-            <Ionicons name="trash-outline" size={14} color={colors.red} style={{ opacity: 0.3 }} />
+            <Ionicons name="trash-outline" size={14} color={theme.red} style={{ opacity: 0.3 }} />
           </TouchableOpacity>
         </View>
       )}
     </View>
   );
 
-  // Goal tasks: card is not tappable (checkbox is visual only)
   if (readOnly || isGoalTask) return card;
 
   return (
@@ -181,15 +196,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     ...shadows.pixel,
   },
-  cardDefault: {
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  cardDone: {
-    borderColor: colors.green,
-    backgroundColor: colors.greenLight,
-    ...shadows.glowGreen,
-  },
   checkbox: {
     width: 22,
     height: 22,
@@ -199,138 +205,31 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     marginTop: 1,
   },
-  checkboxEmpty: {
-    borderColor: colors.textMuted,
-    backgroundColor: 'transparent',
-  },
-  checkboxDone: {
-    borderColor: colors.green,
-    backgroundColor: colors.green,
-    shadowColor: colors.green,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
-  },
   labelArea: { flex: 1, minWidth: 0, gap: 6 },
   labelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-  label: {
-    fontFamily: fonts.vt323,
-    fontSize: 20,
-    color: colors.text,
-    letterSpacing: 0.4,
-    flexShrink: 1,
-  },
-  amountBadge: {
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
-    flexShrink: 0,
-  },
-  amountBadgeText: {
-    fontFamily: fonts.pixel,
-    fontSize: 5,
-    color: colors.text,
-  },
-  pointsBadge: {
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-    borderWidth: 1,
-    borderColor: colors.accent,
-    backgroundColor: colors.accentLight,
-    flexShrink: 0,
-  },
-  pointsBadgeText: {
-    fontFamily: fonts.pixel,
-    fontSize: 5,
-    color: colors.accent,
-  },
+  label: { fontFamily: fonts.vt323, fontSize: 20, letterSpacing: 0.4, flexShrink: 1 },
+  amountBadge: { paddingHorizontal: 5, paddingVertical: 2, borderWidth: 1, flexShrink: 0 },
+  amountBadgeText: { fontFamily: fonts.pixel, fontSize: 5 },
+  pointsBadge: { paddingHorizontal: 4, paddingVertical: 2, borderWidth: 1, flexShrink: 0 },
+  pointsBadgeText: { fontFamily: fonts.pixel, fontSize: 5 },
   goalArea: { gap: 6 },
   barRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  barTrack: { flex: 1, height: 10, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.bg },
+  barTrack: { flex: 1, height: 10, borderWidth: 2 },
   barFill: { height: '100%' },
-  barFillAccent: { backgroundColor: colors.accent },
-  barFillDone: { backgroundColor: colors.green },
-  progressLabel: { fontFamily: fonts.pixel, fontSize: 5, color: colors.textMuted, minWidth: 40, textAlign: 'right' },
-  progressLabelDone: { color: colors.green },
+  progressLabel: { fontFamily: fonts.pixel, fontSize: 5, minWidth: 40, textAlign: 'right' },
   setRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  goalInput: {
-    width: 56,
-    fontFamily: fonts.pixel,
-    fontSize: 7,
-    borderWidth: 2,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
-    color: colors.text,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-  },
-  goalInputError: { borderColor: colors.red },
-  setBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderWidth: 2,
-    borderColor: colors.accent,
-    backgroundColor: colors.accentLight,
-    ...shadows.pixel,
-  },
-  setBtnText: { fontFamily: fonts.pixel, fontSize: 5, color: colors.accent },
-  resetBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderWidth: 2,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
-    ...shadows.pixel,
-  },
-  resetBtnText: { fontFamily: fonts.pixel, fontSize: 5, color: colors.textMuted },
-  goalErrorText: { fontFamily: fonts.pixel, fontSize: 5, color: colors.red },
+  goalInput: { width: 56, fontFamily: fonts.pixel, fontSize: 7, borderWidth: 2, paddingHorizontal: 6, paddingVertical: 3 },
+  setBtn: { paddingHorizontal: 8, paddingVertical: 4, borderWidth: 2, ...shadows.pixel },
+  setBtnText: { fontFamily: fonts.pixel, fontSize: 5 },
+  resetBtn: { paddingHorizontal: 8, paddingVertical: 4, borderWidth: 2, ...shadows.pixel },
+  resetBtnText: { fontFamily: fonts.pixel, fontSize: 5 },
+  goalErrorText: { fontFamily: fonts.pixel, fontSize: 5 },
   whyHint: { marginTop: 2 },
-  whyHintText: {
-    fontFamily: fonts.pixel,
-    fontSize: 5,
-    color: colors.textMuted,
-  },
-  whyText: {
-    fontFamily: fonts.vt323,
-    fontSize: 16,
-    color: colors.textMuted,
-    fontStyle: 'italic',
-  },
-  labelDone: {
-    color: colors.green,
-    opacity: 0.7,
-  },
-  labelStrike: {
-    textDecorationLine: 'line-through',
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 4,
-    flexShrink: 0,
-  },
-  actionBtn: {
-    padding: 4,
-  },
-  nudgeBtn: {
-    paddingHorizontal: 5,
-    paddingVertical: 3,
-    borderWidth: 2,
-    borderColor: colors.accent,
-    backgroundColor: colors.accentLight,
-    flexShrink: 0,
-  },
-  nudgeBtnDone: {
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
-  },
-  nudgeBtnText: {
-    fontFamily: fonts.pixel,
-    fontSize: 5,
-    color: colors.accent,
-  },
-  nudgeBtnTextDone: {
-    color: colors.textMuted,
-  },
+  whyHintText: { fontFamily: fonts.pixel, fontSize: 5 },
+  whyText: { fontFamily: fonts.vt323, fontSize: 16, fontStyle: 'italic' },
+  labelStrike: { textDecorationLine: 'line-through' },
+  actions: { flexDirection: 'row', gap: 4, flexShrink: 0 },
+  actionBtn: { padding: 4 },
+  nudgeBtn: { paddingHorizontal: 5, paddingVertical: 3, borderWidth: 2, flexShrink: 0 },
+  nudgeBtnText: { fontFamily: fonts.pixel, fontSize: 5 },
 });

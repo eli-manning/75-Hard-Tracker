@@ -1,12 +1,13 @@
 import { ReactNode } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { colors, fonts, shadows } from '../lib/theme';
+import { fonts, shadows } from '../lib/theme';
+import { useTheme } from '../context/ThemeContext';
 import { getImageSource } from '../lib/imageMap';
 
 interface ChallengeItemProps {
   label: string;
-  icon?: string;        // path like '/images/workout1.png'
+  icon?: string;
   completed: boolean;
   readOnly: boolean;
   children?: ReactNode;
@@ -18,35 +19,31 @@ interface ChallengeItemProps {
 }
 
 export function ChallengeItem({
-  label,
-  icon,
-  completed,
-  readOnly,
-  children,
-  onToggle,
-  disabled,
-  disabledReason,
-  onNudge,
-  nudgedAlready,
+  label, icon, completed, readOnly, children,
+  onToggle, disabled, disabledReason, onNudge, nudgedAlready,
 }: ChallengeItemProps) {
+  const { theme } = useTheme();
   const isDisabled = readOnly || disabled;
   const iconSource = icon ? getImageSource(icon) : undefined;
 
   const content = (
     <View style={[
       styles.card,
-      completed ? styles.cardDone : styles.cardDefault,
+      completed
+        ? { borderColor: theme.green, backgroundColor: theme.greenLight, ...shadows.glowGreen }
+        : { borderColor: theme.border, backgroundColor: theme.surface },
     ]}>
       <View style={styles.row}>
-        {/* Pixel checkbox */}
         <View style={[
           styles.checkbox,
-          completed ? styles.checkboxDone : styles.checkboxEmpty,
+          completed
+            ? { borderColor: theme.green, backgroundColor: theme.green, shadowColor: theme.green, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 8 }
+            : { borderColor: theme.textMuted, backgroundColor: 'transparent' },
           isDisabled && !completed && styles.checkboxDisabled,
         ]}>
           {completed && (
             <Svg width={12} height={10} viewBox="0 0 12 10" fill="none">
-              <Path d="M1 5l3 3 7-7" stroke={colors.bg} strokeWidth={2.5} strokeLinecap="square" />
+              <Path d="M1 5l3 3 7-7" stroke={theme.bg} strokeWidth={2.5} strokeLinecap="square" />
             </Svg>
           )}
         </View>
@@ -55,8 +52,9 @@ export function ChallengeItem({
           <View style={styles.labelRow}>
             <Text style={[
               styles.label,
-              completed && styles.labelDone,
+              { color: completed ? theme.green : theme.text },
               completed && styles.labelStrike,
+              completed && { opacity: 0.7 },
             ]}>
               {label}
             </Text>
@@ -69,7 +67,7 @@ export function ChallengeItem({
             )}
           </View>
           {disabled && disabledReason && (
-            <Text style={styles.disabledReason}>{disabledReason}</Text>
+            <Text style={[styles.disabledReason, { color: theme.textMuted }]}>{disabledReason}</Text>
           )}
           {children && <View style={styles.children}>{children}</View>}
         </View>
@@ -78,9 +76,17 @@ export function ChallengeItem({
           <TouchableOpacity
             onPress={onNudge}
             disabled={nudgedAlready}
-            style={[styles.nudgeBtn, nudgedAlready && styles.nudgeBtnDone]}
+            style={[
+              styles.nudgeBtn,
+              nudgedAlready
+                ? { borderColor: theme.border, backgroundColor: theme.surface2 }
+                : { borderColor: theme.accent, backgroundColor: theme.accentLight },
+            ]}
           >
-            <Text style={[styles.nudgeBtnText, nudgedAlready && styles.nudgeBtnTextDone]}>
+            <Text style={[
+              styles.nudgeBtnText,
+              { color: nudgedAlready ? theme.textMuted : theme.accent },
+            ]}>
               {nudgedAlready ? 'NUDGED' : 'NUDGE'}
             </Text>
           </TouchableOpacity>
@@ -89,9 +95,7 @@ export function ChallengeItem({
     </View>
   );
 
-  if (isDisabled || !onToggle) {
-    return content;
-  }
+  if (isDisabled || !onToggle) return content;
 
   return (
     <TouchableOpacity onPress={onToggle} activeOpacity={0.85}>
@@ -110,31 +114,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     paddingVertical: 3,
     borderWidth: 2,
-    borderColor: colors.accent,
-    backgroundColor: colors.accentLight,
     flexShrink: 0,
     alignSelf: 'flex-start',
-  },
-  nudgeBtnDone: {
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
   },
   nudgeBtnText: {
     fontFamily: fonts.pixel,
     fontSize: 5,
-    color: colors.accent,
-  },
-  nudgeBtnTextDone: {
-    color: colors.textMuted,
-  },
-  cardDefault: {
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  cardDone: {
-    borderColor: colors.green,
-    backgroundColor: colors.greenLight,
-    ...shadows.glowGreen,
   },
   row: {
     flexDirection: 'row',
@@ -149,18 +134,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
     marginTop: 2,
-  },
-  checkboxEmpty: {
-    borderColor: colors.textMuted,
-    backgroundColor: 'transparent',
-  },
-  checkboxDone: {
-    borderColor: colors.green,
-    backgroundColor: colors.green,
-    shadowColor: colors.green,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
   },
   checkboxDisabled: {
     opacity: 0.4,
@@ -178,12 +151,7 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: fonts.vt323,
     fontSize: 20,
-    color: colors.text,
     letterSpacing: 0.4,
-  },
-  labelDone: {
-    color: colors.green,
-    opacity: 0.7,
   },
   labelStrike: {
     textDecorationLine: 'line-through',
@@ -199,7 +167,6 @@ const styles = StyleSheet.create({
   disabledReason: {
     fontFamily: fonts.pixel,
     fontSize: 6,
-    color: colors.textMuted,
     marginTop: 3,
   },
   children: {

@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { DayEntry } from '../lib/types';
-import { colors, fonts } from '../lib/theme';
+import { fonts } from '../lib/theme';
+import { useTheme } from '../context/ThemeContext';
 
 interface DailyProgressProps {
   entry: DayEntry;
@@ -18,6 +19,7 @@ function countCompleted(entry: DayEntry): number {
 }
 
 export function DailyProgress({ entry }: DailyProgressProps) {
+  const { theme } = useTheme();
   const total = 6;
   const done = countCompleted(entry);
   const pct = (done / total) * 100;
@@ -26,19 +28,21 @@ export function DailyProgress({ entry }: DailyProgressProps) {
   return (
     <View style={styles.container}>
       <View style={styles.row}>
-        <Text style={[styles.label, allDone && styles.labelDone]}>
+        <Text style={[styles.label, { color: allDone ? theme.green : theme.textMuted }]}>
           {done}/{total} CORE TASKS
         </Text>
         {allDone && (
-          <Text style={styles.complete}>COMPLETE ✓</Text>
+          <Text style={[styles.complete, { color: theme.green }]}>COMPLETE ✓</Text>
         )}
       </View>
-      <View style={styles.track}>
+      <View style={[styles.track, { borderColor: theme.border, backgroundColor: theme.bg }]}>
         <View
           style={[
             styles.fill,
             { width: `${pct}%` as any },
-            allDone ? styles.fillDone : styles.fillAccent,
+            allDone
+              ? { backgroundColor: theme.green, shadowColor: theme.green, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 8 }
+              : { backgroundColor: theme.accent, shadowColor: theme.accent, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 8 },
           ]}
         />
       </View>
@@ -47,51 +51,16 @@ export function DailyProgress({ entry }: DailyProgressProps) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    gap: 6,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  label: {
-    fontFamily: fonts.pixel,
-    fontSize: 7,
-    color: colors.textMuted,
-  },
-  labelDone: {
-    color: colors.green,
-  },
+  container: { gap: 6 },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  label: { fontFamily: fonts.pixel, fontSize: 7 },
   complete: {
     fontFamily: fonts.pixel,
     fontSize: 7,
-    color: colors.green,
     textShadowColor: 'rgba(78, 203, 106, 0.6)',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 8,
   },
-  track: {
-    height: 20,
-    borderWidth: 2,
-    borderColor: colors.border,
-    backgroundColor: colors.bg,
-  },
-  fill: {
-    height: '100%',
-  },
-  fillAccent: {
-    backgroundColor: colors.accent,
-    shadowColor: colors.accent,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
-  },
-  fillDone: {
-    backgroundColor: colors.green,
-    shadowColor: colors.green,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
-  },
+  track: { height: 20, borderWidth: 2 },
+  fill: { height: '100%' },
 });

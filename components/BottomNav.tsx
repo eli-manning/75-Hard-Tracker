@@ -3,12 +3,13 @@ import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts, shadows } from '../lib/theme';
+import { useTheme } from '../context/ThemeContext';
 
-const NAV = [
-  { href: '/(tabs)/today', label: '', icon: 'home-outline' as const, match: 'today' },
-  { href: '/(tabs)/crews', label: '', icon: 'people-outline' as const, match: 'crews' },
-  { href: '/(tabs)/history', label: '', icon: 'calendar-outline' as const, match: 'history' },
-  { href: '/(tabs)/leaderboard', label: '', icon: 'trophy-outline' as const, match: 'leaderboard' },
+const NAV_ALL = [
+  { href: '/(tabs)/today',       label: '', icon: 'home-outline' as const,     match: 'today',       rocketHidden: false },
+  { href: '/(tabs)/crews',       label: '', icon: 'people-outline' as const,    match: 'crews',       rocketHidden: true  },
+  { href: '/(tabs)/history',     label: '', icon: 'calendar-outline' as const,  match: 'history',     rocketHidden: false },
+  { href: '/(tabs)/leaderboard', label: '', icon: 'trophy-outline' as const,    match: 'leaderboard', rocketHidden: true  },
 ];
 
 // Web: renders via a React DOM portal directly into document.body so it is
@@ -18,9 +19,12 @@ const NAV = [
 function WebBottomNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const { theme, isRocketMode } = useTheme();
 
   if (typeof document === 'undefined') return null;
   const { createPortal } = require('react-dom');
+
+  const NAV = NAV_ALL.filter(n => !isRocketMode || !n.rocketHidden);
 
   const nav = (
     <div
@@ -32,9 +36,11 @@ function WebBottomNav() {
         width: '100%',
         maxWidth: '480px',
         display: 'flex',
-        backgroundColor: colors.surface,
-        borderTop: `2px solid ${colors.border}`,
-        boxShadow: '0 -3px 0 rgba(26,16,8,0.25)',
+        backgroundColor: theme.surface,
+        borderTop: `2px solid ${theme.border}`,
+        boxShadow: isRocketMode
+          ? `0 -3px 0 ${theme.accentGlow}`
+          : '0 -3px 0 rgba(26,16,8,0.25)',
         zIndex: 9999,
         paddingBottom: 'max(env(safe-area-inset-bottom), 0px)',
       }}
@@ -56,8 +62,8 @@ function WebBottomNav() {
               paddingBottom: '12px',
               gap: '4px',
               border: 'none',
-              borderRight: `1px solid ${colors.border}`,
-              background: active ? colors.accentLight : 'transparent',
+              borderRight: `1px solid ${theme.border}`,
+              background: active ? theme.accentLight : 'transparent',
               cursor: 'pointer',
               WebkitTapHighlightColor: 'transparent',
             } as React.CSSProperties}
@@ -65,13 +71,13 @@ function WebBottomNav() {
             <Ionicons
               name={icon}
               size={20}
-              color={active ? colors.accent : colors.textMuted}
+              color={active ? theme.accent : theme.textMuted}
             />
             <span
               style={{
                 fontFamily: '"Press Start 2P", monospace',
                 fontSize: '6px',
-                color: active ? colors.accent : colors.textMuted,
+                color: active ? theme.accent : theme.textMuted,
               }}
             >
               {label}
@@ -89,9 +95,15 @@ function NativeBottomNav() {
   const pathname = usePathname();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { theme, isRocketMode } = useTheme();
+
+  const NAV = NAV_ALL.filter(n => !isRocketMode || !n.rocketHidden);
 
   return (
-    <View style={[styles.nav, { bottom: -insets.bottom, paddingBottom: insets.bottom }]}>
+    <View style={[
+      styles.nav,
+      { bottom: -insets.bottom, paddingBottom: insets.bottom, backgroundColor: theme.surface, borderTopColor: theme.border },
+    ]}>
       {NAV.map(({ href, label, icon, match }) => {
         const active = pathname.includes(match) ||
           (match === 'today' && pathname.startsWith('/tasks'));
@@ -99,14 +111,14 @@ function NativeBottomNav() {
           <TouchableOpacity
             key={href}
             onPress={() => router.replace(href as any)}
-            style={[styles.tab, active && styles.tabActive]}
+            style={[styles.tab, { borderRightColor: theme.border }, active && { backgroundColor: theme.accentLight }]}
           >
             <Ionicons
               name={icon}
               size={20}
-              color={active ? colors.accent : colors.textMuted}
+              color={active ? theme.accent : theme.textMuted}
             />
-            <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>
+            <Text style={[styles.tabLabel, active ? { color: theme.accent } : { color: theme.textMuted }]}>
               {label}
             </Text>
           </TouchableOpacity>
@@ -125,9 +137,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: 'row',
-    backgroundColor: colors.surface,
     borderTopWidth: 2,
-    borderTopColor: colors.border,
     ...shadows.pixelUp,
   },
   tab: {
@@ -137,17 +147,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 4,
     borderRightWidth: 1,
-    borderRightColor: colors.border,
-  },
-  tabActive: {
-    backgroundColor: colors.accentLight,
   },
   tabLabel: {
     fontFamily: fonts.pixel,
     fontSize: 6,
-    color: colors.textMuted,
-  },
-  tabLabelActive: {
-    color: colors.accent,
   },
 });

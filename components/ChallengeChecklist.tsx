@@ -3,7 +3,8 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-nativ
 import { DayEntry, UserProfile } from '../lib/types';
 import { ChallengeItem } from './ChallengeItem';
 import { WaterTracker } from './WaterTracker';
-import { colors, fonts, shadows } from '../lib/theme';
+import { fonts, shadows } from '../lib/theme';
+import { useTheme } from '../context/ThemeContext';
 
 interface ChallengeChecklistProps {
   entry: DayEntry;
@@ -17,6 +18,7 @@ interface ChallengeChecklistProps {
 }
 
 export function ChallengeChecklist({ entry, readOnly, onUpdate, weightUnit = 'lbs', onNudge, nudgedTasks, challengeMode, hiddenCoreTasks }: ChallengeChecklistProps) {
+  const { theme } = useTheme();
   const [w1Duration, setW1Duration] = useState(String(entry.workoutOneDuration ?? 45));
   const [w2Duration, setW2Duration] = useState(String(entry.workoutTwoDuration ?? 45));
   const [weightInput, setWeightInput] = useState(entry.bodyWeight ? String(entry.bodyWeight) : '');
@@ -72,6 +74,8 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate, weightUnit = 'lb
   const isHidden = (key: keyof NonNullable<UserProfile['hiddenCoreTasks']>) =>
     challengeMode === 'general' && hiddenCoreTasks?.[key] === true;
 
+  const inputStyle = [styles.durationInput, { borderColor: theme.border, backgroundColor: theme.surface2, color: theme.text }];
+
   return (
     <View style={styles.list}>
       {/* Workout 1 */}
@@ -92,10 +96,10 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate, weightUnit = 'lb
                 onChangeText={setW1Duration}
                 onBlur={() => patch({ workoutOneDuration: Number(w1Duration) || 45, workoutOneCompleted: entry.workoutOneCompleted })}
                 keyboardType="numeric"
-                style={styles.durationInput}
-                placeholderTextColor={colors.textMuted}
+                style={inputStyle}
+                placeholderTextColor={theme.textMuted}
               />
-              <Text style={styles.durationUnit}>min</Text>
+              <Text style={[styles.durationUnit, { color: theme.textMuted }]}>min</Text>
             </View>
           )}
         </ChallengeItem>
@@ -122,10 +126,10 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate, weightUnit = 'lb
                   onChangeText={setW2Duration}
                   onBlur={() => patch({ workoutTwoDuration: Number(w2Duration) || 45, workoutTwoCompleted: entry.workoutTwoCompleted })}
                   keyboardType="numeric"
-                  style={styles.durationInput}
-                  placeholderTextColor={colors.textMuted}
+                  style={inputStyle}
+                  placeholderTextColor={theme.textMuted}
                 />
-                <Text style={styles.durationUnit}>min</Text>
+                <Text style={[styles.durationUnit, { color: theme.textMuted }]}>min</Text>
               </View>
               <TouchableOpacity
                 onPress={() => patch({
@@ -134,13 +138,12 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate, weightUnit = 'lb
                 })}
                 style={[
                   styles.outdoorBtn,
-                  entry.workoutTwoOutdoor ? styles.outdoorBtnActive : styles.outdoorBtnInactive,
+                  entry.workoutTwoOutdoor
+                    ? { borderColor: theme.green, backgroundColor: theme.greenLight, ...shadows.glowGreen }
+                    : { borderColor: theme.accent, backgroundColor: theme.accentLight, ...shadows.glowAccent },
                 ]}
               >
-                <Text style={[
-                  styles.outdoorBtnText,
-                  entry.workoutTwoOutdoor ? styles.outdoorBtnTextGreen : styles.outdoorBtnTextAccent,
-                ]}>
+                <Text style={[styles.outdoorBtnText, { color: entry.workoutTwoOutdoor ? theme.green : theme.accent }]}>
                   {entry.workoutTwoOutdoor ? 'OUTDOOR ✓' : '? OUTDOOR ?'}
                 </Text>
               </TouchableOpacity>
@@ -189,31 +192,35 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate, weightUnit = 'lb
         >
           <View style={styles.readingContent}>
             <View style={styles.readingBarRow}>
-              <View style={styles.barTrack}>
+              <View style={[styles.barTrack, { borderColor: theme.border, backgroundColor: theme.bg }]}>
                 <View style={[
                   styles.barFill,
                   { width: `${Math.min(100, ((entry.pagesRead ?? 0) / 10) * 100)}%` as any },
-                  entry.readingCompleted ? styles.barFillDone : styles.barFillAccent,
+                  { backgroundColor: entry.readingCompleted ? theme.green : theme.accent },
                 ]} />
               </View>
-              <Text style={[styles.pagesLabel, entry.readingCompleted && styles.pagesLabelDone]}>
+              <Text style={[styles.pagesLabel, { color: entry.readingCompleted ? theme.green : theme.textMuted }]}>
                 {entry.pagesRead ?? 0}/10 pg
               </Text>
             </View>
             {!readOnly && (
               <View style={styles.pageBtnRow}>
-                <Text style={styles.plus}>+</Text>
+                <Text style={[styles.plus, { color: theme.textMuted }]}>+</Text>
                 {[1, 5, 10].map((n) => (
-                  <TouchableOpacity key={n} onPress={() => addPages(n)} style={styles.pageBtn}>
-                    <Text style={styles.pageBtnText}>{n}pg</Text>
+                  <TouchableOpacity
+                    key={n}
+                    onPress={() => addPages(n)}
+                    style={[styles.pageBtn, { borderColor: theme.border, backgroundColor: theme.surface2 }]}
+                  >
+                    <Text style={[styles.pageBtnText, { color: theme.text }]}>{n}pg</Text>
                   </TouchableOpacity>
                 ))}
                 {entry.pagesRead > 0 && (
                   <TouchableOpacity
                     onPress={() => patch({ pagesRead: 0, readingCompleted: false })}
-                    style={styles.pageBtn}
+                    style={[styles.pageBtn, { borderColor: theme.border, backgroundColor: theme.surface2 }]}
                   >
-                    <Text style={[styles.pageBtnText, { color: colors.textMuted }]}>RESET</Text>
+                    <Text style={[styles.pageBtnText, { color: theme.textMuted }]}>RESET</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -235,20 +242,17 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate, weightUnit = 'lb
         >
         {!readOnly && (
           <View style={{ marginTop: 8 }}>
-            <TouchableOpacity
-              onPress={() => setLogExpanded((v) => !v)}
-              style={styles.logToggle}
-            >
-              <Text style={styles.logToggleText}>
+            <TouchableOpacity onPress={() => setLogExpanded((v) => !v)} style={styles.logToggle}>
+              <Text style={[styles.logToggleText, { color: theme.textMuted }]}>
                 {logExpanded ? '▼' : '▶'} LOG DAILY STATS (opt)
               </Text>
             </TouchableOpacity>
 
             {logExpanded && (
-              <View style={styles.logSection}>
+              <View style={[styles.logSection, { borderTopColor: theme.border }]}>
                 {/* Weight */}
                 <View style={styles.logField}>
-                  <Text style={styles.logFieldLabel}>WEIGHT ({weightUnit})</Text>
+                  <Text style={[styles.logFieldLabel, { color: theme.textMuted }]}>WEIGHT ({weightUnit})</Text>
                   <TextInput
                     value={weightInput}
                     onChangeText={setWeightInput}
@@ -258,17 +262,17 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate, weightUnit = 'lb
                     }}
                     keyboardType="decimal-pad"
                     placeholder={`enter ${weightUnit}`}
-                    placeholderTextColor={colors.textMuted}
-                    style={[styles.durationInput, { width: 120 }]}
+                    placeholderTextColor={theme.textMuted}
+                    style={[inputStyle, { width: 120 }]}
                   />
                 </View>
 
                 {/* Mood */}
                 <View style={styles.logField}>
                   <View style={styles.logFieldHeaderRow}>
-                    <Text style={styles.logFieldLabel}>MOOD</Text>
+                    <Text style={[styles.logFieldLabel, { color: theme.textMuted }]}>MOOD</Text>
                     {entry.mood != null && (
-                      <Text style={[styles.logFieldLabel, { color: colors.accent }]}>
+                      <Text style={[styles.logFieldLabel, { color: theme.accent }]}>
                         {moodLabels[entry.mood - 1]}
                       </Text>
                     )}
@@ -280,12 +284,13 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate, weightUnit = 'lb
                         onPress={() => patch({ mood: entry.mood === val ? undefined : val })}
                         style={[
                           styles.ratingBtn,
-                          entry.mood === val && styles.ratingBtnAccentActive,
+                          { borderColor: theme.border, backgroundColor: theme.bg },
+                          entry.mood === val && { borderColor: theme.accent, backgroundColor: theme.accentLight, ...shadows.glowAccent },
                         ]}
                       >
                         <Text style={[
                           styles.ratingBtnText,
-                          entry.mood === val ? styles.ratingBtnTextAccent : styles.ratingBtnTextMuted,
+                          { color: entry.mood === val ? theme.accent : theme.textMuted },
                         ]}>{val}</Text>
                       </TouchableOpacity>
                     ))}
@@ -295,9 +300,9 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate, weightUnit = 'lb
                 {/* Energy */}
                 <View style={styles.logField}>
                   <View style={styles.logFieldHeaderRow}>
-                    <Text style={styles.logFieldLabel}>ENERGY</Text>
+                    <Text style={[styles.logFieldLabel, { color: theme.textMuted }]}>ENERGY</Text>
                     {entry.energyLevel != null && (
-                      <Text style={[styles.logFieldLabel, { color: colors.green }]}>
+                      <Text style={[styles.logFieldLabel, { color: theme.green }]}>
                         {energyLabels[entry.energyLevel - 1]}
                       </Text>
                     )}
@@ -311,12 +316,13 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate, weightUnit = 'lb
                           onPress={() => patch({ energyLevel: entry.energyLevel === val ? undefined : val })}
                           style={[
                             styles.ratingBtn,
-                            filled && styles.ratingBtnGreenActive,
+                            { borderColor: theme.border, backgroundColor: theme.bg },
+                            filled && { borderColor: theme.green, backgroundColor: theme.greenLight, ...shadows.glowGreen },
                           ]}
                         >
                           <Text style={[
                             styles.ratingBtnText,
-                            filled ? styles.ratingBtnTextGreen : styles.ratingBtnTextMuted,
+                            { color: filled ? theme.green : theme.textMuted },
                           ]}>{val}</Text>
                         </TouchableOpacity>
                       );
@@ -341,47 +347,29 @@ const styles = StyleSheet.create({
     fontFamily: fonts.pixel,
     fontSize: 7,
     borderWidth: 2,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
-    color: colors.text,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
-  durationUnit: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
+  durationUnit: { fontFamily: fonts.pixel, fontSize: 6 },
   w2Controls: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 4 },
   outdoorBtn: { paddingHorizontal: 12, paddingVertical: 5, borderWidth: 2, ...shadows.pixel },
-  outdoorBtnActive: { borderColor: colors.green, backgroundColor: colors.greenLight, ...shadows.glowGreen },
-  outdoorBtnInactive: { borderColor: colors.accent, backgroundColor: colors.accentLight, ...shadows.glowAccent },
   outdoorBtnText: { fontFamily: fonts.pixel, fontSize: 7 },
-  outdoorBtnTextGreen: { color: colors.green },
-  outdoorBtnTextAccent: { color: colors.accent },
   readingContent: { gap: 8 },
   readingBarRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  barTrack: { flex: 1, height: 12, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.bg },
+  barTrack: { flex: 1, height: 12, borderWidth: 2 },
   barFill: { height: '100%' },
-  barFillAccent: { backgroundColor: colors.accent },
-  barFillDone: { backgroundColor: colors.green },
-  pagesLabel: { fontFamily: fonts.vt323, fontSize: 18, color: colors.textMuted, minWidth: 55 },
-  pagesLabelDone: { color: colors.green },
+  pagesLabel: { fontFamily: fonts.vt323, fontSize: 18, minWidth: 55 },
   pageBtnRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
-  plus: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
-  pageBtn: { paddingHorizontal: 10, paddingVertical: 3, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surface2, ...shadows.pixel },
-  pageBtnText: { fontFamily: fonts.pixel, fontSize: 7, color: colors.text },
+  plus: { fontFamily: fonts.pixel, fontSize: 6 },
+  pageBtn: { paddingHorizontal: 10, paddingVertical: 3, borderWidth: 2, ...shadows.pixel },
+  pageBtnText: { fontFamily: fonts.pixel, fontSize: 7 },
   logToggle: { padding: 0 },
-  logToggleText: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
-  logSection: { marginTop: 12, gap: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border },
+  logToggleText: { fontFamily: fonts.pixel, fontSize: 6 },
+  logSection: { marginTop: 12, gap: 16, paddingTop: 12, borderTopWidth: 1 },
   logField: { gap: 8 },
   logFieldHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  logFieldLabel: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
+  logFieldLabel: { fontFamily: fonts.pixel, fontSize: 6 },
   ratingRow: { flexDirection: 'row', gap: 6 },
-  ratingBtn: {
-    flex: 1, paddingVertical: 5, borderWidth: 2, borderColor: colors.border,
-    backgroundColor: colors.bg, alignItems: 'center',
-  },
-  ratingBtnAccentActive: { borderColor: colors.accent, backgroundColor: colors.accentLight, ...shadows.glowAccent },
-  ratingBtnGreenActive: { borderColor: colors.green, backgroundColor: colors.greenLight, ...shadows.glowGreen },
+  ratingBtn: { flex: 1, paddingVertical: 5, borderWidth: 2, alignItems: 'center' },
   ratingBtnText: { fontFamily: fonts.pixel, fontSize: 8 },
-  ratingBtnTextMuted: { color: colors.textMuted },
-  ratingBtnTextAccent: { color: colors.accent },
-  ratingBtnTextGreen: { color: colors.green },
 });

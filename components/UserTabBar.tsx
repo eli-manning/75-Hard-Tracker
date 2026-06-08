@@ -2,7 +2,8 @@ import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet } from 'rea
 import { UserProfile } from '../lib/types';
 import { getAvatarUrl } from '../lib/avatar';
 import { getAvatarSource, AVATAR_PORTRAIT_RATIO } from '../lib/avatarMap';
-import { colors, fonts, shadows } from '../lib/theme';
+import { fonts, shadows } from '../lib/theme';
+import { useTheme } from '../context/ThemeContext';
 import { StreakFlame } from './StreakFlame';
 
 interface UserTabBarProps {
@@ -13,6 +14,8 @@ interface UserTabBarProps {
 }
 
 export function UserTabBar({ users, activeUid, onSelectUser, currentUserUid }: UserTabBarProps) {
+  const { theme } = useTheme();
+
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.container}>
       {users.map((u) => {
@@ -24,7 +27,13 @@ export function UserTabBar({ users, activeUid, onSelectUser, currentUserUid }: U
             style={[styles.tab, { opacity: isActive ? 1 : 0.45 }]}
           >
             <View style={styles.avatarWrapper}>
-              <View style={[styles.avatarFrame, isActive ? styles.avatarActive : styles.avatarInactive]}>
+              <View style={[
+                styles.avatarFrame,
+                { backgroundColor: theme.surface },
+                isActive
+                  ? { borderColor: theme.accent, ...shadows.glowAccent }
+                  : { borderColor: theme.border },
+              ]}>
                 {(() => {
                   const url = getAvatarUrl(u);
                   const ratio = AVATAR_PORTRAIT_RATIO[url];
@@ -41,9 +50,9 @@ export function UserTabBar({ users, activeUid, onSelectUser, currentUserUid }: U
             </View>
             <View style={styles.nameRow}>
               {u.uid === currentUserUid && (
-                <Text style={styles.arrow}>▶</Text>
+                <Text style={[styles.arrow, { color: theme.accent }]}>▶</Text>
               )}
-              <Text style={[styles.name, isActive && styles.nameActive]}>
+              <Text style={[styles.name, { color: isActive ? theme.accent : theme.textMuted }]}>
                 {u.displayName.toUpperCase()}
               </Text>
             </View>
@@ -62,49 +71,16 @@ const styles = StyleSheet.create({
     gap: 12,
     flexDirection: 'row',
   },
-  tab: {
-    alignItems: 'center',
-    gap: 6,
-  },
-  avatarWrapper: {
-    position: 'relative',
-  },
+  tab: { alignItems: 'center', gap: 6 },
+  avatarWrapper: { position: 'relative' },
   avatarFrame: {
     width: 64,
     height: 64,
     borderWidth: 2,
-    backgroundColor: colors.surface,
     overflow: 'hidden',
     ...shadows.pixel,
   },
-  avatarActive: {
-    borderColor: colors.accent,
-    ...shadows.glowAccent,
-  },
-  avatarInactive: {
-    borderColor: colors.border,
-  },
-  avatar: {
-    width: 64,
-    height: 64,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  arrow: {
-    fontFamily: fonts.pixel,
-    fontSize: 7,
-    color: colors.accent,
-  },
-  name: {
-    fontFamily: fonts.pixel,
-    fontSize: 6,
-    color: colors.textMuted,
-    letterSpacing: 0.5,
-  },
-  nameActive: {
-    color: colors.accent,
-  },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  arrow: { fontFamily: fonts.pixel, fontSize: 7 },
+  name: { fontFamily: fonts.pixel, fontSize: 6, letterSpacing: 0.5 },
 });

@@ -30,20 +30,22 @@ import { RestartModal } from '../../components/RestartModal';
 import { MissedDayModal } from '../../components/MissedDayModal';
 import { computeDayPoints, computeAllCoreCompleted } from '../../lib/points';
 import { colors, fonts } from '../../lib/theme';
+import { useTheme } from '../../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function DaySkeleton({ profile }: { profile: UserProfile }) {
+  const { theme } = useTheme();
   const today = format(new Date(), 'MMMM d, yyyy').toUpperCase();
   return (
     <View style={styles.skeletonContainer}>
       <View style={styles.skeletonHeader}>
-        <Text style={styles.skeletonDayNum}>DAY —</Text>
-        <Text style={styles.skeletonDate}>{today}</Text>
+        <Text style={[styles.skeletonDayNum, { color: theme.accent }]}>DAY —</Text>
+        <Text style={[styles.skeletonDate, { color: theme.textMuted }]}>{today}</Text>
       </View>
-      <View style={styles.skeletonBar} />
-      <Text style={styles.skeletonLabel}>CORE TASKS</Text>
+      <View style={[styles.skeletonBar, { borderColor: theme.border, backgroundColor: theme.surface }]} />
+      <Text style={[styles.skeletonLabel, { color: theme.textMuted }]}>CORE TASKS</Text>
       {[...Array(6)].map((_, i) => (
-        <View key={i} style={[styles.skeletonTask, { opacity: 1 - i * 0.1 }]} />
+        <View key={i} style={[styles.skeletonTask, { borderColor: theme.border, backgroundColor: theme.surface, opacity: 1 - i * 0.1 }]} />
       ))}
     </View>
   );
@@ -61,6 +63,7 @@ function CrewTaskCard({
   onSetProgress: (n: number) => void;
   onResetProgress: () => void;
 }) {
+  const { theme } = useTheme();
   const [input, setInput] = useState('');
   const [inputError, setInputError] = useState(false);
   const isGoal = task.amount != null;
@@ -77,25 +80,35 @@ function CrewTaskCard({
   }
 
   const inner = (
-    <View style={[styles.crewTaskCard, completed && styles.crewTaskCardDone]}>
-      <View style={[styles.crewCheckbox, completed && styles.crewCheckboxDone]}>
+    <View style={[
+      styles.crewTaskCard,
+      completed
+        ? { borderColor: theme.green, backgroundColor: theme.greenLight, shadowColor: theme.green, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.3, shadowRadius: 6 }
+        : { borderColor: theme.border, backgroundColor: theme.surface },
+    ]}>
+      <View style={[
+        styles.crewCheckbox,
+        completed
+          ? { borderColor: theme.green, backgroundColor: theme.green, shadowColor: theme.green, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 8 }
+          : { borderColor: theme.textMuted, backgroundColor: 'transparent' },
+      ]}>
         {completed && (
           <Svg width={12} height={10} viewBox="0 0 12 10" fill="none">
-            <Path d="M1 5l3 3 7-7" stroke={colors.bg} strokeWidth={2.5} strokeLinecap="square" />
+            <Path d="M1 5l3 3 7-7" stroke={theme.bg} strokeWidth={2.5} strokeLinecap="square" />
           </Svg>
         )}
       </View>
       <View style={styles.crewTaskBody}>
-        <Text style={[styles.crewTaskLabel, completed && styles.crewTaskLabelDone]} numberOfLines={2}>
+        <Text style={[styles.crewTaskLabel, { color: completed ? theme.green : theme.text }, completed && styles.crewTaskLabelDone]} numberOfLines={2}>
           {task.label}
         </Text>
         {isGoal && (
           <View style={styles.crewGoalArea}>
             <View style={styles.crewBarRow}>
-              <View style={styles.crewBarTrack}>
-                <View style={[styles.crewBarFill, { width: `${fillPct}%` as any }, completed ? styles.crewBarFillDone : styles.crewBarFillAccent]} />
+              <View style={[styles.crewBarTrack, { borderColor: theme.border, backgroundColor: theme.bg }]}>
+                <View style={[styles.crewBarFill, { width: `${fillPct}%` as any, backgroundColor: completed ? theme.green : theme.accent }]} />
               </View>
-              <Text style={[styles.crewProgressLabel, completed && styles.crewProgressLabelDone]}>
+              <Text style={[styles.crewProgressLabel, { color: completed ? theme.green : theme.textMuted }]}>
                 {progress}/{goalAmount}{unitLabel}
               </Text>
             </View>
@@ -106,25 +119,25 @@ function CrewTaskCard({
                   onChangeText={(t) => { setInput(t.replace(/[^0-9]/g, '')); setInputError(false); }}
                   keyboardType="number-pad"
                   placeholder="0"
-                  placeholderTextColor={colors.textMuted}
-                  style={[styles.crewGoalInput, inputError && styles.crewGoalInputError]}
+                  placeholderTextColor={theme.textMuted}
+                  style={[styles.crewGoalInput, { borderColor: inputError ? theme.red : theme.border, backgroundColor: theme.surface2, color: theme.text }]}
                   maxLength={6}
                   onSubmitEditing={handleSet}
                 />
-                <TouchableOpacity onPress={handleSet} style={styles.crewSetBtn}>
-                  <Text style={styles.crewSetBtnText}>SET</Text>
+                <TouchableOpacity onPress={handleSet} style={[styles.crewSetBtn, { borderColor: theme.accent, backgroundColor: theme.accentLight }]}>
+                  <Text style={[styles.crewSetBtnText, { color: theme.accent }]}>SET</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={onResetProgress} style={styles.crewResetBtn}>
-                  <Text style={styles.crewResetBtnText}>RESET</Text>
+                <TouchableOpacity onPress={onResetProgress} style={[styles.crewResetBtn, { borderColor: theme.border, backgroundColor: theme.surface2 }]}>
+                  <Text style={[styles.crewResetBtnText, { color: theme.textMuted }]}>RESET</Text>
                 </TouchableOpacity>
               </View>
             )}
-            {inputError && <Text style={styles.crewGoalErrorText}>ENTER A VALID NUMBER</Text>}
+            {inputError && <Text style={[styles.crewGoalErrorText, { color: theme.red }]}>ENTER A VALID NUMBER</Text>}
           </View>
         )}
         {!isGoal && task.unit != null && (
-          <View style={styles.crewAmountBadge}>
-            <Text style={styles.crewAmountText}>{task.amount}{task.unit ? ` ${task.unit.toUpperCase()}` : ''}</Text>
+          <View style={[styles.crewAmountBadge, { borderColor: theme.border, backgroundColor: theme.surface2 }]}>
+            <Text style={[styles.crewAmountText, { color: theme.text }]}>{task.amount}{task.unit ? ` ${task.unit.toUpperCase()}` : ''}</Text>
           </View>
         )}
       </View>
@@ -136,6 +149,7 @@ function CrewTaskCard({
 }
 
 function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile; onProfileUpdate: (p: UserProfile) => void }) {
+  const { theme, isRocketMode } = useTheme();
   const { crews } = useUserCrews(currentUser.uid);
   const { users: allUsers } = useAllUsers();
   const users = useMemo(() => {
@@ -419,7 +433,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
     : 0;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.bg }]}>
       {showSummary && dayEntry && (
         <DaySummaryModal
           visible={showSummary}
@@ -468,11 +482,11 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
             onPress={() => setMenuOpen(true)}
             style={styles.hamburger}
           >
-            <View style={styles.hamburgerLine} />
-            <View style={styles.hamburgerLine} />
-            <View style={styles.hamburgerLine} />
+            <View style={[styles.hamburgerLine, { backgroundColor: theme.text }]} />
+            <View style={[styles.hamburgerLine, { backgroundColor: theme.text }]} />
+            <View style={[styles.hamburgerLine, { backgroundColor: theme.text }]} />
           </TouchableOpacity>
-          {pendingRequestCount > 0 && <View style={styles.notifDot} />}
+          {pendingRequestCount > 0 && <View style={[styles.notifDot, { backgroundColor: theme.red, borderColor: theme.bg }]} />}
         </View>
       </View>
 
@@ -487,33 +501,33 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
       {pendingNudge && (
         <Modal transparent animationType="fade">
           <View style={styles.spendBackdrop}>
-            <View style={styles.spendCard}>
+            <View style={[styles.spendCard, { backgroundColor: theme.surface, borderColor: theme.accent }]}>
               {nudgeQuota.purchased >= 5 || (currentUser.totalPoints ?? 0) < 10 ? (
                 <>
-                  <Text style={styles.spendTitle}>NOT ENOUGH POINTS</Text>
-                  <Text style={styles.spendBody}>
+                  <Text style={[styles.spendTitle, { color: theme.accent }]}>NOT ENOUGH POINTS</Text>
+                  <Text style={[styles.spendBody, { color: theme.textMuted }]}>
                     {nudgeQuota.purchased >= 5
                       ? "You've sent 5 paid nudges today. Try again tomorrow."
                       : `You need 10 points to send a nudge. You have ${currentUser.totalPoints ?? 0}.`}
                   </Text>
-                  <TouchableOpacity onPress={() => setPendingNudge(null)} style={styles.spendCancelBtn}>
-                    <Text style={styles.spendCancelText}>OK</Text>
+                  <TouchableOpacity onPress={() => setPendingNudge(null)} style={[styles.spendCancelBtn, { borderColor: theme.border }]}>
+                    <Text style={[styles.spendCancelText, { color: theme.textMuted }]}>OK</Text>
                   </TouchableOpacity>
                 </>
               ) : (
                 <>
-                  <Text style={styles.spendTitle}>SPEND 10 POINTS?</Text>
-                  <Text style={styles.spendBody}>
+                  <Text style={[styles.spendTitle, { color: theme.accent }]}>SPEND 10 POINTS?</Text>
+                  <Text style={[styles.spendBody, { color: theme.textMuted }]}>
                     {"You've used all 5 free nudges today.\n"}
                     {`You have ${currentUser.totalPoints ?? 0} points.\n`}
                     {`Paid nudges today: ${nudgeQuota.purchased}/5`}
                   </Text>
                   <View style={styles.spendBtns}>
-                    <TouchableOpacity onPress={() => setPendingNudge(null)} style={styles.spendCancelBtn}>
-                      <Text style={styles.spendCancelText}>CANCEL</Text>
+                    <TouchableOpacity onPress={() => setPendingNudge(null)} style={[styles.spendCancelBtn, { borderColor: theme.border }]}>
+                      <Text style={[styles.spendCancelText, { color: theme.textMuted }]}>CANCEL</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={handleSpendPoints} style={styles.spendConfirmBtn}>
-                      <Text style={styles.spendConfirmText}>SPEND 10 PTS</Text>
+                    <TouchableOpacity onPress={handleSpendPoints} style={[styles.spendConfirmBtn, { borderColor: theme.accent, backgroundColor: theme.accentLight }]}>
+                      <Text style={[styles.spendConfirmText, { color: theme.accent }]}>SPEND 10 PTS</Text>
                     </TouchableOpacity>
                   </View>
                 </>
@@ -529,11 +543,11 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
         showsVerticalScrollIndicator={false}
       >
         {readOnly && !showSkeleton && (
-          <View style={styles.viewingBanner}>
-            <Text style={styles.viewingBannerText}>
+          <View style={[styles.viewingBanner, { borderColor: theme.border, backgroundColor: theme.surface2 }]}>
+            <Text style={[styles.viewingBannerText, { color: theme.textMuted }]}>
               VIEWING {activeProfile.displayName.toUpperCase()}'S DAY
             </Text>
-            <Text style={styles.nudgeQuotaText}>
+            <Text style={[styles.nudgeQuotaText, { color: theme.textMuted }]}>
               {nudgeQuota.remaining > 0
                 ? `${nudgeQuota.remaining} NUDGE${nudgeQuota.remaining !== 1 ? 'S' : ''} LEFT TODAY`
                 : '0 FREE — 10 PTS EACH'}
@@ -542,8 +556,8 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
         )}
 
         {profileError && (
-          <View style={styles.errorBanner}>
-            <Text style={styles.errorBannerText}>FAILED TO LOAD USER DATA</Text>
+          <View style={[styles.errorBanner, { borderColor: theme.red, backgroundColor: theme.redLight }]}>
+            <Text style={[styles.errorBannerText, { color: theme.red }]}>FAILED TO LOAD USER DATA</Text>
           </View>
         )}
 
@@ -553,42 +567,42 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
           <View style={styles.content}>
             {!readOnly && dayCompleted && !showSummary && (
               <TouchableOpacity
-                style={styles.summaryBanner}
+                style={[styles.summaryBanner, { backgroundColor: theme.accent, borderColor: theme.accent, shadowColor: theme.accent }]}
                 onPress={() => setShowSummary(true)}
                 activeOpacity={0.85}
               >
                 <Text style={styles.summaryBannerText}>DAY COMPLETE — VIEW SUMMARY</Text>
-                <Ionicons name="chevron-forward" size={12} color={colors.white} />
+                <Ionicons name="chevron-forward" size={12} color={theme.white} />
               </TouchableOpacity>
             )}
             <View style={styles.dayHeader}>
               {activeProfile.challengeMode === 'general' ? (
                 <View style={styles.dayNumRow}>
-                  <Text style={styles.generalDate}>{format(new Date(), 'EEE,MMM d').toUpperCase()}</Text>
+                  <Text style={[styles.generalDate, { color: theme.accent, textShadowColor: theme.accentGlow }]}>{format(new Date(), 'EEE,MMM d').toUpperCase()}</Text>
                   {(activeProfile.totalPoints ?? 0) > 0 && (
                     <>
-                      <Text style={styles.dayNumSep}>|</Text>
-                      <Text style={styles.generalDate}>{activeProfile.totalPoints ?? 0} PTS</Text>
+                      <Text style={[styles.dayNumSep, { color: theme.textMuted }]}>|</Text>
+                      <Text style={[styles.generalDate, { color: theme.accent, textShadowColor: theme.accentGlow }]}>{activeProfile.totalPoints ?? 0} PTS</Text>
                     </>
                   )}
                 </View>
               ) : dayNum <= 0 ? (
                 <>
-                  <Text style={styles.startsInLabel}>STARTING SOON</Text>
-                  <Text style={styles.daysUntil}>{Math.abs(dayNum) + 1} {Math.abs(dayNum) + 1 === 1 ? 'DAY' : 'DAYS'} AWAY</Text>
+                  <Text style={[styles.startsInLabel, { color: theme.textMuted }]}>STARTING SOON</Text>
+                  <Text style={[styles.daysUntil, { color: theme.accent, textShadowColor: theme.accentGlow }]}>{Math.abs(dayNum) + 1} {Math.abs(dayNum) + 1 === 1 ? 'DAY' : 'DAYS'} AWAY</Text>
                 </>
               ) : (
                 <View style={styles.dayNumRow}>
-                  <Text style={styles.dayNumSmall}>DAY {dayNum}</Text>
+                  <Text style={[styles.dayNumSmall, { color: theme.accent, textShadowColor: theme.accentGlow }]}>DAY {dayNum}</Text>
                   {(activeProfile.totalPoints ?? 0) > 0 && (
                     <>
-                      <Text style={styles.dayNumSep}>|</Text>
-                      <Text style={styles.dayNumSmall}>{activeProfile.totalPoints ?? 0} PTS</Text>
+                      <Text style={[styles.dayNumSep, { color: theme.textMuted }]}>|</Text>
+                      <Text style={[styles.dayNumSmall, { color: theme.accent, textShadowColor: theme.accentGlow }]}>{activeProfile.totalPoints ?? 0} PTS</Text>
                     </>
                   )}
                 </View>
               )}
-              {activeProfile.challengeMode !== 'general' && <Text style={styles.dateText}>{today}</Text>}
+              {activeProfile.challengeMode !== 'general' && <Text style={[styles.dateText, { color: theme.textMuted }]}>{today}</Text>}
               {dayEntry && dayEntry.dayNumber > 0 && <DailyProgress entry={dayEntry} />}
             </View>
 
@@ -598,8 +612,8 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
 
             <View>
               <TouchableOpacity onPress={() => setCoreOpen((o) => !o)} style={styles.sectionToggle}>
-                <Ionicons name={coreOpen ? 'chevron-down' : 'chevron-forward'} size={12} color={colors.text} />
-                <Text style={styles.sectionLabel}>CORE TASKS</Text>
+                <Ionicons name={coreOpen ? 'chevron-down' : 'chevron-forward'} size={12} color={theme.text} />
+                <Text style={[styles.sectionLabel, { color: theme.text }]}>CORE TASKS</Text>
               </TouchableOpacity>
               {coreOpen && dayEntry && (
                 <ChallengeChecklist
@@ -631,14 +645,14 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
             {!readOnly && dayEntry && crews.some((c) => c.customCrewTasks.length > 0) && (
               <View style={styles.crewTasksSection}>
                 <TouchableOpacity onPress={() => setCrewOpen((o) => !o)} style={[styles.sectionToggle, { marginBottom: 0 }]}>
-                  <Ionicons name={crewOpen ? 'chevron-down' : 'chevron-forward'} size={12} color={colors.text} />
-                  <Text style={styles.sectionLabel}>CREW TASKS</Text>
+                  <Ionicons name={crewOpen ? 'chevron-down' : 'chevron-forward'} size={12} color={theme.text} />
+                  <Text style={[styles.sectionLabel, { color: theme.text }]}>CREW TASKS</Text>
                 </TouchableOpacity>
                 {crewOpen && <View style={styles.crewTaskGroups}>{crews.filter((c) => c.customCrewTasks.length > 0).map((crew) => (
                   <View key={crew.id} style={styles.crewTaskGroup}>
                     <View style={styles.crewTaskGroupHeader}>
-                      <Ionicons name={getCrewIconIon(crew.icon) as any} size={12} color={colors.textMuted} />
-                      <Text style={styles.crewTaskGroupName}>{crew.name.toUpperCase()}</Text>
+                      <Ionicons name={getCrewIconIon(crew.icon) as any} size={12} color={theme.textMuted} />
+                      <Text style={[styles.crewTaskGroupName, { color: theme.textMuted }]}>{crew.name.toUpperCase()}</Text>
                     </View>
                     <View style={styles.crewTaskList}>
                       {crew.customCrewTasks.map((task) => {

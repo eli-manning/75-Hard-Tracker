@@ -15,7 +15,8 @@ import { UserProfile } from '../lib/types';
 import { getAvatarUrl } from '../lib/avatar';
 import { getAvatarSource, AVATAR_PORTRAIT_RATIO } from '../lib/avatarMap';
 import { getCached, invalidate } from '../lib/cache';
-import { colors, fonts, shadows } from '../lib/theme';
+import { fonts, shadows } from '../lib/theme';
+import { useTheme } from '../context/ThemeContext';
 import { InstallPrompt } from './InstallPrompt';
 
 interface SideMenuProps {
@@ -27,16 +28,16 @@ interface SideMenuProps {
 }
 
 const DRAWER_WIDTH = 280;
-const SCREEN_WIDTH = Dimensions.get('window').width;
 
 function AvatarImg({ url, size }: { url: string; size: number }) {
+  const { theme } = useTheme();
   const [err, setErr] = useState(false);
   const source = getAvatarSource(url);
   const ratio = AVATAR_PORTRAIT_RATIO[url];
   if (err) {
     return (
       <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-        <Ionicons name="person-outline" size={size * 0.55} color={colors.textMuted} />
+        <Ionicons name="person-outline" size={size * 0.55} color={theme.textMuted} />
       </View>
     );
   }
@@ -51,6 +52,7 @@ function AvatarImg({ url, size }: { url: string; size: number }) {
 }
 
 export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSeen }: SideMenuProps) {
+  const { theme } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const drawerAnim = useRef(new Animated.Value(DRAWER_WIDTH)).current;
@@ -70,30 +72,17 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSe
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(drawerAnim, {
-        toValue: open ? 0 : DRAWER_WIDTH,
-        duration: 280,
-        useNativeDriver: true,
-      }),
-      Animated.timing(backdropAnim, {
-        toValue: open ? 1 : 0,
-        duration: 280,
-        useNativeDriver: true,
-      }),
+      Animated.timing(drawerAnim, { toValue: open ? 0 : DRAWER_WIDTH, duration: 280, useNativeDriver: true }),
+      Animated.timing(backdropAnim, { toValue: open ? 1 : 0, duration: 280, useNativeDriver: true }),
     ]).start();
   }, [open]);
 
   useEffect(() => {
     if (!open) { setSentRequests(new Set()); setFriendSearch(''); return; }
-
     invalidate(`profile-${profile.uid}`);
-    getUserProfile(profile.uid).then((fresh) => {
-      if (fresh) onProfileUpdateRef.current(fresh);
-    }).catch(() => {});
-
+    getUserProfile(profile.uid).then((fresh) => { if (fresh) onProfileUpdateRef.current(fresh); }).catch(() => {});
     invalidate('all-users');
     getAllUsers().then(setAllUsers).catch(() => {});
-
     setRequestsLoading(true);
     getPendingRequests(profile.uid)
       .then((reqs) => { setPendingRequests(reqs); if (reqs.length === 0) onRequestsSeenRef.current?.(); })
@@ -115,11 +104,8 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSe
       } else {
         setSentRequests((prev) => new Set(Array.from(prev).concat(toUid)));
       }
-    } catch {
-      // silently fail
-    } finally {
-      setFriendsActionUid(null);
-    }
+    } catch {}
+    finally { setFriendsActionUid(null); }
   }
 
   async function handleAccept(fromUid: string) {
@@ -128,11 +114,8 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSe
       await acceptFriendRequest(profile.uid, fromUid);
       onProfileUpdate({ ...profile, friends: [...(profile.friends ?? []), fromUid] });
       setPendingRequests((prev) => prev.filter((uid) => uid !== fromUid));
-    } catch {
-      // silently fail
-    } finally {
-      setFriendsActionUid(null);
-    }
+    } catch {}
+    finally { setFriendsActionUid(null); }
   }
 
   async function handleDecline(fromUid: string) {
@@ -140,11 +123,8 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSe
     try {
       await declineFriendRequest(profile.uid, fromUid);
       setPendingRequests((prev) => prev.filter((uid) => uid !== fromUid));
-    } catch {
-      // silently fail
-    } finally {
-      setFriendsActionUid(null);
-    }
+    } catch {}
+    finally { setFriendsActionUid(null); }
   }
 
   async function handleReorderFriend(friendUid: string, dir: -1 | 1) {
@@ -164,11 +144,8 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSe
     try {
       await removeFriend(profile.uid, friendUid);
       onProfileUpdate({ ...profile, friends: (profile.friends ?? []).filter((uid) => uid !== friendUid) });
-    } catch {
-      // silently fail
-    } finally {
-      setFriendsActionUid(null);
-    }
+    } catch {}
+    finally { setFriendsActionUid(null); }
   }
 
   const friendUids = new Set(profile.friends ?? []);
@@ -188,7 +165,6 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSe
 
   return (
     <>
-      {/* Backdrop */}
       <Animated.View
         pointerEvents={open ? 'auto' : 'none'}
         style={[styles.backdrop, { opacity: backdropAnim }]}
@@ -196,155 +172,134 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSe
         <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} />
       </Animated.View>
 
-      {/* Drawer */}
-      <Animated.View style={[styles.drawer, { transform: [{ translateX: drawerAnim }] }]}>
-        {/* Header */}
-        <View style={[styles.drawerHeader, { paddingTop: Math.max(insets.top, 16) }]}>
-          <Text style={styles.drawerTitle}>MENU</Text>
+      <Animated.View style={[
+        styles.drawer,
+        { backgroundColor: theme.surface, borderLeftColor: theme.border, transform: [{ translateX: drawerAnim }] },
+      ]}>
+        <View style={[styles.drawerHeader, { paddingTop: Math.max(insets.top, 16), borderBottomColor: theme.border }]}>
+          <Text style={[styles.drawerTitle, { color: theme.accent }]}>MENU</Text>
           <TouchableOpacity onPress={onClose} style={{ opacity: 0.6 }}>
-            <Ionicons name="close" size={18} color={colors.text} />
+            <Ionicons name="close" size={18} color={theme.text} />
           </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.scrollArea}>
-          {/* Profile link */}
           <TouchableOpacity
             onPress={() => { router.push('/profile' as any); onClose(); }}
-            style={styles.profileBtn}
+            style={[styles.profileBtn, { borderBottomColor: theme.border }]}
           >
-            <View style={styles.avatarFrameAccent}>
+            <View style={[styles.avatarFrameAccent, { borderColor: theme.accent, shadowColor: theme.accent }]}>
               <AvatarImg url={getAvatarUrl(profile)} size={48} />
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={styles.profileName} numberOfLines={1}>{profile.displayName}</Text>
-              <Text style={styles.profileCta}>VIEW PROFILE</Text>
+              <Text style={[styles.profileName, { color: theme.text }]} numberOfLines={1}>{profile.displayName}</Text>
+              <Text style={[styles.profileCta, { color: theme.accent }]}>VIEW PROFILE</Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.accent} />
+            <Ionicons name="chevron-forward" size={16} color={theme.accent} />
           </TouchableOpacity>
 
-          {/* Manage tasks */}
           <TouchableOpacity
             onPress={() => { router.push('/tasks' as any); }}
-            style={styles.menuRow}
+            style={[styles.menuRow, { borderBottomColor: theme.border }]}
           >
-            <Ionicons name="list-outline" size={14} color={colors.textMuted} />
-            <Text style={styles.menuRowText}>MANAGE TASKS</Text>
-            <Ionicons name="chevron-forward" size={14} color={colors.textMuted} style={{ marginLeft: 'auto' }} />
+            <Ionicons name="list-outline" size={14} color={theme.textMuted} />
+            <Text style={[styles.menuRowText, { color: theme.textMuted }]}>MANAGE TASKS</Text>
+            <Ionicons name="chevron-forward" size={14} color={theme.textMuted} style={{ marginLeft: 'auto' }} />
           </TouchableOpacity>
 
-          {/* Friends section */}
-          <View style={styles.friendsSection}>
+          <View style={[styles.friendsSection, { borderBottomColor: theme.border }]}>
             <View style={styles.friendsHeader}>
-              <Ionicons name="people-outline" size={14} color={colors.textMuted} />
-              <Text style={styles.friendsTitle}>FRIENDS</Text>
+              <Ionicons name="people-outline" size={14} color={theme.textMuted} />
+              <Text style={[styles.friendsTitle, { color: theme.textMuted }]}>FRIENDS</Text>
               {!requestsLoading && requesters.length > 0 && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{requesters.length}</Text>
+                <View style={[styles.badge, { backgroundColor: theme.red }]}>
+                  <Text style={[styles.badgeText, { color: theme.white }]}>{requesters.length}</Text>
                 </View>
               )}
             </View>
 
-            {/* Incoming requests */}
             {requestsLoading ? (
-              <Text style={styles.bodyText}>Checking requests…</Text>
+              <Text style={[styles.bodyText, { color: theme.text }]}>Checking requests…</Text>
             ) : requesters.length > 0 && (
               <View style={styles.subSection}>
-                <Text style={styles.subSectionLabel}>REQUESTS</Text>
+                <Text style={[styles.subSectionLabel, { color: theme.textMuted }]}>REQUESTS</Text>
                 {requesters.map((u) => (
                   <View key={u.uid} style={styles.userRow}>
-                    <View style={styles.avatarFrameSmall}>
+                    <View style={[styles.avatarFrameSmall, { borderColor: theme.accent }]}>
                       <AvatarImg url={getAvatarUrl(u)} size={36} />
                     </View>
-                    <Text style={styles.userName} numberOfLines={1}>{u.displayName}</Text>
+                    <Text style={[styles.userName, { color: theme.text }]} numberOfLines={1}>{u.displayName}</Text>
                     <TouchableOpacity
                       onPress={() => { handleAccept(u.uid); onRequestsSeen?.(); }}
                       disabled={friendsActionUid === u.uid}
-                      style={[styles.actionBtnGreen, friendsActionUid === u.uid && { opacity: 0.5 }]}
+                      style={[styles.actionBtnGreen, { borderColor: theme.green, backgroundColor: theme.greenLight }, friendsActionUid === u.uid && { opacity: 0.5 }]}
                     >
-                      <Text style={styles.actionBtnGreenText}>✓</Text>
+                      <Text style={[styles.actionBtnGreenText, { color: theme.green }]}>✓</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => handleDecline(u.uid)}
                       disabled={friendsActionUid === u.uid}
-                      style={[styles.actionBtnRed, friendsActionUid === u.uid && { opacity: 0.5 }]}
+                      style={[styles.actionBtnRed, { borderColor: theme.red, backgroundColor: theme.redLight }, friendsActionUid === u.uid && { opacity: 0.5 }]}
                     >
-                      <Text style={styles.actionBtnRedText}>✕</Text>
+                      <Text style={[styles.actionBtnRedText, { color: theme.red }]}>✕</Text>
                     </TouchableOpacity>
                   </View>
                 ))}
               </View>
             )}
 
-            {/* Current friends */}
             {friends.length > 0 && (
               <View style={styles.subSection}>
-                <Text style={styles.subSectionLabel}>YOUR FRIENDS</Text>
+                <Text style={[styles.subSectionLabel, { color: theme.textMuted }]}>YOUR FRIENDS</Text>
                 {friends.map((u, i) => (
                   <View key={u.uid} style={styles.userRow}>
-                    <View style={styles.avatarFrameTiny}>
+                    <View style={[styles.avatarFrameTiny, { borderColor: theme.border }]}>
                       <AvatarImg url={getAvatarUrl(u)} size={28} />
                     </View>
-                    <Text style={[styles.bodyText, { flex: 1 }]} numberOfLines={1}>{u.displayName}</Text>
+                    <Text style={[styles.bodyText, { flex: 1, color: theme.text }]} numberOfLines={1}>{u.displayName}</Text>
                     <View style={styles.reorderBtns}>
-                      <TouchableOpacity
-                        onPress={() => handleReorderFriend(u.uid, -1)}
-                        disabled={i === 0}
-                        style={{ opacity: i === 0 ? 0.2 : 0.5 }}
-                      >
-                        <Ionicons name="chevron-up" size={12} color={colors.text} />
+                      <TouchableOpacity onPress={() => handleReorderFriend(u.uid, -1)} disabled={i === 0} style={{ opacity: i === 0 ? 0.2 : 0.5 }}>
+                        <Ionicons name="chevron-up" size={12} color={theme.text} />
                       </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={() => handleReorderFriend(u.uid, 1)}
-                        disabled={i === friends.length - 1}
-                        style={{ opacity: i === friends.length - 1 ? 0.2 : 0.5 }}
-                      >
-                        <Ionicons name="chevron-down" size={12} color={colors.text} />
+                      <TouchableOpacity onPress={() => handleReorderFriend(u.uid, 1)} disabled={i === friends.length - 1} style={{ opacity: i === friends.length - 1 ? 0.2 : 0.5 }}>
+                        <Ionicons name="chevron-down" size={12} color={theme.text} />
                       </TouchableOpacity>
                     </View>
-                    <TouchableOpacity
-                      onPress={() => handleRemoveFriend(u.uid)}
-                      disabled={friendsActionUid === u.uid}
-                      style={{ opacity: friendsActionUid === u.uid ? 0.3 : 0.4 }}
-                    >
-                      <Ionicons name="person-remove-outline" size={14} color={colors.red} />
+                    <TouchableOpacity onPress={() => handleRemoveFriend(u.uid)} disabled={friendsActionUid === u.uid} style={{ opacity: friendsActionUid === u.uid ? 0.3 : 0.4 }}>
+                      <Ionicons name="person-remove-outline" size={14} color={theme.red} />
                     </TouchableOpacity>
                   </View>
                 ))}
               </View>
             )}
 
-            {/* Add friends */}
             <View style={styles.subSection}>
-              <Text style={styles.subSectionLabel}>ADD FRIENDS</Text>
+              <Text style={[styles.subSectionLabel, { color: theme.textMuted }]}>ADD FRIENDS</Text>
               <TextInput
                 value={friendSearch}
                 onChangeText={setFriendSearch}
                 placeholder="Search by name or email"
-                placeholderTextColor={colors.textMuted}
-                style={styles.searchInput}
+                placeholderTextColor={theme.textMuted}
+                style={[styles.searchInput, { borderColor: theme.border, backgroundColor: theme.surface2, color: theme.text }]}
               />
               {searchResults.length === 0 && q.length > 0 && (
-                <Text style={styles.bodyText}>No users found.</Text>
+                <Text style={[styles.bodyText, { color: theme.text }]}>No users found.</Text>
               )}
               {searchResults.map((u) => {
                 const sent = sentRequests.has(u.uid);
                 return (
                   <View key={u.uid} style={styles.userRow}>
-                    <View style={styles.avatarFrameTiny}>
+                    <View style={[styles.avatarFrameTiny, { borderColor: theme.border }]}>
                       <AvatarImg url={getAvatarUrl(u)} size={28} />
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={styles.bodyText} numberOfLines={1}>{u.displayName}</Text>
+                      <Text style={[styles.bodyText, { color: theme.text }]} numberOfLines={1}>{u.displayName}</Text>
                     </View>
                     {sent ? (
-                      <Text style={styles.sentLabel}>SENT</Text>
+                      <Text style={[styles.sentLabel, { color: theme.textMuted }]}>SENT</Text>
                     ) : (
-                      <TouchableOpacity
-                        onPress={() => handleSendRequest(u.uid)}
-                        disabled={friendsActionUid === u.uid}
-                        style={{ opacity: friendsActionUid === u.uid ? 0.5 : 1 }}
-                      >
-                        <Ionicons name="person-add-outline" size={14} color={colors.accent} />
+                      <TouchableOpacity onPress={() => handleSendRequest(u.uid)} disabled={friendsActionUid === u.uid} style={{ opacity: friendsActionUid === u.uid ? 0.5 : 1 }}>
+                        <Ionicons name="person-add-outline" size={14} color={theme.accent} />
                       </TouchableOpacity>
                     )}
                   </View>
@@ -353,25 +308,23 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSe
             </View>
           </View>
 
-          {/* Install prompt */}
           <View style={styles.installSection}>
             <InstallPrompt />
           </View>
         </ScrollView>
 
-        {/* Sign out + legal — pinned to bottom */}
-        <View style={styles.footer}>
-          <TouchableOpacity onPress={handleSignOut} style={styles.signOutBtn}>
-            <Ionicons name="log-out-outline" size={14} color={colors.textMuted} />
-            <Text style={styles.signOutText}>SIGN OUT</Text>
+        <View style={[styles.footer, { borderTopColor: theme.border }]}>
+          <TouchableOpacity onPress={handleSignOut} style={[styles.signOutBtn, { borderColor: theme.border, backgroundColor: theme.surface2 }]}>
+            <Ionicons name="log-out-outline" size={14} color={theme.textMuted} />
+            <Text style={[styles.signOutText, { color: theme.textMuted }]}>SIGN OUT</Text>
           </TouchableOpacity>
           <View style={styles.legalRow}>
             <TouchableOpacity onPress={() => { router.push('/privacy' as any); onClose(); }}>
-              <Text style={styles.legalLink}>PRIVACY</Text>
+              <Text style={[styles.legalLink, { color: theme.textMuted }]}>PRIVACY</Text>
             </TouchableOpacity>
-            <Text style={styles.legalSep}>|</Text>
+            <Text style={[styles.legalSep, { color: theme.border }]}>|</Text>
             <TouchableOpacity onPress={() => { router.push('/terms' as any); onClose(); }}>
-              <Text style={styles.legalLink}>TERMS</Text>
+              <Text style={[styles.legalLink, { color: theme.textMuted }]}>TERMS</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -391,9 +344,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0, right: 0, bottom: 0,
     width: DRAWER_WIDTH,
-    backgroundColor: colors.surface,
     borderLeftWidth: 2,
-    borderLeftColor: colors.border,
     zIndex: 50,
     ...Platform.select({
       native: {
@@ -406,82 +357,54 @@ const styles = StyleSheet.create({
     }),
   },
   drawerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 2,
-    borderBottomColor: colors.border,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    padding: 16, borderBottomWidth: 2,
   },
-  drawerTitle: { fontFamily: fonts.pixel, fontSize: 8, color: colors.accent },
+  drawerTitle: { fontFamily: fonts.pixel, fontSize: 8 },
   scrollArea: { flex: 1 },
   profileBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 16,
-    borderBottomWidth: 2,
-    borderBottomColor: colors.border,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    padding: 16, borderBottomWidth: 2,
   },
   avatarFrameAccent: {
-    width: 48, height: 48,
-    borderWidth: 2, borderColor: colors.accent,
-    overflow: 'hidden', flexShrink: 0,
-    shadowColor: colors.accent, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 8,
+    width: 48, height: 48, borderWidth: 2, overflow: 'hidden', flexShrink: 0,
+    shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 8,
   },
-  profileAvatar: { width: 48, height: 48 },
-  profileName: { fontFamily: fonts.vt323, fontSize: 22, color: colors.text },
-  profileCta: { fontFamily: fonts.pixel, fontSize: 6, color: colors.accent, marginTop: 2 },
-  friendsSection: {
-    padding: 16, gap: 12,
-    borderBottomWidth: 2, borderBottomColor: colors.border,
+  profileName: { fontFamily: fonts.vt323, fontSize: 22 },
+  profileCta: { fontFamily: fonts.pixel, fontSize: 6, marginTop: 2 },
+  menuRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    padding: 16, borderBottomWidth: 2,
   },
+  menuRowText: { fontFamily: fonts.pixel, fontSize: 7 },
+  friendsSection: { padding: 16, gap: 12, borderBottomWidth: 2 },
   friendsHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  friendsTitle: { fontFamily: fonts.pixel, fontSize: 7, color: colors.textMuted },
-  badge: {
-    minWidth: 16, height: 16, borderRadius: 8,
-    backgroundColor: colors.red, paddingHorizontal: 4,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  badgeText: { fontFamily: fonts.inter, fontSize: 10, fontWeight: '700', color: colors.white },
+  friendsTitle: { fontFamily: fonts.pixel, fontSize: 7 },
+  badge: { minWidth: 16, height: 16, borderRadius: 8, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { fontFamily: fonts.inter, fontSize: 10, fontWeight: '700' },
   subSection: { gap: 8 },
-  subSectionLabel: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
+  subSectionLabel: { fontFamily: fonts.pixel, fontSize: 6 },
   userRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   reorderBtns: { flexDirection: 'column', gap: 0 },
-  avatarFrameSmall: { width: 36, height: 36, borderWidth: 2, borderColor: colors.accent, overflow: 'hidden', flexShrink: 0 },
-  avatarFrameTiny: { width: 28, height: 28, borderWidth: 2, borderColor: colors.border, overflow: 'hidden', flexShrink: 0 },
-  userName: { fontFamily: fonts.interSemiBold, fontSize: 13, color: colors.text, flex: 1 },
-  bodyText: { fontFamily: fonts.inter, fontSize: 12, color: colors.text },
-  actionBtnGreen: { paddingHorizontal: 9, paddingVertical: 3, borderWidth: 2, borderColor: colors.green, backgroundColor: colors.greenLight },
-  actionBtnGreenText: { fontFamily: fonts.inter, fontSize: 15, fontWeight: '700', color: colors.green },
-  actionBtnRed: { paddingHorizontal: 9, paddingVertical: 3, borderWidth: 2, borderColor: colors.red, backgroundColor: colors.redLight },
-  actionBtnRedText: { fontFamily: fonts.inter, fontSize: 15, fontWeight: '700', color: colors.red },
-  searchInput: {
-    fontFamily: fonts.inter, fontSize: 10, padding: 8,
-    borderWidth: 2, borderColor: colors.border,
-    backgroundColor: colors.surface2, color: colors.text,
-  },
-  sentLabel: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
-  footer: { padding: 16, gap: 12, borderTopWidth: 2, borderTopColor: colors.border },
+  avatarFrameSmall: { width: 36, height: 36, borderWidth: 2, overflow: 'hidden', flexShrink: 0 },
+  avatarFrameTiny: { width: 28, height: 28, borderWidth: 2, overflow: 'hidden', flexShrink: 0 },
+  userName: { fontFamily: fonts.interSemiBold, fontSize: 13, flex: 1 },
+  bodyText: { fontFamily: fonts.inter, fontSize: 12 },
+  actionBtnGreen: { paddingHorizontal: 9, paddingVertical: 3, borderWidth: 2 },
+  actionBtnGreenText: { fontFamily: fonts.inter, fontSize: 15, fontWeight: '700' },
+  actionBtnRed: { paddingHorizontal: 9, paddingVertical: 3, borderWidth: 2 },
+  actionBtnRedText: { fontFamily: fonts.inter, fontSize: 15, fontWeight: '700' },
+  searchInput: { fontFamily: fonts.inter, fontSize: 10, padding: 8, borderWidth: 2 },
+  sentLabel: { fontFamily: fonts.pixel, fontSize: 6 },
+  footer: { padding: 16, gap: 12, borderTopWidth: 2 },
   installSection: { paddingHorizontal: 16, paddingVertical: 8 },
   signOutBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, paddingVertical: 12,
-    borderWidth: 2, borderColor: colors.border,
-    backgroundColor: colors.surface2,
+    gap: 8, paddingVertical: 12, borderWidth: 2,
     ...shadows.pixel,
   },
-  signOutText: { fontFamily: fonts.pixel, fontSize: 8, color: colors.textMuted },
+  signOutText: { fontFamily: fonts.pixel, fontSize: 8 },
   legalRow: { flexDirection: 'row', justifyContent: 'center', gap: 16, alignItems: 'center' },
-  legalLink: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
-  legalSep: { color: colors.border },
-  menuRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    padding: 16,
-    borderBottomWidth: 2,
-    borderBottomColor: colors.border,
-  },
-  menuRowText: { fontFamily: fonts.pixel, fontSize: 7, color: colors.textMuted },
+  legalLink: { fontFamily: fonts.pixel, fontSize: 6 },
+  legalSep: {},
 });

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
-import { colors } from '../lib/theme';
 import { Stack, usePathname, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -14,13 +13,16 @@ import { AuthProvider } from '../context/AuthContext';
 import { useAuthContext } from '../context/AuthContext';
 import { NavVisibilityProvider, useNavVisibility } from '../context/NavVisibilityContext';
 import { NotificationsProvider } from '../context/NotificationsContext';
+import { ThemeProvider, useTheme } from '../context/ThemeContext';
 import { BottomNav } from '../components/BottomNav';
+import { StarField } from '../components/StarField';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function AppShell() {
   const { loading: authLoading, user } = useAuthContext();
   const { navHidden } = useNavVisibility();
+  const { theme, isRocketMode } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -63,7 +65,7 @@ function AppShell() {
   }, [fontsLoaded, authLoading, minElapsed]);
 
   const screens = (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.bg } }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="login" />
       <Stack.Screen name="onboarding" />
@@ -83,15 +85,21 @@ function AppShell() {
 
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: theme.bg }]}>
       {Platform.OS === 'web' ? (
-        <View style={styles.webCenter}>
-          <View style={styles.webFrame}>
+        <View style={[styles.webCenter, { backgroundColor: theme.bg }]}>
+          <View style={[styles.webFrame, { backgroundColor: theme.bg }]} nativeID="web-frame">
+            {isRocketMode && <StarField />}
             {screens}
             {showWebNav && <BottomNav />}
           </View>
         </View>
-      ) : screens}
+      ) : (
+        <View style={{ flex: 1 }}>
+          {isRocketMode && <StarField />}
+          {screens}
+        </View>
+      )}
     </View>
   );
 }
@@ -99,12 +107,14 @@ function AppShell() {
 function AppWithNotifications() {
   const { user } = useAuthContext();
   return (
-    <NotificationsProvider uid={user?.uid}>
-      <NavVisibilityProvider>
-        <StatusBar style="light" />
-        <AppShell />
-      </NavVisibilityProvider>
-    </NotificationsProvider>
+    <ThemeProvider>
+      <NotificationsProvider uid={user?.uid}>
+        <NavVisibilityProvider>
+          <StatusBar style="light" />
+          <AppShell />
+        </NavVisibilityProvider>
+      </NotificationsProvider>
+    </ThemeProvider>
   );
 }
 
@@ -121,12 +131,10 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.bg,
   },
   webCenter: {
     flex: 1,
     alignItems: 'center',
-    backgroundColor: colors.bg,
     width: '100%',
   },
   webFrame: {

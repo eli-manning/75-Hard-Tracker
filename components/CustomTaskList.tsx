@@ -5,7 +5,8 @@ import { CustomTask, DayEntry } from '../lib/types';
 import { CustomTaskItem } from './CustomTaskItem';
 import { TaskEditor } from './TaskEditor';
 import { createCustomTask, updateCustomTask, archiveCustomTask } from '../lib/firestore';
-import { colors, fonts } from '../lib/theme';
+import { fonts } from '../lib/theme';
+import { useTheme } from '../context/ThemeContext';
 
 interface CustomTaskListProps {
   tasks: CustomTask[];
@@ -19,6 +20,7 @@ interface CustomTaskListProps {
 }
 
 export function CustomTaskList({ tasks, dayEntry, uid, readOnly, hideActions, onDayUpdate, onNudge, nudgedTasks }: CustomTaskListProps) {
+  const { theme } = useTheme();
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<CustomTask | undefined>();
   const [defaultType, setDefaultType] = useState<'daily' | 'backlog'>('daily');
@@ -96,20 +98,20 @@ export function CustomTaskList({ tasks, dayEntry, uid, readOnly, hideActions, on
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <TouchableOpacity onPress={() => setDailyOpen((o) => !o)} style={styles.backlogToggle}>
-            <Ionicons name={dailyOpen ? 'chevron-down' : 'chevron-forward'} size={12} color={colors.text} />
-            <Text style={styles.sectionTitle}>YOUR TASKS</Text>
+            <Ionicons name={dailyOpen ? 'chevron-down' : 'chevron-forward'} size={12} color={theme.text} />
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>YOUR TASKS</Text>
           </TouchableOpacity>
           {!readOnly && (
             <TouchableOpacity onPress={() => openEditor('daily')} style={styles.addBtn}>
-              <Ionicons name="add" size={12} color={colors.accent} />
-              <Text style={styles.addText}>ADD</Text>
+              <Ionicons name="add" size={12} color={theme.accent} />
+              <Text style={[styles.addText, { color: theme.accent }]}>ADD</Text>
             </TouchableOpacity>
           )}
         </View>
 
         {dailyOpen && (
           dailyTasks.length === 0 ? (
-            <Text style={styles.empty}>No daily tasks yet</Text>
+            <Text style={[styles.empty, { color: theme.textMuted }]}>No daily tasks yet</Text>
           ) : (
             <View style={styles.taskList}>
               {dailyTasks.map((task) => {
@@ -144,21 +146,21 @@ export function CustomTaskList({ tasks, dayEntry, uid, readOnly, hideActions, on
             <Ionicons
               name={backlogOpen ? 'chevron-down' : 'chevron-forward'}
               size={12}
-              color={colors.text}
+              color={theme.text}
             />
-            <Text style={styles.sectionTitle}>BACKLOG</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>BACKLOG</Text>
           </TouchableOpacity>
           {!readOnly && (
             <TouchableOpacity onPress={() => openEditor('backlog')} style={styles.addBtn}>
-              <Ionicons name="add" size={12} color={colors.accent} />
-              <Text style={styles.addText}>ADD</Text>
+              <Ionicons name="add" size={12} color={theme.accent} />
+              <Text style={[styles.addText, { color: theme.accent }]}>ADD</Text>
             </TouchableOpacity>
           )}
         </View>
 
         {backlogOpen && (
           backlogTasks.length === 0 ? (
-            <Text style={styles.empty}>Backlog is empty</Text>
+            <Text style={[styles.empty, { color: theme.textMuted }]}>Backlog is empty</Text>
           ) : (
             <View style={styles.taskList}>
               {backlogTasks.map((task) => (
@@ -198,32 +200,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 8,
   },
-  sectionTitle: {
-    fontFamily: fonts.pixel,
-    fontSize: 10,
-    color: colors.text,
-  },
-  addBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  addText: {
-    fontFamily: fonts.pixel,
-    fontSize: 8,
-    color: colors.accent,
-  },
-  empty: {
-    fontFamily: fonts.inter,
-    fontSize: 13,
-    color: colors.textMuted,
-  },
-  taskList: {
-    gap: 4,
-  },
-  backlogToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
+  sectionTitle: { fontFamily: fonts.pixel, fontSize: 10 },
+  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  addText: { fontFamily: fonts.pixel, fontSize: 8 },
+  empty: { fontFamily: fonts.inter, fontSize: 13 },
+  taskList: { gap: 4 },
+  backlogToggle: { flexDirection: 'row', alignItems: 'center', gap: 4 },
 });
