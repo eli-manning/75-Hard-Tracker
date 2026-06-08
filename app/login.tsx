@@ -316,15 +316,13 @@ export default function LoginPage() {
                   </Text>
                 </TouchableOpacity>
 
-                {mode === 'signup' && (
-                  <Text style={styles.legalText}>
-                    {'By creating an account, you agree to our '}
-                    <Text style={styles.legalLink} onPress={() => router.push('/terms' as any)}>Terms of Service</Text>
-                    {' and '}
-                    <Text style={styles.legalLink} onPress={() => router.push('/privacy' as any)}>Privacy Policy</Text>
-                    {'.'}
-                  </Text>
-                )}
+                <Text style={styles.legalText}>
+                  {'By continuing, you agree to our '}
+                  <Text style={styles.legalLink} onPress={() => router.push('/terms' as any)}>Terms of Service</Text>
+                  {' and '}
+                  <Text style={styles.legalLink} onPress={() => router.push('/privacy' as any)}>Privacy Policy</Text>
+                  {'.'}
+                </Text>
               </View>
             </>
           )}
