@@ -299,14 +299,11 @@ export const joinCrew = onCall({ region: REGION }, async (request) => {
   const crewData = crewDoc.data();
   const crewId = crewDoc.id;
 
-  if ((crewData.members ?? []).length >= 20) {
-    throw new HttpsError('resource-exhausted', 'Crew is full (max 20 members)');
-  }
-  if ((crewData.members ?? []).includes(uid)) {
-    throw new HttpsError('already-exists', 'You are already in this crew');
-  }
-
   await db.runTransaction(async (tx) => {
+    const freshCrewSnap = await tx.get(crewDoc.ref);
+    const freshMembers = (freshCrewSnap.data()?.members ?? []) as string[];
+    if (freshMembers.length >= 20) throw new HttpsError('resource-exhausted', 'Crew is full (max 20 members)');
+    if (freshMembers.includes(uid)) throw new HttpsError('already-exists', 'You are already in this crew');
     tx.update(crewDoc.ref, { members: admin.firestore.FieldValue.arrayUnion(uid) });
     tx.update(db.doc(`users/${uid}`), { crews: admin.firestore.FieldValue.arrayUnion(crewId) });
   });
