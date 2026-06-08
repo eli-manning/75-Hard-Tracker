@@ -26,7 +26,7 @@ const CHART_H = 160;
 function tileColor(entry: DayEntry | undefined, date: Date, startDate: string | null): string {
   if (isFuture(date) && !isToday(date)) return colors.surface;
   if (isToday(date) && (!entry || !entry.allCoreCompleted)) return colors.accentLight;
-  if (!entry && startDate && format(date, 'yyyy-MM-dd') <= startDate) return colors.surface;
+  if (!entry && (!startDate || format(date, 'yyyy-MM-dd') <= startDate)) return colors.surface;
   if (!entry) return colors.redLight;
   if (entry.allCoreCompleted) return colors.greenLight;
   const done = [
@@ -40,7 +40,7 @@ function tileColor(entry: DayEntry | undefined, date: Date, startDate: string | 
 function tileBorder(entry: DayEntry | undefined, date: Date, startDate: string | null): string {
   if (isFuture(date) && !isToday(date)) return colors.border;
   if (isToday(date) && (!entry || !entry.allCoreCompleted)) return colors.accent;
-  if (!entry && startDate && format(date, 'yyyy-MM-dd') <= startDate) return colors.border;
+  if (!entry && (!startDate || format(date, 'yyyy-MM-dd') <= startDate)) return colors.border;
   if (!entry) return colors.red;
   if (entry.allCoreCompleted) return colors.green;
   const done = [
