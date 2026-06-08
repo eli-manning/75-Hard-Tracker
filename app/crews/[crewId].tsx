@@ -669,16 +669,16 @@ const styles = StyleSheet.create({
   heroMeta: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted, letterSpacing: 1 },
   noStreakText: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted, opacity: 0.6 },
 
-  heroBottomRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'center' },
+  heroBottomRow: { flexDirection: 'row', alignItems: 'stretch', gap: 10, flexWrap: 'wrap', justifyContent: 'center' },
   summaryPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 10, paddingVertical: 5,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+    paddingHorizontal: 10,
     backgroundColor: colors.accent,
     borderWidth: 2, borderColor: colors.accent,
     shadowColor: colors.accent, shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.4, shadowRadius: 6,
   },
-  summaryPillText: { fontFamily: fonts.pixel, fontSize: 6, color: colors.white },
+  summaryPillText: { fontFamily: fonts.pixel, fontSize: 7, color: colors.white },
 
   // Stats
   statsRow: {
