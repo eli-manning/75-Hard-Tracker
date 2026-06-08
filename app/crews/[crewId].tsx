@@ -366,6 +366,19 @@ export default function CrewDetailPage() {
           </View>
         </View>
 
+        {/* Summary banner — visible when today's summary has been written */}
+        {crew.lastSummaryDate === format(new Date(), 'yyyy-MM-dd') && (
+          <TouchableOpacity
+            style={styles.summaryBanner}
+            onPress={() => router.push(`/crews/summary/${crew.id}/${crew.lastSummaryDate}` as any)}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="trophy-outline" size={14} color={colors.white} />
+            <Text style={styles.summaryBannerText}>TODAY COMPLETE — VIEW SUMMARY</Text>
+            <Ionicons name="chevron-forward" size={12} color={colors.white} />
+          </TouchableOpacity>
+        )}
+
         {/* Members */}
         <View style={styles.sectionBlock}>
           <Text style={styles.sectionLabel}>MEMBERS</Text>
@@ -656,6 +669,17 @@ const styles = StyleSheet.create({
   },
   heroMeta: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted, letterSpacing: 1 },
   noStreakText: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted, opacity: 0.6 },
+
+  summaryBanner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    gap: 8, marginHorizontal: 16, marginTop: 12,
+    paddingHorizontal: 14, paddingVertical: 12,
+    backgroundColor: colors.accent,
+    borderWidth: 2, borderColor: colors.accent,
+    shadowColor: colors.accent, shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35, shadowRadius: 6, elevation: 4,
+  },
+  summaryBannerText: { flex: 1, fontFamily: fonts.pixel, fontSize: 7, color: colors.white },
 
   // Stats
   statsRow: {
