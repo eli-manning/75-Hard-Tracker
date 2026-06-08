@@ -3,16 +3,28 @@ import {
   View, Text, Image, ScrollView, TouchableOpacity, StyleSheet,
   ActivityIndicator, Platform, Share,
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getCrewById, getCrewSummary, getUserProfile } from '../../../../lib/firestore';
+import { getCrewIconIon } from '../../../../lib/crews';
 import { getAvatarUrl } from '../../../../lib/avatar';
 import { getAvatarSource, AVATAR_PORTRAIT_RATIO } from '../../../../lib/avatarMap';
 import { colors, fonts, shadows } from '../../../../lib/theme';
 import { Crew, CrewDaySummary, UserProfile } from '../../../../lib/types';
+import { format, parseISO } from 'date-fns';
 
 const GOLD = '#f0c040';
+
+const CORE_TASK_LABELS: Record<string, string> = {
+  workout1: 'Workout #1 — 45 min',
+  workout2: 'Workout #2 — Outdoor',
+  diet: 'No cheat meals today',
+  water: 'Drink 1 gallon of water',
+  reading: 'Read 10 pages',
+  photo: 'Progress photo',
+};
 
 async function captureAndShare(ref: React.RefObject<View>) {
   if (Platform.OS === 'web') return;
@@ -55,7 +67,7 @@ export default function CrewSummaryPage() {
   const { crewId, date } = useLocalSearchParams<{ crewId: string; date: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const resultsRef = useRef<View>(null);
+  const cardRef = useRef<View>(null);
 
   const [crew, setCrew] = useState<Crew | null>(null);
   const [summary, setSummary] = useState<CrewDaySummary | null | undefined>(undefined);
@@ -75,7 +87,6 @@ export default function CrewSummaryPage() {
     }).finally(() => setLoading(false));
   }, [crewId, date]);
 
-  // Load member profiles for avatars when summary arrives
   useEffect(() => {
     if (!summary) return;
     const uids = summary.memberResults.map((m) => m.uid);
@@ -88,75 +99,159 @@ export default function CrewSummaryPage() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}>
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator color={colors.accent} />
       </View>
     );
   }
 
+  const dateFormatted = date ? format(parseISO(date), 'MMMM d, yyyy').toUpperCase() : '';
+  const activeCoreKeys = crew
+    ? Object.entries(crew.activeTasks ?? {}).filter(([, v]) => v).map(([k]) => k)
+    : [];
+  const customTasks = crew?.customCrewTasks ?? [];
+  const totalTasks = activeCoreKeys.length + customTasks.length;
+  const mvpProfile = summary?.mvpUid ? memberProfiles[summary.mvpUid] : undefined;
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
+    <View style={styles.container}>
+      {/* Top accent section */}
+      <View style={[styles.section1, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={18} color={colors.accent} />
+          <Ionicons name="chevron-back" size={18} color={colors.white} />
         </TouchableOpacity>
-        <View style={styles.headerInfo}>
-          <Text style={styles.crewName} numberOfLines={1}>{crew?.name ?? '...'}</Text>
-          <Text style={styles.dateText}>{date}</Text>
-        </View>
-        {summary && Platform.OS !== 'web' && (
-          <TouchableOpacity
-            onPress={() => captureAndShare(resultsRef as React.RefObject<View>)}
-            style={styles.shareBtn}
-          >
-            <Ionicons name="share-outline" size={16} color={colors.accent} />
-          </TouchableOpacity>
+
+        {!summary ? (
+          <View style={styles.section1Content}>
+            <Text style={styles.crewCompleteText}>NO SUMMARY</Text>
+            <Text style={styles.crewNameText}>{crew?.name ?? '...'}</Text>
+            <Text style={styles.section1Date}>{dateFormatted}</Text>
+          </View>
+        ) : (
+          <View style={styles.section1Content}>
+            <Text style={styles.crewCompleteText}>CREW COMPLETE</Text>
+            <Text style={styles.crewNameText}>{crew?.name ?? '...'}</Text>
+            <Text style={styles.section1Date}>{dateFormatted}</Text>
+            <View style={styles.section1Streak}>
+              <Text style={styles.section1StreakNum}>{summary.newStreak}</Text>
+              <Text style={styles.section1StreakLabel}>DAY STREAK</Text>
+            </View>
+          </View>
         )}
       </View>
 
-      {!summary ? (
-        <View style={styles.noSummary}>
-          <Ionicons name="document-outline" size={40} color={colors.border} />
-          <Text style={styles.noSummaryText}>NO SUMMARY FOR THIS DATE</Text>
-          <Text style={styles.noSummaryBody}>
-            The crew hasn't finished all tasks for this day yet, or no data was recorded.
-          </Text>
-        </View>
-      ) : (
-        <ScrollView
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: 60 + insets.bottom }]}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Streak result */}
-          <View style={[styles.streakResult, summary.streakSurvived ? styles.streakSurvived : styles.streakBroken]}>
-            {summary.streakSurvived ? (
-              <>
-                <Text style={styles.streakResultTitle}>CREW COMPLETE</Text>
-                <Text style={styles.streakCount}>{summary.newStreak}</Text>
-                <Text style={styles.streakCountLabel}>DAY STREAK</Text>
-              </>
-            ) : (
-              <>
-                <Text style={[styles.streakResultTitle, styles.streakBrokenText]}>STREAK BROKEN</Text>
-                <Text style={[styles.streakCountLabel, styles.streakBrokenText]}>Back to day 1</Text>
-              </>
-            )}
+      {/* Bottom cream section */}
+      <View style={styles.section2}>
+        {!summary ? (
+          <View style={styles.noSummary}>
+            <Ionicons name="document-outline" size={40} color={colors.border} />
+            <Text style={styles.noSummaryText}>NO SUMMARY FOR THIS DATE</Text>
+            <Text style={styles.noSummaryBody}>
+              The crew hasn't finished all tasks for this day yet, or no data was recorded.
+            </Text>
           </View>
+        ) : (
+          <ScrollView
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: 80 + insets.bottom }]}
+            showsVerticalScrollIndicator={false}
+          >
+            <View ref={cardRef} style={styles.shareCard}>
+              {/* Logo row */}
+              <View style={styles.logoRow}>
+                <Image source={require('../../../../assets/icon.png')} style={styles.logoImg} resizeMode="contain" />
+                <Text style={styles.logoText}>CREWDAY</Text>
+                <View style={{ flex: 1 }} />
+                {crew && (
+                  <Ionicons name={getCrewIconIon(crew.icon) as any} size={16} color={colors.textMuted} />
+                )}
+              </View>
 
-          {/* Member results — captured for share */}
-          <View ref={resultsRef} style={styles.section}>
-            <Text style={styles.sectionTitle}>MEMBER RESULTS</Text>
-            {summary.memberResults.map((m) => {
-              const isMvp = summary.mvpUid === m.uid && m.completed;
-              return (
-                <View key={m.uid} style={[styles.memberRow, isMvp && styles.memberRowMvp]}>
-                  <MemberAvatar profile={memberProfiles[m.uid]} size={32} />
-                  <View style={styles.memberInfo}>
-                    <View style={styles.memberNameRow}>
-                      <Text style={styles.memberName} numberOfLines={1}>{m.displayName}</Text>
+              {/* MVP spotlight */}
+              {mvpProfile && (
+                <View style={styles.mvpSection}>
+                  <MemberAvatar profile={mvpProfile} size={56} />
+                  <View style={styles.mvpInfo}>
+                    <View style={styles.mvpBadgeRow}>
+                      <View style={styles.mvpBadge}>
+                        <Text style={styles.mvpBadgeText}>MVP</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.mvpName} numberOfLines={1}>{mvpProfile.displayName}</Text>
+                    <Text style={styles.mvpPts}>
+                      {summary.memberResults.find((m) => m.uid === summary.mvpUid)?.points ?? 0} PTS
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Stats row */}
+              <View style={styles.statsRow}>
+                <View style={styles.statBlock}>
+                  <Text style={styles.statNum}>{summary.newStreak}</Text>
+                  <Text style={styles.statLabel}>DAY STREAK</Text>
+                </View>
+                <View style={[styles.statBlock, styles.statBlockBorder]}>
+                  <Text style={styles.statNum}>{summary.memberResults.filter((m) => !m.inactive).length}</Text>
+                  <Text style={styles.statLabel}>MEMBERS</Text>
+                </View>
+                <View style={[styles.statBlock, styles.statBlockBorder]}>
+                  <Text style={styles.statNum}>{totalTasks}</Text>
+                  <Text style={styles.statLabel}>TASKS DONE</Text>
+                </View>
+              </View>
+
+              <View style={styles.divider} />
+
+              {/* Completed task list */}
+              {totalTasks > 0 && (
+                <View style={styles.taskList}>
+                  {activeCoreKeys.map((key) => (
+                    <View key={key} style={styles.taskRow}>
+                      <View style={styles.taskCheck}>
+                        <Svg width={10} height={8} viewBox="0 0 12 10" fill="none">
+                          <Path d="M1 5l3 3 7-7" stroke={colors.bg} strokeWidth={2.5} strokeLinecap="square" />
+                        </Svg>
+                      </View>
+                      <Text style={styles.taskLabel}>{CORE_TASK_LABELS[key] ?? key}</Text>
+                    </View>
+                  ))}
+                  {customTasks.map((t) => (
+                    <View key={t.id} style={styles.taskRow}>
+                      <View style={styles.taskCheck}>
+                        <Svg width={10} height={8} viewBox="0 0 12 10" fill="none">
+                          <Path d="M1 5l3 3 7-7" stroke={colors.bg} strokeWidth={2.5} strokeLinecap="square" />
+                        </Svg>
+                      </View>
+                      <Text style={styles.taskLabel}>{t.label}</Text>
+                      {t.amount != null && (
+                        <View style={styles.taskBadge}>
+                          <Text style={styles.taskBadgeText}>{t.amount}{t.unit ? ` ${t.unit.toUpperCase()}` : ''}</Text>
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              <View style={styles.divider} />
+
+              {/* Member results */}
+              <View style={styles.memberList}>
+                {summary.memberResults.map((m) => {
+                  const isMvp = summary.mvpUid === m.uid && m.completed;
+                  const profile = memberProfiles[m.uid];
+                  return (
+                    <View key={m.uid} style={[styles.memberRow, isMvp && styles.memberRowMvp]}>
+                      <MemberAvatar profile={profile} size={32} />
+                      <View style={styles.memberInfo}>
+                        <Text style={styles.memberName} numberOfLines={1}>
+                          {profile?.displayName ?? m.displayName}
+                        </Text>
+                        <Text style={styles.memberPts}>{m.points} PTS</Text>
+                      </View>
                       {isMvp && (
                         <View style={styles.mvpBadge}>
-                          <Text style={styles.mvpText}>MVP</Text>
+                          <Text style={styles.mvpBadgeText}>MVP</Text>
                         </View>
                       )}
                       {m.inactive && (
@@ -164,96 +259,171 @@ export default function CrewSummaryPage() {
                           <Text style={styles.inactiveText}>INACTIVE</Text>
                         </View>
                       )}
+                      <View style={[styles.completionBox, m.completed ? styles.completionDone : styles.completionMiss]}>
+                        <Ionicons
+                          name={m.completed ? 'checkmark' : 'close'}
+                          size={14}
+                          color={m.completed ? colors.green : colors.red}
+                        />
+                      </View>
                     </View>
-                    <Text style={styles.memberPoints}>{m.points} PTS</Text>
-                  </View>
-                  <View style={[styles.completionBadge, m.completed ? styles.completedBadge : styles.missedBadge]}>
-                    <Ionicons
-                      name={m.completed ? 'checkmark' : 'close'}
-                      size={16}
-                      color={m.completed ? colors.green : colors.red}
-                    />
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-        </ScrollView>
-      )}
+                  );
+                })}
+              </View>
+            </View>
+          </ScrollView>
+        )}
+
+        {/* Buttons */}
+        <View style={[styles.btnRow, { paddingBottom: insets.bottom + 8 }]}>
+          {summary && Platform.OS !== 'web' && (
+            <TouchableOpacity
+              style={styles.shareBtn}
+              onPress={() => captureAndShare(cardRef as React.RefObject<View>)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="share-outline" size={13} color={colors.white} />
+              <Text style={styles.shareBtnText}>SHARE</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={[styles.closeBtn, (!summary || Platform.OS === 'web') && { flex: 1 }]}
+            onPress={() => router.back()}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.closeBtnText}>CLOSE</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
-  header: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: 2, borderBottomColor: colors.border,
+  container: { flex: 1, backgroundColor: colors.accent },
+
+  section1: {
+    flex: 38,
+    backgroundColor: colors.accent,
+    paddingHorizontal: 16,
+    paddingBottom: 20,
   },
-  backBtn: { padding: 4 },
-  headerInfo: { flex: 1 },
-  crewName: { fontFamily: fonts.pixel, fontSize: 9, color: colors.text },
-  dateText: { fontFamily: fonts.inter, fontSize: 11, color: colors.textMuted, marginTop: 2 },
-  shareBtn: { padding: 8 },
-  noSummary: {
-    flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 32,
+  backBtn: { padding: 4, alignSelf: 'flex-start', marginBottom: 8 },
+  section1Content: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
+  crewCompleteText: {
+    fontFamily: fonts.pixel, fontSize: 13, color: colors.white, textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.25)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 0,
   },
+  crewNameText: {
+    fontFamily: fonts.pixel, fontSize: 9, color: colors.white, opacity: 0.85, textAlign: 'center',
+  },
+  section1Date: {
+    fontFamily: fonts.inter, fontSize: 11, color: colors.white, opacity: 0.7, textAlign: 'center',
+  },
+  section1Streak: { alignItems: 'center', marginTop: 4 },
+  section1StreakNum: {
+    fontFamily: fonts.pixel, fontSize: 28, color: colors.white,
+    textShadowColor: 'rgba(0,0,0,0.2)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8,
+  },
+  section1StreakLabel: { fontFamily: fonts.pixel, fontSize: 6, color: colors.white, opacity: 0.8 },
+
+  section2: {
+    flex: 62,
+    backgroundColor: colors.bg,
+    borderTopWidth: 3,
+    borderTopColor: colors.white,
+  },
+  scrollContent: { padding: 16, gap: 0 },
+
+  noSummary: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 32 },
   noSummaryText: { fontFamily: fonts.pixel, fontSize: 9, color: colors.textMuted, textAlign: 'center' },
   noSummaryBody: { fontFamily: fonts.inter, fontSize: 13, color: colors.textMuted, textAlign: 'center', lineHeight: 20 },
-  scrollContent: { paddingHorizontal: 16, paddingTop: 20, gap: 24 },
-  streakResult: {
-    padding: 24, alignItems: 'center', gap: 8,
+
+  shareCard: {
+    backgroundColor: colors.bg,
+    padding: 16,
+    gap: 14,
     borderWidth: 2,
+    borderColor: colors.border,
+    ...shadows.pixel,
   },
-  streakSurvived: { borderColor: colors.green, backgroundColor: colors.greenLight },
-  streakBroken: { borderColor: colors.red, backgroundColor: colors.redLight },
-  streakResultTitle: {
-    fontFamily: fonts.pixel, fontSize: 11, color: colors.green,
+
+  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  logoImg: { width: 24, height: 24 },
+  logoText: { fontFamily: fonts.pixel, fontSize: 7, color: colors.accent, letterSpacing: 1 },
+
+  mvpSection: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    padding: 12, borderWidth: 2, borderColor: GOLD, backgroundColor: `${GOLD}18`,
   },
-  streakBrokenText: { color: colors.red },
-  streakCount: {
-    fontFamily: fonts.pixel, fontSize: 36, color: colors.accent,
-    textShadowColor: colors.accentGlow, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8,
+  mvpInfo: { flex: 1, gap: 4 },
+  mvpBadgeRow: { flexDirection: 'row' },
+  mvpName: { fontFamily: fonts.interSemiBold, fontSize: 15, color: colors.text },
+  mvpPts: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
+
+  statsRow: { flexDirection: 'row', borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surface },
+  statBlock: { flex: 1, alignItems: 'center', paddingVertical: 10, gap: 4 },
+  statBlockBorder: { borderLeftWidth: 2, borderLeftColor: colors.border },
+  statNum: { fontFamily: fonts.pixel, fontSize: 20, color: colors.accent },
+  statLabel: { fontFamily: fonts.pixel, fontSize: 5, color: colors.textMuted, textAlign: 'center' },
+
+  divider: { height: 2, backgroundColor: colors.border },
+
+  taskList: { gap: 8 },
+  taskRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  taskCheck: {
+    width: 18, height: 18,
+    backgroundColor: colors.green, borderWidth: 1.5, borderColor: colors.green,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  streakCountLabel: { fontFamily: fonts.pixel, fontSize: 8, color: colors.green },
-  section: { gap: 0 },
-  sectionTitle: { fontFamily: fonts.pixel, fontSize: 9, color: colors.text, marginBottom: 12 },
+  taskLabel: { flex: 1, fontFamily: fonts.inter, fontSize: 13, color: colors.text },
+  taskBadge: {
+    paddingHorizontal: 5, paddingVertical: 2,
+    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface2,
+  },
+  taskBadgeText: { fontFamily: fonts.pixel, fontSize: 5, color: colors.text },
+
+  memberList: { gap: 0 },
   memberRow: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   memberRowMvp: {
     borderWidth: 2, borderColor: GOLD,
     paddingHorizontal: 8, marginHorizontal: -8,
-    backgroundColor: `${GOLD}15`,
+    backgroundColor: `${GOLD}12`,
   },
   avatarFrame: { overflow: 'hidden', borderWidth: 2, borderColor: colors.border, flexShrink: 0 },
   avatarPlaceholder: {
-    borderWidth: 2, borderColor: colors.border,
-    backgroundColor: colors.surface2,
-    alignItems: 'center', justifyContent: 'center',
-    flexShrink: 0,
+    borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surface2,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   memberInfo: { flex: 1, gap: 2 },
-  memberNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   memberName: { fontFamily: fonts.interSemiBold, fontSize: 13, color: colors.text },
-  memberPoints: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
-  mvpBadge: {
-    paddingHorizontal: 5, paddingVertical: 2,
-    backgroundColor: GOLD, borderWidth: 1, borderColor: GOLD,
-  },
-  mvpText: { fontFamily: fonts.pixel, fontSize: 5, color: '#0a0800' },
-  inactiveBadge: {
-    paddingHorizontal: 5, paddingVertical: 2,
-    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface2,
-  },
+  memberPts: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
+  mvpBadge: { paddingHorizontal: 5, paddingVertical: 2, backgroundColor: GOLD, borderWidth: 1, borderColor: GOLD },
+  mvpBadgeText: { fontFamily: fonts.pixel, fontSize: 5, color: '#0a0800' },
+  inactiveBadge: { paddingHorizontal: 5, paddingVertical: 2, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface2 },
   inactiveText: { fontFamily: fonts.pixel, fontSize: 5, color: colors.textMuted },
-  completionBadge: {
-    width: 28, height: 28, borderWidth: 2, alignItems: 'center', justifyContent: 'center',
-    flexShrink: 0,
+  completionBox: { width: 26, height: 26, borderWidth: 2, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  completionDone: { borderColor: colors.green, backgroundColor: colors.greenLight },
+  completionMiss: { borderColor: colors.red, backgroundColor: colors.redLight },
+
+  btnRow: {
+    flexDirection: 'row', gap: 12, padding: 16, paddingTop: 8,
+    borderTopWidth: 1, borderTopColor: colors.border,
+    backgroundColor: colors.bg,
   },
-  completedBadge: { borderColor: colors.green, backgroundColor: colors.greenLight },
-  missedBadge: { borderColor: colors.red, backgroundColor: colors.redLight },
+  shareBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, paddingVertical: 14,
+    backgroundColor: colors.accent, borderWidth: 2, borderColor: colors.accent,
+  },
+  shareBtnText: { fontFamily: fonts.pixel, fontSize: 7, color: colors.white },
+  closeBtn: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    paddingVertical: 14, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surface,
+  },
+  closeBtnText: { fontFamily: fonts.pixel, fontSize: 7, color: colors.textMuted },
 });
