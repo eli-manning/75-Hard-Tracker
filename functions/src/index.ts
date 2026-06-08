@@ -161,10 +161,22 @@ async function evaluateCrewCompletion(
 
       let completed = false;
       if (entry && !inactive) {
+        const activeTasks: Record<string, boolean> = crew.activeTasks ?? {};
+        const CORE_FIELD: Record<string, string> = {
+          workout1: 'workoutOneCompleted',
+          workout2: 'workoutTwoCompleted',
+          diet: 'dietCompleted',
+          water: 'waterCompleted',
+          reading: 'readingCompleted',
+          photo: 'photoCompleted',
+        };
+        const coreOk = Object.entries(activeTasks).every(
+          ([key, required]) => !required || !!(entry as Record<string, unknown>)[CORE_FIELD[key]]
+        );
         const crewTasksCompleted: string[] = entry.crewTasksCompleted ?? [];
         const customTasks: { id: string }[] = crew.customCrewTasks ?? [];
         const customOk = customTasks.every((t) => crewTasksCompleted.includes(t.id));
-        completed = !!entry.allCoreCompleted && customOk;
+        completed = coreOk && customOk;
       }
 
       return {

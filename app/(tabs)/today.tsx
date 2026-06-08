@@ -82,6 +82,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
   const [dayCompleted, setDayCompleted] = useState(false);
   const summaryShownRef = useRef(false);
   const prevAllCoreRef = useRef<boolean | null>(null);
+  const prevCrewCompletedRef = useRef<Map<string, boolean>>(new Map());
   const [dismissedMilestone, setDismissedMilestone] = useState<number | null>(null);
   const [showRestartModal, setShowRestartModal] = useState(false);
   const [restartForced, setRestartForced] = useState(false);
@@ -103,6 +104,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
   // Reset prev-state tracking when switching between users so we don't false-trigger on return
   useEffect(() => {
     prevAllCoreRef.current = null;
+    prevCrewCompletedRef.current = new Map();
   }, [activeUid]);
 
   // Detect own-day allCoreCompleted false→true transition and show summary modal
@@ -114,14 +116,38 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
       summaryShownRef.current = true;
       setDayCompleted(true);
       setShowSummary(true);
-      // Notify crew evaluation for each crew the user belongs to
-      const fn = httpsCallable(getFunctions(undefined, 'us-west2'), 'triggerCrewEvaluation');
-      for (const crew of crews) {
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dayEntry?.allCoreCompleted, activeUid]);
+
+  // Trigger crew evaluation when this user completes all of a crew's specific requirements
+  useEffect(() => {
+    if (!dayEntry || activeUid !== currentUser.uid || !crews.length) return;
+    const CORE_FIELD: Record<string, keyof DayEntry> = {
+      workout1: 'workoutOneCompleted',
+      workout2: 'workoutTwoCompleted',
+      diet: 'dietCompleted',
+      water: 'waterCompleted',
+      reading: 'readingCompleted',
+      photo: 'photoCompleted',
+    };
+    const fn = httpsCallable(getFunctions(undefined, 'us-west2'), 'triggerCrewEvaluation');
+    for (const crew of crews) {
+      const activeTasks = crew.activeTasks ?? {};
+      const coreOk = Object.entries(activeTasks).every(
+        ([key, required]) => !required || !!(dayEntry as Record<string, unknown>)[CORE_FIELD[key as keyof typeof CORE_FIELD]]
+      );
+      const crewTasksCompleted = dayEntry.crewTasksCompleted ?? [];
+      const customOk = crew.customCrewTasks.every((t) => crewTasksCompleted.includes(t.id));
+      const nowComplete = coreOk && customOk;
+      const wasComplete = prevCrewCompletedRef.current.get(crew.id) ?? false;
+      prevCrewCompletedRef.current.set(crew.id, nowComplete);
+      if (!wasComplete && nowComplete) {
         fn({ crewId: crew.id, date: todayStr }).catch(() => {});
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dayEntry?.allCoreCompleted, activeUid]);
+  }, [dayEntry, crews, activeUid]);
 
   const isTabSwitch = activeUid !== currentUser.uid && profileLoading;
   const showSkeleton = useMinDuration(isTabSwitch || (dayLoading && !dayEntry), 600);

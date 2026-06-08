@@ -154,7 +154,7 @@ async function evaluateCrewCompletion(crewId, date) {
     // Fetch all member day entries and profiles in parallel
     const members = (_a = crew.members) !== null && _a !== void 0 ? _a : [];
     const memberData = await Promise.all(members.map(async (uid) => {
-        var _a, _b, _c, _d;
+        var _a, _b, _c, _d, _e;
         const [daySnap, userSnap, prevDaySnap] = await Promise.all([
             db.doc(`days/${uid}/entries/${date}`).get(),
             db.doc(`users/${uid}`).get(),
@@ -166,16 +166,26 @@ async function evaluateCrewCompletion(crewId, date) {
         const inactive = !entry && !prevDaySnap.exists;
         let completed = false;
         if (entry && !inactive) {
-            const crewTasksCompleted = (_b = entry.crewTasksCompleted) !== null && _b !== void 0 ? _b : [];
-            const customTasks = (_c = crew.customCrewTasks) !== null && _c !== void 0 ? _c : [];
+            const activeTasks = (_b = crew.activeTasks) !== null && _b !== void 0 ? _b : {};
+            const CORE_FIELD = {
+                workout1: 'workoutOneCompleted',
+                workout2: 'workoutTwoCompleted',
+                diet: 'dietCompleted',
+                water: 'waterCompleted',
+                reading: 'readingCompleted',
+                photo: 'photoCompleted',
+            };
+            const coreOk = Object.entries(activeTasks).every(([key, required]) => !required || !!entry[CORE_FIELD[key]]);
+            const crewTasksCompleted = (_c = entry.crewTasksCompleted) !== null && _c !== void 0 ? _c : [];
+            const customTasks = (_d = crew.customCrewTasks) !== null && _d !== void 0 ? _d : [];
             const customOk = customTasks.every((t) => crewTasksCompleted.includes(t.id));
-            completed = !!entry.allCoreCompleted && customOk;
+            completed = coreOk && customOk;
         }
         return {
             uid,
             displayName,
             completed,
-            points: (_d = entry === null || entry === void 0 ? void 0 : entry.dailyPoints) !== null && _d !== void 0 ? _d : 0,
+            points: (_e = entry === null || entry === void 0 ? void 0 : entry.dailyPoints) !== null && _e !== void 0 ? _e : 0,
             inactive,
         };
     }));
