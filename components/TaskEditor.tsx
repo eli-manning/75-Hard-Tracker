@@ -20,16 +20,26 @@ export function TaskEditor({ task, defaultType = 'daily', onSave, onClose }: Tas
   const [visible, setVisible] = useState(task?.visible ?? true);
   const [why, setWhy] = useState(task?.why ?? '');
   const [points, setPoints] = useState<string>(task?.points ? String(task.points) : '');
+  const [amount, setAmount] = useState<string>(task?.amount ? String(task.amount) : '');
+  const [unit, setUnit] = useState(task?.unit ?? '');
+  const [goalAmount, setGoalAmount] = useState<string>(task?.goalAmount ? String(task.goalAmount) : '');
+  const [goalUnit, setGoalUnit] = useState(task?.goalUnit ?? '');
 
   function handleSave() {
     if (!label.trim()) return;
     const parsedPoints = parseInt(points, 10);
+    const parsedAmount = parseFloat(amount);
+    const parsedGoalAmount = parseInt(goalAmount, 10);
     onSave({
       label: label.trim().slice(0, 200),
       type,
       visible,
       why: why.trim() || undefined,
       points: !isNaN(parsedPoints) ? Math.max(0, Math.min(parsedPoints, 10)) : undefined,
+      amount: !isNaN(parsedAmount) && parsedAmount > 0 ? parsedAmount : undefined,
+      unit: unit.trim().slice(0, 20) || undefined,
+      goalAmount: !isNaN(parsedGoalAmount) && parsedGoalAmount > 0 ? parsedGoalAmount : undefined,
+      goalUnit: goalAmount.trim() && goalUnit.trim() ? goalUnit.trim().slice(0, 12) : undefined,
     });
   }
 
@@ -89,6 +99,52 @@ export function TaskEditor({ task, defaultType = 'daily', onSave, onClose }: Tas
                   </Text>
                 </TouchableOpacity>
               ))}
+            </View>
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.fieldLabel}>GOAL AMOUNT (OPTIONAL — ENABLES PROGRESS TRACKER)</Text>
+            <View style={styles.amountRow}>
+              <TextInput
+                value={goalAmount}
+                onChangeText={(t) => setGoalAmount(t.replace(/[^0-9]/g, ''))}
+                keyboardType="number-pad"
+                maxLength={6}
+                placeholderTextColor={colors.textMuted}
+                placeholder="GOAL"
+                style={[styles.input, styles.amountInput]}
+              />
+              <TextInput
+                value={goalUnit}
+                onChangeText={(t) => setGoalUnit(t.slice(0, 12))}
+                maxLength={12}
+                placeholderTextColor={colors.textMuted}
+                placeholder="UNIT (e.g. miles)"
+                style={[styles.input, styles.unitInput]}
+              />
+            </View>
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.fieldLabel}>AMOUNT &amp; UNIT (OPTIONAL — DISPLAY BADGE)</Text>
+            <View style={styles.amountRow}>
+              <TextInput
+                value={amount}
+                onChangeText={(t) => setAmount(t.replace(/[^0-9.]/g, ''))}
+                keyboardType="decimal-pad"
+                maxLength={6}
+                placeholderTextColor={colors.textMuted}
+                placeholder="e.g. 5"
+                style={[styles.input, styles.amountInput]}
+              />
+              <TextInput
+                value={unit}
+                onChangeText={(t) => setUnit(t.slice(0, 20))}
+                maxLength={20}
+                placeholderTextColor={colors.textMuted}
+                placeholder="e.g. miles"
+                style={[styles.input, styles.unitInput]}
+              />
             </View>
           </View>
 
@@ -174,6 +230,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 0,
   },
+  amountRow: { flexDirection: 'row', gap: 8 },
+  amountInput: { width: 90 },
+  unitInput: { flex: 1 },
   typeRow: {
     flexDirection: 'row',
     gap: 8,

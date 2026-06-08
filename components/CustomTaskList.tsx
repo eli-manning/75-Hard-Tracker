@@ -12,12 +12,13 @@ interface CustomTaskListProps {
   dayEntry: DayEntry;
   uid: string;
   readOnly: boolean;
+  hideActions?: boolean;
   onDayUpdate: (updates: Partial<DayEntry>) => void;
   onNudge?: (taskKey: string, message: string) => void;
   nudgedTasks?: Set<string>;
 }
 
-export function CustomTaskList({ tasks, dayEntry, uid, readOnly, onDayUpdate, onNudge, nudgedTasks }: CustomTaskListProps) {
+export function CustomTaskList({ tasks, dayEntry, uid, readOnly, hideActions, onDayUpdate, onNudge, nudgedTasks }: CustomTaskListProps) {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<CustomTask | undefined>();
   const [defaultType, setDefaultType] = useState<'daily' | 'backlog'>('daily');
@@ -39,6 +40,29 @@ export function CustomTaskList({ tasks, dayEntry, uid, readOnly, onDayUpdate, on
     await archiveCustomTask(uid, task.id);
   }
 
+  function handleSetProgress(task: CustomTask, amount: number) {
+    const goalAmount = task.goalAmount!;
+    const currentProgress = dayEntry.customTaskProgress ?? {};
+    const newProgress = { ...currentProgress, [task.id]: amount };
+    const currentCompleted = dayEntry.customTasksCompleted;
+    let newCompleted: string[];
+    if (amount >= goalAmount) {
+      newCompleted = currentCompleted.includes(task.id)
+        ? currentCompleted
+        : [...currentCompleted, task.id];
+    } else {
+      newCompleted = currentCompleted.filter((id) => id !== task.id);
+    }
+    onDayUpdate({ customTaskProgress: newProgress, customTasksCompleted: newCompleted });
+  }
+
+  function handleResetProgress(task: CustomTask) {
+    const currentProgress = dayEntry.customTaskProgress ?? {};
+    const newProgress = { ...currentProgress, [task.id]: 0 };
+    const newCompleted = dayEntry.customTasksCompleted.filter((id) => id !== task.id);
+    onDayUpdate({ customTaskProgress: newProgress, customTasksCompleted: newCompleted });
+  }
+
   async function handleSave(data: Partial<CustomTask>) {
     if (editingTask) {
       await updateCustomTask(uid, editingTask.id, data);
@@ -52,6 +76,10 @@ export function CustomTaskList({ tasks, dayEntry, uid, readOnly, onDayUpdate, on
         visible: data.visible ?? true,
         ...(data.why ? { why: data.why } : {}),
         ...(data.points !== undefined ? { points: data.points } : {}),
+        ...(data.amount !== undefined ? { amount: data.amount } : {}),
+        ...(data.unit ? { unit: data.unit } : {}),
+        ...(data.goalAmount !== undefined ? { goalAmount: data.goalAmount } : {}),
+        ...(data.goalUnit ? { goalUnit: data.goalUnit } : {}),
       });
     }
     setEditorOpen(false);
@@ -86,19 +114,26 @@ export function CustomTaskList({ tasks, dayEntry, uid, readOnly, onDayUpdate, on
             <Text style={styles.empty}>No daily tasks yet</Text>
           ) : (
             <View style={styles.taskList}>
-              {dailyTasks.map((task) => (
-                <CustomTaskItem
-                  key={task.id}
-                  task={task}
-                  completed={dayEntry.customTasksCompleted.includes(task.id)}
-                  readOnly={readOnly}
-                  onToggle={() => toggleDailyTask(task.id)}
-                  onEdit={() => openEditor('daily', task)}
-                  onDelete={() => archiveCustomTask(uid, task.id)}
-                  onNudge={onNudge ? () => onNudge(`custom-${task.id}`, task.label) : undefined}
-                  nudgedAlready={nudgedTasks?.has(`custom-${task.id}`)}
-                />
-              ))}
+              {dailyTasks.map((task) => {
+                const isGoalTask = typeof task.goalAmount === 'number' && task.goalAmount > 0;
+                return (
+                  <CustomTaskItem
+                    key={task.id}
+                    task={task}
+                    completed={dayEntry.customTasksCompleted.includes(task.id)}
+                    readOnly={readOnly}
+                    hideActions={hideActions}
+                    progressAmount={isGoalTask ? (dayEntry.customTaskProgress?.[task.id] ?? 0) : undefined}
+                    onToggle={() => toggleDailyTask(task.id)}
+                    onEdit={() => openEditor('daily', task)}
+                    onDelete={() => archiveCustomTask(uid, task.id)}
+                    onSetProgress={isGoalTask && !readOnly ? (amt) => handleSetProgress(task, amt) : undefined}
+                    onResetProgress={isGoalTask && !readOnly ? () => handleResetProgress(task) : undefined}
+                    onNudge={onNudge ? () => onNudge(`custom-${task.id}`, task.label) : undefined}
+                    nudgedAlready={nudgedTasks?.has(`custom-${task.id}`)}
+                  />
+                );
+              })}
             </View>
           )
         )}
@@ -134,6 +169,7 @@ export function CustomTaskList({ tasks, dayEntry, uid, readOnly, onDayUpdate, on
                   task={task}
                   completed={false}
                   readOnly={readOnly}
+                  hideActions={hideActions}
                   onToggle={() => toggleBacklogTask(task)}
                   onEdit={() => openEditor('backlog', task)}
                   onDelete={() => archiveCustomTask(uid, task.id)}
