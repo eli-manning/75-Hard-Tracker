@@ -1,5 +1,5 @@
 import { format, subDays, parseISO } from 'date-fns';
-import { DayEntry, CustomTask } from './types';
+import { DayEntry, CustomTask, UserProfile } from './types';
 
 export const TASK_POINTS = {
   workout1: 10,
@@ -30,10 +30,37 @@ export function computeWaterBonus(ozLogged: number, completed: boolean): number 
   return Math.min(Math.floor(extra / 40) * 5, 10);
 }
 
+// Computes allCoreCompleted for a given entry and profile.
+// For 75hard: all 6 tasks required (including outdoor workout 2).
+// For general: only non-hidden tasks required; if all hidden, requires at least one custom task.
+export function computeAllCoreCompleted(entry: DayEntry, profile: UserProfile): boolean {
+  if (profile.challengeMode !== 'general') {
+    return (
+      entry.workoutOneCompleted &&
+      entry.workoutTwoCompleted &&
+      entry.workoutTwoOutdoor &&
+      entry.dietCompleted &&
+      entry.waterCompleted &&
+      entry.readingCompleted &&
+      entry.photoCompleted
+    );
+  }
+  const hidden = profile.hiddenCoreTasks ?? {};
+  const checks: boolean[] = [];
+  if (!hidden.workout1) checks.push(entry.workoutOneCompleted);
+  if (!hidden.workout2) checks.push(entry.workoutTwoCompleted);
+  if (!hidden.diet)    checks.push(entry.dietCompleted);
+  if (!hidden.water)   checks.push(entry.waterCompleted);
+  if (!hidden.reading) checks.push(entry.readingCompleted);
+  if (!hidden.photo)   checks.push(entry.photoCompleted);
+  if (checks.length === 0) return (entry.customTasksCompleted?.length ?? 0) > 0;
+  return checks.every(Boolean);
+}
+
 // Canonical streak computation — used by both the streak-update Cloud-facing function
 // and the history page. The history.tsx local copy was the more correct one; this
 // matches that logic exactly.
-export function computeStreakFromHistory(history: DayEntry[]): { current: number; longest: number } {
+export function computeStreakFromHistory(history: DayEntry[], challengeStartDate?: string | null): { current: number; longest: number } {
   const sorted = [...history].sort((a, b) => b.date.localeCompare(a.date));
   const today = format(new Date(), 'yyyy-MM-dd');
   let current = 0, longest = 0, streak = 0;
@@ -42,6 +69,11 @@ export function computeStreakFromHistory(history: DayEntry[]): { current: number
 
   for (const entry of sorted) {
     if (entry.date > today) continue;
+    if (challengeStartDate && entry.date < challengeStartDate) {
+      if (current === 0) current = streak;
+      longest = Math.max(longest, streak);
+      break;
+    }
     if (entry.date < expected) {
       if (current === 0) current = streak;
       longest = Math.max(longest, streak);
@@ -64,17 +96,20 @@ export function computeStreakFromHistory(history: DayEntry[]): { current: number
   return { current, longest };
 }
 
-export function computeDayPoints(entry: DayEntry, customTasks: CustomTask[]): number {
+export function computeDayPoints(entry: DayEntry, customTasks: CustomTask[], profile?: UserProfile): number {
+  const isGeneral = profile?.challengeMode === 'general';
+  const hidden = isGeneral ? (profile?.hiddenCoreTasks ?? {}) : {};
+
   let pts = 0;
-  if (entry.workoutOneCompleted) pts += TASK_POINTS.workout1;
-  if (entry.workoutTwoCompleted) pts += TASK_POINTS.workout2;
-  if (entry.dietCompleted) pts += TASK_POINTS.diet;
-  if (entry.waterCompleted) pts += TASK_POINTS.water;
-  if (entry.readingCompleted) pts += TASK_POINTS.reading;
-  if (entry.photoCompleted) pts += TASK_POINTS.photo;
+  if (entry.workoutOneCompleted && !hidden.workout1) pts += TASK_POINTS.workout1;
+  if (entry.workoutTwoCompleted && !hidden.workout2) pts += TASK_POINTS.workout2;
+  if (entry.dietCompleted && !hidden.diet)           pts += TASK_POINTS.diet;
+  if (entry.waterCompleted && !hidden.water)         pts += TASK_POINTS.water;
+  if (entry.readingCompleted && !hidden.reading)     pts += TASK_POINTS.reading;
+  if (entry.photoCompleted && !hidden.photo)         pts += TASK_POINTS.photo;
   if (entry.allCoreCompleted) pts += PERFECT_DAY_BONUS;
-  pts += computeReadingBonus(entry.pagesRead ?? 0, entry.readingCompleted);
-  pts += computeWaterBonus(entry.waterOzLogged ?? 0, entry.waterCompleted);
+  if (!hidden.reading) pts += computeReadingBonus(entry.pagesRead ?? 0, entry.readingCompleted);
+  if (!hidden.water)   pts += computeWaterBonus(entry.waterOzLogged ?? 0, entry.waterCompleted);
   let customPts = 0;
   for (const taskId of (entry.customTasksCompleted ?? [])) {
     const task = customTasks.find((t) => t.id === taskId);
