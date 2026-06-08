@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
 import { useCustomTasks } from '../../hooks/useCustomTasks';
 import { TaskEditor } from '../../components/TaskEditor';
@@ -46,6 +47,7 @@ function TaskRow({
 }
 
 function TasksInner({ uid }: { uid: string }) {
+  const router = useRouter();
   const { tasks } = useCustomTasks(uid);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<CustomTask | undefined>();
@@ -111,11 +113,16 @@ function TasksInner({ uid }: { uid: string }) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="chevron-back" size={18} color={colors.accent} />
+        </TouchableOpacity>
+        <Text style={styles.pageTitle}>MY TASKS</Text>
+      </View>
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.pageTitle}>MY TASKS</Text>
         <View style={styles.sections}>
           <Section title="DAILY" list={daily} type="daily" />
           <Section title="BACKLOG" list={backlog} type="backlog" />
@@ -142,8 +149,14 @@ export default function TasksPage() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
+  header: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 16, paddingVertical: 12,
+    borderBottomWidth: 2, borderBottomColor: colors.border,
+  },
+  backBtn: { padding: 4 },
+  pageTitle: { fontFamily: fonts.pixel, fontSize: 12, color: colors.accent },
   scrollContent: { paddingHorizontal: 16, paddingTop: 16 },
-  pageTitle: { fontFamily: fonts.pixel, fontSize: 14, color: colors.accent, marginBottom: 24 },
   sections: { gap: 32 },
   section: { gap: 8 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
