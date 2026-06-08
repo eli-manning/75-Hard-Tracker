@@ -59,7 +59,7 @@ export function CustomTaskList({ tasks, dayEntry, uid, readOnly, hideActions, on
   function handleResetProgress(task: CustomTask) {
     const currentProgress = dayEntry.customTaskProgress ?? {};
     const newProgress = { ...currentProgress, [task.id]: 0 };
-    const newCompleted = dayEntry.customTasksCompleted.filter((id) => id !== task.id);
+    const newCompleted = (dayEntry.customTasksCompleted ?? []).filter((id) => id !== task.id);
     onDayUpdate({ customTaskProgress: newProgress, customTasksCompleted: newCompleted });
   }
 
@@ -120,7 +120,7 @@ export function CustomTaskList({ tasks, dayEntry, uid, readOnly, hideActions, on
                   <CustomTaskItem
                     key={task.id}
                     task={task}
-                    completed={dayEntry.customTasksCompleted.includes(task.id)}
+                    completed={(dayEntry.customTasksCompleted ?? []).includes(task.id)}
                     readOnly={readOnly}
                     hideActions={hideActions}
                     progressAmount={isGoalTask ? (dayEntry.customTaskProgress?.[task.id] ?? 0) : undefined}
