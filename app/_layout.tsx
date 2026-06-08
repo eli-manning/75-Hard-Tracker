@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import { colors } from '../lib/theme';
-import { Stack, usePathname } from 'expo-router';
+import { Stack, usePathname, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
@@ -20,8 +21,20 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 function AppShell() {
   const { loading: authLoading, user } = useAuthContext();
   const { navHidden } = useNavVisibility();
-  // Silently refresh push token on every app open for users who already granted permission
   const pathname = usePathname();
+  const router = useRouter();
+
+  // Deep-link navigation from push notification taps (native only)
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data as Record<string, string> | undefined;
+      if (data?.type === 'crew_complete' && data.crewId && data.date) {
+        router.push(`/crews/summary/${data.crewId}/${data.date}` as any);
+      }
+    });
+    return () => sub.remove();
+  }, []);
   const [fontsLoaded] = useFonts({
     PressStart2P_400Regular,
     VT323_400Regular,
@@ -56,6 +69,7 @@ function AppShell() {
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="profile" />
+      <Stack.Screen name="tasks" />
       <Stack.Screen name="privacy" />
       <Stack.Screen name="terms" />
     </Stack>
@@ -65,7 +79,7 @@ function AppShell() {
   // overflow:hidden clipping AND the body overflow:hidden + position:fixed iOS Safari bug).
   const showWebNav = Platform.OS === 'web' &&
     fontsLoaded && !authLoading && minElapsed && !navHidden &&
-    ['/today', '/tasks', '/history', '/leaderboard'].some(p => pathname.startsWith(p));
+    ['/today', '/crews', '/history', '/leaderboard'].includes(pathname);
 
 
   return (
