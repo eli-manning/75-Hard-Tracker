@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   View, Text, Image, TextInput, TouchableOpacity,
-  ScrollView, KeyboardAvoidingView, Platform, StyleSheet,
+  ScrollView, KeyboardAvoidingView, Platform, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,19 +16,61 @@ import { NotificationSettings } from '../components/NotificationSettings';
 import { RestartModal } from '../components/RestartModal';
 import { StreakFlame } from '../components/StreakFlame';
 import { colors, fonts, shadows } from '../lib/theme';
-import { format, parseISO } from 'date-fns';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+interface Draft {
+  displayName: string;
+  challengeStartDate: string | null;
+  challengeMode: 'general' | '75hard';
+  leaderboardOptOut: boolean;
+  dicebearSeed?: string;
+  notifAllEnabled?: boolean;
+  notifDailyEnabled?: boolean;
+  notifDailyTime?: string;
+  notifNudgesEnabled?: boolean;
+  notifFriendRequestsEnabled?: boolean;
+}
+
+function makeDraft(p: UserProfile): Draft {
+  return {
+    displayName: p.displayName,
+    challengeStartDate: p.challengeStartDate,
+    challengeMode: p.challengeMode ?? 'general',
+    leaderboardOptOut: p.leaderboardOptOut !== false,
+    dicebearSeed: p.dicebearSeed,
+    notifAllEnabled: p.notifAllEnabled,
+    notifDailyEnabled: p.notifDailyEnabled,
+    notifDailyTime: p.notifDailyTime,
+    notifNudgesEnabled: p.notifNudgesEnabled,
+    notifFriendRequestsEnabled: p.notifFriendRequestsEnabled,
+  };
+}
+
+function isDraftDirty(draft: Draft, profile: UserProfile): boolean {
+  return (
+    draft.displayName !== profile.displayName ||
+    draft.challengeStartDate !== profile.challengeStartDate ||
+    draft.challengeMode !== (profile.challengeMode ?? 'general') ||
+    draft.leaderboardOptOut !== (profile.leaderboardOptOut !== false) ||
+    draft.dicebearSeed !== profile.dicebearSeed ||
+    draft.notifAllEnabled !== profile.notifAllEnabled ||
+    draft.notifDailyEnabled !== profile.notifDailyEnabled ||
+    draft.notifDailyTime !== profile.notifDailyTime ||
+    draft.notifNudgesEnabled !== profile.notifNudgesEnabled ||
+    draft.notifFriendRequestsEnabled !== profile.notifFriendRequestsEnabled
+  );
+}
 
 function ProfileInner({ currentUser }: { currentUser: UserProfile }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState(currentUser);
+  const [draft, setDraft] = useState<Draft>(() => makeDraft(currentUser));
   const [editingName, setEditingName] = useState(false);
-  const [nameInput, setNameInput] = useState(profile.displayName);
+  const [nameInput, setNameInput] = useState(currentUser.displayName);
   const [editingStart, setEditingStart] = useState(false);
-  const [startInput, setStartInput] = useState(profile.challengeStartDate);
+  const [startInput, setStartInput] = useState(currentUser.challengeStartDate ?? '');
   const [saving, setSaving] = useState(false);
-  const [randomizing, setRandomizing] = useState(false);
   const [showRestartModal, setShowRestartModal] = useState(false);
 
   useEffect(() => {
@@ -36,58 +78,72 @@ function ProfileInner({ currentUser }: { currentUser: UserProfile }) {
     return unsub;
   }, [profile.uid]);
 
-  async function handleSaveName() {
+  // Merged profile used for display and child components — shows draft values
+  const draftProfile: UserProfile = {
+    ...profile,
+    displayName: draft.displayName,
+    challengeStartDate: draft.challengeStartDate,
+    challengeMode: draft.challengeMode,
+    leaderboardOptOut: draft.leaderboardOptOut,
+    dicebearSeed: draft.dicebearSeed,
+    notifAllEnabled: draft.notifAllEnabled,
+    notifDailyEnabled: draft.notifDailyEnabled,
+    notifDailyTime: draft.notifDailyTime,
+    notifNudgesEnabled: draft.notifNudgesEnabled,
+    notifFriendRequestsEnabled: draft.notifFriendRequestsEnabled,
+  };
+
+  const dirty = isDraftDirty(draft, profile);
+
+  function commitName() {
     const trimmed = nameInput.trim().slice(0, 100);
-    if (!trimmed || trimmed === profile.displayName) { setEditingName(false); return; }
+    if (trimmed) setDraft((d) => ({ ...d, displayName: trimmed }));
+    else setNameInput(draft.displayName);
+    setEditingName(false);
+  }
+
+  function commitStart() {
+    if (startInput) setDraft((d) => ({ ...d, challengeStartDate: startInput }));
+    else setStartInput(draft.challengeStartDate);
+    setEditingStart(false);
+  }
+
+  async function handleSaveAll() {
     setSaving(true);
     try {
-      await updateUserProfile(profile.uid, { displayName: trimmed });
+      const changes: Partial<UserProfile> = {};
+      if (draft.displayName !== profile.displayName) changes.displayName = draft.displayName;
+      if (draft.challengeStartDate !== profile.challengeStartDate) changes.challengeStartDate = draft.challengeStartDate;
+      if (draft.challengeMode !== (profile.challengeMode ?? 'general')) changes.challengeMode = draft.challengeMode;
+      if (draft.leaderboardOptOut !== (profile.leaderboardOptOut !== false)) changes.leaderboardOptOut = draft.leaderboardOptOut;
+      if (draft.dicebearSeed !== profile.dicebearSeed) changes.dicebearSeed = draft.dicebearSeed;
+      if (draft.notifAllEnabled !== profile.notifAllEnabled) changes.notifAllEnabled = draft.notifAllEnabled;
+      if (draft.notifDailyEnabled !== profile.notifDailyEnabled) changes.notifDailyEnabled = draft.notifDailyEnabled;
+      if (draft.notifDailyTime !== profile.notifDailyTime) changes.notifDailyTime = draft.notifDailyTime;
+      if (draft.notifNudgesEnabled !== profile.notifNudgesEnabled) changes.notifNudgesEnabled = draft.notifNudgesEnabled;
+      if (draft.notifFriendRequestsEnabled !== profile.notifFriendRequestsEnabled) changes.notifFriendRequestsEnabled = draft.notifFriendRequestsEnabled;
+
+      await updateUserProfile(profile.uid, changes);
       invalidate('all-users');
       invalidate(`profile-${profile.uid}`);
-      setEditingName(false);
-      setProfile((p) => ({ ...p, displayName: trimmed }));
+      setProfile((p) => ({ ...p, ...changes }));
     } catch {
-      // write failed; user can retry
+      // keep dirty state, user can retry
     } finally {
       setSaving(false);
     }
   }
 
-  async function handleSaveStart() {
-    if (!startInput || startInput === profile.challengeStartDate) { setEditingStart(false); return; }
-    setSaving(true);
-    try {
-      await updateUserProfile(profile.uid, { challengeStartDate: startInput });
-      invalidate(`profile-${profile.uid}`);
-      setEditingStart(false);
-      setProfile((p) => ({ ...p, challengeStartDate: startInput }));
-    } catch {
-      // write failed; user can retry
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleRandomize() {
-    setRandomizing(true);
-    try {
-      const seed = generateSeed();
-      await updateUserProfile(profile.uid, { dicebearSeed: seed });
-      invalidate(`profile-${profile.uid}`);
-      setProfile((p) => ({ ...p, dicebearSeed: seed }));
-    } catch {
-      // silently ignore
-    } finally {
-      setRandomizing(false);
-    }
-  }
-
-  const isCustom = hasCustomAvatar(profile);
+  const [avatarErr, setAvatarErr] = useState(false);
+  useEffect(() => setAvatarErr(false), [draft.dicebearSeed]);
+  const isCustom = hasCustomAvatar(draftProfile);
+  const avatarUrl = getAvatarUrl(draftProfile);
+  const avatarRatio = AVATAR_PORTRAIT_RATIO[avatarUrl];
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 100 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + (dirty ? 120 : 60) }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Back button */}
@@ -102,28 +158,28 @@ function ProfileInner({ currentUser }: { currentUser: UserProfile }) {
         <View style={styles.avatarSection}>
           <View style={styles.avatarWrapper}>
             <View style={styles.avatarFrame}>
-              {(() => {
-                const url = getAvatarUrl(profile);
-                const ratio = AVATAR_PORTRAIT_RATIO[url];
-                return (
-                  <Image
-                    source={getAvatarSource(url)}
-                    style={{ width: 120, height: ratio ? 120 / ratio : 120 }}
-                    resizeMode={ratio ? 'stretch' : 'cover'}
-                  />
-                );
-              })()}
+              {avatarErr ? (
+                <View style={{ width: 120, height: 120, alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="person-outline" size={56} color={colors.textMuted} />
+                </View>
+              ) : (
+                <Image
+                  source={getAvatarSource(avatarUrl)}
+                  style={{ width: 120, height: avatarRatio ? 120 / avatarRatio : 120 }}
+                  resizeMode={avatarRatio ? 'stretch' : 'cover'}
+                  onError={() => setAvatarErr(true)}
+                />
+              )}
             </View>
             <StreakFlame streak={profile.currentStreak ?? 0} size="lg" />
           </View>
           {!isCustom && (
             <TouchableOpacity
-              onPress={handleRandomize}
-              disabled={randomizing}
-              style={[styles.randomizeBtn, randomizing && { opacity: 0.5 }]}
+              onPress={() => setDraft((d) => ({ ...d, dicebearSeed: generateSeed() }))}
+              style={styles.randomizeBtn}
             >
               <Ionicons name="refresh-outline" size={12} color={colors.textMuted} />
-              <Text style={styles.randomizeBtnText}>{randomizing ? 'RANDOMIZING...' : 'RANDOMIZE'}</Text>
+              <Text style={styles.randomizeBtnText}>RANDOMIZE</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -139,15 +195,20 @@ function ProfileInner({ currentUser }: { currentUser: UserProfile }) {
                 autoFocus
                 style={[styles.editInput, { flex: 1 }]}
                 placeholderTextColor={colors.textMuted}
+                onBlur={commitName}
+                onSubmitEditing={commitName}
+                returnKeyType="done"
               />
-              <TouchableOpacity onPress={handleSaveName} disabled={saving} style={styles.iconBtn}>
-                <Ionicons name="checkmark" size={16} color={colors.green} />
+              <TouchableOpacity onPress={commitName} style={styles.iconBtn}>
+                <Ionicons name="checkmark" size={16} color={colors.accent} />
               </TouchableOpacity>
             </View>
           ) : (
             <View style={styles.displayRow}>
-              <Text style={styles.displayValue}>{profile.displayName}</Text>
-              <TouchableOpacity onPress={() => { setNameInput(profile.displayName); setEditingName(true); }} style={styles.iconBtn}>
+              <Text style={[styles.displayValue, draft.displayName !== profile.displayName && styles.pendingValue]}>
+                {draft.displayName}
+              </Text>
+              <TouchableOpacity onPress={() => { setNameInput(draft.displayName); setEditingName(true); }} style={styles.iconBtn}>
                 <Ionicons name="pencil-outline" size={16} color={colors.accent} />
               </TouchableOpacity>
             </View>
@@ -160,46 +221,49 @@ function ProfileInner({ currentUser }: { currentUser: UserProfile }) {
           <Text style={styles.displayValue}>{profile.email}</Text>
         </View>
 
-        {/* Challenge start date */}
-        <View style={styles.fieldCard}>
-          <Text style={styles.fieldLabel}>CHALLENGE START DATE</Text>
-          {editingStart ? (
-            <View style={styles.editRow}>
-              <TextInput
-                value={startInput}
-                onChangeText={setStartInput}
-                autoFocus
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor={colors.textMuted}
-                style={[styles.editInput, { flex: 1 }]}
-              />
-              <TouchableOpacity onPress={handleSaveStart} disabled={saving} style={styles.iconBtn}>
-                <Ionicons name="checkmark" size={16} color={colors.green} />
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.displayRow}>
-              <Text style={styles.displayValue}>{profile.challengeStartDate}</Text>
-              <TouchableOpacity onPress={() => { setStartInput(profile.challengeStartDate); setEditingStart(true); }} style={styles.iconBtn}>
-                <Ionicons name="pencil-outline" size={16} color={colors.accent} />
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
+        {/* Challenge start date — 75 Hard only */}
+        {draft.challengeMode === '75hard' && (
+          <View style={styles.fieldCard}>
+            <Text style={styles.fieldLabel}>CHALLENGE START DATE</Text>
+            {editingStart ? (
+              <View style={styles.editRow}>
+                <TextInput
+                  value={startInput}
+                  onChangeText={setStartInput}
+                  autoFocus
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor={colors.textMuted}
+                  style={[styles.editInput, { flex: 1 }]}
+                  onBlur={commitStart}
+                  onSubmitEditing={commitStart}
+                  returnKeyType="done"
+                />
+                <TouchableOpacity onPress={commitStart} style={styles.iconBtn}>
+                  <Ionicons name="checkmark" size={16} color={colors.accent} />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.displayRow}>
+                <Text style={[styles.displayValue, draft.challengeStartDate !== profile.challengeStartDate && styles.pendingValue]}>
+                  {draft.challengeStartDate ?? '—'}
+                </Text>
+                <TouchableOpacity onPress={() => { setStartInput(draft.challengeStartDate ?? ''); setEditingStart(true); }} style={styles.iconBtn}>
+                  <Ionicons name="pencil-outline" size={16} color={colors.accent} />
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Challenge mode */}
         <View style={styles.fieldCard}>
           <Text style={styles.fieldLabel}>CHALLENGE MODE</Text>
           <View style={styles.displayRow}>
-            <Text style={styles.displayValue}>
-              {(profile.challengeMode ?? 'general') === '75hard' ? '75 HARD MODE' : 'GENERAL FITNESS'}
+            <Text style={[styles.displayValue, draft.challengeMode !== (profile.challengeMode ?? 'general') && styles.pendingValue]}>
+              {draft.challengeMode === '75hard' ? '75 HARD MODE' : 'GENERAL FITNESS'}
             </Text>
             <TouchableOpacity
-              onPress={async () => {
-                const newMode = (profile.challengeMode ?? 'general') === '75hard' ? 'general' : '75hard';
-                await updateUserProfile(profile.uid, { challengeMode: newMode });
-                setProfile((p) => ({ ...p, challengeMode: newMode }));
-              }}
+              onPress={() => setDraft((d) => ({ ...d, challengeMode: d.challengeMode === '75hard' ? 'general' : '75hard' }))}
               style={styles.iconBtn}
             >
               <Ionicons name="swap-horizontal-outline" size={16} color={colors.accent} />
@@ -223,33 +287,26 @@ function ProfileInner({ currentUser }: { currentUser: UserProfile }) {
         <View style={styles.fieldCard}>
           <Text style={styles.fieldLabel}>LEADERBOARD</Text>
           <View style={styles.displayRow}>
-            <Text style={styles.displayValue}>
-              {profile.leaderboardOptOut !== false ? 'OPTED OUT' : 'VISIBLE TO ALL'}
+            <Text style={[styles.displayValue, draft.leaderboardOptOut !== (profile.leaderboardOptOut !== false) && styles.pendingValue]}>
+              {draft.leaderboardOptOut ? 'OPTED OUT' : 'VISIBLE TO ALL'}
             </Text>
             <TouchableOpacity
-              onPress={async () => {
-                const next = profile.leaderboardOptOut !== false;
-                await updateUserProfile(profile.uid, { leaderboardOptOut: !next });
-                setProfile((p) => ({ ...p, leaderboardOptOut: !next }));
-              }}
+              onPress={() => setDraft((d) => ({ ...d, leaderboardOptOut: !d.leaderboardOptOut }))}
               style={styles.iconBtn}
             >
               <Ionicons
-                name={profile.leaderboardOptOut !== false ? 'eye-off-outline' : 'eye-outline'}
+                name={draft.leaderboardOptOut ? 'eye-off-outline' : 'eye-outline'}
                 size={16}
-                color={profile.leaderboardOptOut !== false ? colors.textMuted : colors.accent}
+                color={draft.leaderboardOptOut ? colors.textMuted : colors.accent}
               />
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Notifications */}
+        {/* Notifications — updates draft, saved with everything else */}
         <NotificationSettings
-          profile={profile}
-          onUpdate={async (patch) => {
-            await updateUserProfile(profile.uid, patch);
-            setProfile((p) => ({ ...p, ...patch }));
-          }}
+          profile={draftProfile}
+          onUpdate={(patch) => setDraft((d) => ({ ...d, ...patch }))}
         />
 
         {/* Fitness info */}
@@ -268,19 +325,32 @@ function ProfileInner({ currentUser }: { currentUser: UserProfile }) {
             )}
           </View>
         )}
+
         {/* Danger zone */}
-        {(profile.challengeMode ?? 'general') === '75hard' && (
+        {(draft.challengeMode ?? 'general') === '75hard' && (
           <View style={styles.dangerZone}>
             <Text style={styles.dangerLabel}>DANGER ZONE</Text>
-            <TouchableOpacity
-              onPress={() => setShowRestartModal(true)}
-              style={styles.dangerBtn}
-            >
+            <TouchableOpacity onPress={() => setShowRestartModal(true)} style={styles.dangerBtn}>
               <Text style={styles.dangerBtnText}>FAILED THE CHALLENGE</Text>
             </TouchableOpacity>
           </View>
         )}
       </ScrollView>
+
+      {/* Sticky save bar */}
+      {dirty && (
+        <View style={[styles.saveBar, { paddingBottom: insets.bottom + 12 }]}>
+          <TouchableOpacity
+            onPress={handleSaveAll}
+            disabled={saving}
+            style={[styles.saveBtn, saving && { opacity: 0.6 }]}
+          >
+            {saving
+              ? <ActivityIndicator size="small" color={colors.white} />
+              : <Text style={styles.saveBtnText}>SAVE CHANGES</Text>}
+          </TouchableOpacity>
+        </View>
+      )}
 
       <RestartModal
         visible={showRestartModal}
@@ -303,6 +373,7 @@ function ProfileInner({ currentUser }: { currentUser: UserProfile }) {
             ...(keepLongestStreak ? {} : { longestStreak: 0 }),
             ...(keepPoints ? {} : { totalPoints: 0 }),
           }));
+          setDraft((d) => ({ ...d, challengeStartDate: newStartDate }));
         }}
         onCancel={() => setShowRestartModal(false)}
       />
@@ -342,7 +413,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...shadows.glowAccent,
   },
-  avatar: { width: 120, height: 120 },
   randomizeBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 12, paddingVertical: 8,
@@ -358,6 +428,7 @@ const styles = StyleSheet.create({
   fieldLabel: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
   displayRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   displayValue: { fontFamily: fonts.vt323, fontSize: 22, color: colors.text, flex: 1 },
+  pendingValue: { color: colors.accent },
   editRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   editInput: {
     fontFamily: fonts.vt323, fontSize: 22,
@@ -386,4 +457,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dangerBtnText: { fontFamily: fonts.pixel, fontSize: 7, color: colors.red },
+  saveBar: {
+    paddingHorizontal: 16, paddingTop: 12,
+    borderTopWidth: 2, borderTopColor: colors.border,
+    backgroundColor: colors.surface,
+    ...shadows.pixelUp,
+  },
+  saveBtn: {
+    paddingVertical: 16,
+    borderWidth: 2, borderColor: colors.accent,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+  },
+  saveBtnText: { fontFamily: fonts.pixel, fontSize: 9, color: colors.white },
 });
