@@ -7,11 +7,12 @@ export interface UserProfile {
   dicebearSeed?: string;
   email: string;
   createdAt: Timestamp;
-  challengeStartDate: string; // "YYYY-MM-DD"
+  challengeStartDate: string | null; // "YYYY-MM-DD" for 75hard, null for general
   isActive: boolean;
   currentStreak: number;
   longestStreak: number;
   friends?: string[];
+  crews?: string[];           // crewIds the user belongs to
   // Fitness profile (set during onboarding, all optional)
   startingWeight?: number;
   weightUnit?: 'lbs' | 'kg';
@@ -26,6 +27,14 @@ export interface UserProfile {
   notifFriendRequestsEnabled?: boolean;
   totalPoints?: number;
   challengeMode?: '75hard' | 'general';
+  hiddenCoreTasks?: {
+    workout1?: boolean;
+    workout2?: boolean;
+    diet?: boolean;
+    water?: boolean;
+    reading?: boolean;
+    photo?: boolean;
+  };
   leaderboardOptOut?: boolean; // undefined means not yet on leaderboard (opted out); false means explicitly opted in
   nudgesRemaining?: number;       // free nudges left today (max 5, default 5 if absent)
   purchasedNudgesToday?: number;  // paid nudges used today (max 5)
@@ -50,6 +59,8 @@ export interface DayEntry {
   pagesRead: number;
 
   customTasksCompleted: string[];
+  crewTasksCompleted?: string[]; // IDs of completed crew custom tasks
+  customTaskProgress?: Record<string, number>; // taskId -> logged amount for goal-based tasks
 
   // Optional daily metrics
   bodyWeight?: number;
@@ -60,6 +71,54 @@ export interface DayEntry {
   allCoreCompleted: boolean;
   updatedAt: Timestamp;
   dailyPoints?: number;
+}
+
+export interface CrewTask {
+  id: string;    // uuid generated client-side
+  label: string; // max 60 chars
+  order: number;
+  amount?: number;
+  unit?: string;
+}
+
+export interface Crew {
+  id: string;
+  name: string;              // display name, max 30 chars
+  icon: string;              // preset icon key
+  joinCode: string;          // 6-char all-caps unique code
+  creatorUid: string;
+  members: string[];
+  admins: string[];
+  activeTasks: {
+    workout1: boolean;
+    workout2: boolean;
+    diet: boolean;
+    water: boolean;
+    reading: boolean;
+    photo: boolean;
+  };
+  customCrewTasks: CrewTask[];
+  crewStreak: number;
+  longestCrewStreak: number;
+  lastStreakDate: string; // YYYY-MM-DD
+  lastSummaryDate?: string; // YYYY-MM-DD — idempotency guard for onDayEntryUpdated
+  createdAt: Timestamp;
+}
+
+export interface CrewDaySummary {
+  crewId: string;
+  date: string;
+  memberResults: {
+    uid: string;
+    displayName: string;
+    completed: boolean;
+    points: number;
+    inactive: boolean;
+  }[];
+  streakSurvived: boolean;
+  newStreak: number;
+  mvpUid: string | null;
+  pushedAt: Timestamp;
 }
 
 export interface CustomTask {
@@ -74,4 +133,8 @@ export interface CustomTask {
   visible?: boolean; // whether friends can see this task (defaults to true)
   why?: string;
   points?: number; // 1-10, optional point value for this task
+  amount?: number; // display badge only (e.g. "5 MILES")
+  unit?: string;   // display badge only
+  goalAmount?: number; // enables progress tracker; undefined = plain checkbox
+  goalUnit?: string;   // unit label for progress tracker
 }
