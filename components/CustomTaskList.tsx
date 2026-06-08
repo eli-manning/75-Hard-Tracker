@@ -29,7 +29,7 @@ export function CustomTaskList({ tasks, dayEntry, uid, readOnly, hideActions, on
   const backlogTasks = tasks.filter((t) => t.type === 'backlog' && !t.archived);
 
   function toggleDailyTask(taskId: string) {
-    const current = dayEntry.customTasksCompleted;
+    const current = dayEntry.customTasksCompleted ?? [];
     const updated = current.includes(taskId)
       ? current.filter((id) => id !== taskId)
       : [...current, taskId];
@@ -44,7 +44,7 @@ export function CustomTaskList({ tasks, dayEntry, uid, readOnly, hideActions, on
     const goalAmount = task.goalAmount!;
     const currentProgress = dayEntry.customTaskProgress ?? {};
     const newProgress = { ...currentProgress, [task.id]: amount };
-    const currentCompleted = dayEntry.customTasksCompleted;
+    const currentCompleted = dayEntry.customTasksCompleted ?? [];
     let newCompleted: string[];
     if (amount >= goalAmount) {
       newCompleted = currentCompleted.includes(task.id)
@@ -76,8 +76,6 @@ export function CustomTaskList({ tasks, dayEntry, uid, readOnly, hideActions, on
         visible: data.visible ?? true,
         ...(data.why ? { why: data.why } : {}),
         ...(data.points !== undefined ? { points: data.points } : {}),
-        ...(data.amount !== undefined ? { amount: data.amount } : {}),
-        ...(data.unit ? { unit: data.unit } : {}),
         ...(data.goalAmount !== undefined ? { goalAmount: data.goalAmount } : {}),
         ...(data.goalUnit ? { goalUnit: data.goalUnit } : {}),
       });

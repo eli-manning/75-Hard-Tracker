@@ -109,8 +109,6 @@ function TasksInner({ uid, profile: initialProfile }: { uid: string; profile: Us
         visible: data.visible ?? true,
         ...(data.why ? { why: data.why } : {}),
         ...(data.points !== undefined ? { points: data.points } : {}),
-        ...(data.amount !== undefined ? { amount: data.amount } : {}),
-        ...(data.unit ? { unit: data.unit } : {}),
         ...(data.goalAmount !== undefined ? { goalAmount: data.goalAmount } : {}),
         ...(data.goalUnit ? { goalUnit: data.goalUnit } : {}),
       });
