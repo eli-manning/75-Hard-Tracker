@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View, Text, Image, TextInput, TouchableOpacity,
   ScrollView, Animated, StyleSheet, Dimensions, Platform,
@@ -30,14 +30,22 @@ const DRAWER_WIDTH = 280;
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 function AvatarImg({ url, size }: { url: string; size: number }) {
+  const [err, setErr] = useState(false);
   const source = getAvatarSource(url);
   const ratio = AVATAR_PORTRAIT_RATIO[url];
-  // Portrait sprites: render taller than the container so the head (top) fills the frame
+  if (err) {
+    return (
+      <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+        <Ionicons name="person-outline" size={size * 0.55} color={colors.textMuted} />
+      </View>
+    );
+  }
   return (
     <Image
       source={source}
       style={{ width: size, height: ratio ? size / ratio : size }}
       resizeMode={ratio ? 'stretch' : 'cover'}
+      onError={() => setErr(true)}
     />
   );
 }
@@ -214,6 +222,16 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSe
             <Ionicons name="chevron-forward" size={16} color={colors.accent} />
           </TouchableOpacity>
 
+          {/* Manage tasks */}
+          <TouchableOpacity
+            onPress={() => { router.push('/(tabs)/tasks' as any); }}
+            style={styles.menuRow}
+          >
+            <Ionicons name="list-outline" size={14} color={colors.textMuted} />
+            <Text style={styles.menuRowText}>MANAGE TASKS</Text>
+            <Ionicons name="chevron-forward" size={14} color={colors.textMuted} style={{ marginLeft: 'auto' }} />
+          </TouchableOpacity>
+
           {/* Friends section */}
           <View style={styles.friendsSection}>
             <View style={styles.friendsHeader}>
@@ -301,7 +319,7 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSe
               <TextInput
                 value={friendSearch}
                 onChangeText={setFriendSearch}
-                placeholder="Search by name or email…"
+                placeholder="Search by name or email"
                 placeholderTextColor={colors.textMuted}
                 style={styles.searchInput}
               />
@@ -339,24 +357,24 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSe
           <View style={styles.installSection}>
             <InstallPrompt />
           </View>
-
-          {/* Sign out + legal */}
-          <View style={styles.footer}>
-            <TouchableOpacity onPress={handleSignOut} style={styles.signOutBtn}>
-              <Ionicons name="log-out-outline" size={14} color={colors.textMuted} />
-              <Text style={styles.signOutText}>SIGN OUT</Text>
-            </TouchableOpacity>
-            <View style={styles.legalRow}>
-              <TouchableOpacity onPress={() => { router.push('/privacy' as any); onClose(); }}>
-                <Text style={styles.legalLink}>PRIVACY</Text>
-              </TouchableOpacity>
-              <Text style={styles.legalSep}>|</Text>
-              <TouchableOpacity onPress={() => { router.push('/terms' as any); onClose(); }}>
-                <Text style={styles.legalLink}>TERMS</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
         </ScrollView>
+
+        {/* Sign out + legal — pinned to bottom */}
+        <View style={styles.footer}>
+          <TouchableOpacity onPress={handleSignOut} style={styles.signOutBtn}>
+            <Ionicons name="log-out-outline" size={14} color={colors.textMuted} />
+            <Text style={styles.signOutText}>SIGN OUT</Text>
+          </TouchableOpacity>
+          <View style={styles.legalRow}>
+            <TouchableOpacity onPress={() => { router.push('/privacy' as any); onClose(); }}>
+              <Text style={styles.legalLink}>PRIVACY</Text>
+            </TouchableOpacity>
+            <Text style={styles.legalSep}>|</Text>
+            <TouchableOpacity onPress={() => { router.push('/terms' as any); onClose(); }}>
+              <Text style={styles.legalLink}>TERMS</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Animated.View>
     </>
   );
@@ -439,12 +457,12 @@ const styles = StyleSheet.create({
   actionBtnRed: { paddingHorizontal: 9, paddingVertical: 3, borderWidth: 2, borderColor: colors.red, backgroundColor: colors.redLight },
   actionBtnRedText: { fontFamily: fonts.inter, fontSize: 15, fontWeight: '700', color: colors.red },
   searchInput: {
-    fontFamily: fonts.inter, fontSize: 12, padding: 8,
+    fontFamily: fonts.inter, fontSize: 10, padding: 8,
     borderWidth: 2, borderColor: colors.border,
     backgroundColor: colors.surface2, color: colors.text,
   },
   sentLabel: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
-  footer: { padding: 16, gap: 12, marginTop: 'auto' },
+  footer: { padding: 16, gap: 12, borderTopWidth: 2, borderTopColor: colors.border },
   installSection: { paddingHorizontal: 16, paddingVertical: 8 },
   signOutBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
@@ -457,4 +475,13 @@ const styles = StyleSheet.create({
   legalRow: { flexDirection: 'row', justifyContent: 'center', gap: 16, alignItems: 'center' },
   legalLink: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
   legalSep: { color: colors.border },
+  menuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 16,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.border,
+  },
+  menuRowText: { fontFamily: fonts.pixel, fontSize: 7, color: colors.textMuted },
 });
