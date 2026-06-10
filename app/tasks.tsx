@@ -279,8 +279,8 @@ const styles = StyleSheet.create({
   },
   taskLabel: { flex: 1, fontFamily: fonts.vt323, fontSize: 18 },
   taskActions: { flexDirection: 'row', gap: 4, flexShrink: 0 },
-  actionBtn: { padding: 4, opacity: 0.4 },
-  actionBtnDisabled: { opacity: 0.2 },
+  actionBtn: { padding: 4 },
+  actionBtnDisabled: { opacity: 0.3 },
   coreTaskRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: 10, paddingHorizontal: 12, borderWidth: 2,
