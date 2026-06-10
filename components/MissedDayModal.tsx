@@ -31,6 +31,7 @@ export function MissedDayModal({ visible, yesterdayEntry, onMissed, onSaved, onD
       const mins = parseInt(workoutTwoMins, 10);
       patch.workoutTwoDuration = isNaN(mins) ? 0 : mins;
       patch.workoutTwoCompleted = !isNaN(mins) && mins > 0;
+      if (patch.workoutTwoCompleted) patch.workoutTwoOutdoor = true;
     }
     if (!yesterdayEntry.waterCompleted) {
       const oz = parseInt(waterOz, 10);

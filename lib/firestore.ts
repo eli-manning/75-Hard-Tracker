@@ -252,7 +252,8 @@ export async function updateDayEntry(
   updates: Partial<DayEntry>
 ): Promise<void> {
   // Firestore rejects undefined — convert to deleteField() to remove the field
-  const safe: Record<string, unknown> = { updatedAt: serverTimestamp() };
+  // Always write date+uid so orderBy('date') queries never miss this document.
+  const safe: Record<string, unknown> = { updatedAt: serverTimestamp(), date, uid };
   for (const [k, v] of Object.entries(updates)) {
     safe[k] = v === undefined ? deleteField() : v;
   }
@@ -273,7 +274,8 @@ export async function updateDayEntryWithPoints(
   const entryRef = doc(db(), 'days', uid, 'entries', date);
   const userRef = doc(db(), 'users', uid);
 
-  const safe: Record<string, unknown> = { updatedAt: serverTimestamp() };
+  // Always write date+uid so orderBy('date') queries never miss this document.
+  const safe: Record<string, unknown> = { updatedAt: serverTimestamp(), date, uid };
   for (const [k, v] of Object.entries(updates)) {
     safe[k] = v === undefined ? deleteField() : v;
   }

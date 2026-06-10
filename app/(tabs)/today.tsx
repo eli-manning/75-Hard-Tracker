@@ -13,7 +13,7 @@ import { useDayData } from '../../hooks/useDayData';
 import { useCustomTasks } from '../../hooks/useCustomTasks';
 import { useUserCrews } from '../../hooks/useUserCrews';
 import { useMinDuration } from '../../hooks/useMinDuration';
-import { getUserProfile, getAllUsers, getPendingRequests, getDayEntry, getDayHistory, updateUserProfile, updateDayEntryWithPoints, subscribeToProfile } from '../../lib/firestore';
+import { getUserProfile, getAllUsers, getPendingRequests, getDayEntry, getDayHistory, updateUserProfile, updateDayEntryWithPoints, updateStreakOnProfile, subscribeToProfile } from '../../lib/firestore';
 import { getCached, setCached, getSessionCached, setSessionCached, clearAll } from '../../lib/cache';
 import { getCrewIconIon } from '../../lib/crews';
 import { UserProfile, DayEntry } from '../../lib/types';
@@ -467,6 +467,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
             if (delta !== 0) {
               onProfileUpdate({ ...currentUser, totalPoints: Math.max(0, (currentUser.totalPoints ?? 0) + delta) });
             }
+            await updateStreakOnProfile(activeUid, currentUser.challengeStartDate).catch(() => {});
             setShowMissedDay(false);
           }}
           onDismiss={() => setShowMissedDay(false)}
