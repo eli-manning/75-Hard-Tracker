@@ -326,6 +326,8 @@ function ProfileInner({ currentUser }: { currentUser: UserProfile }) {
           </View>
         )}
 
+
+
         {/* Danger zone */}
         {(draft.challengeMode ?? 'general') === '75hard' && (
           <View style={styles.dangerZone}>
