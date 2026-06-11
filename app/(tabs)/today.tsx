@@ -31,6 +31,7 @@ import { MissedDayModal } from '../../components/MissedDayModal';
 import { computeDayPoints, computeAllCoreCompleted } from '../../lib/points';
 import { colors, fonts } from '../../lib/theme';
 import { useTheme } from '../../context/ThemeContext';
+import { useTutorial } from '../../context/TutorialContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function DaySkeleton({ profile }: { profile: UserProfile }) {
@@ -191,12 +192,29 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
   const [yesterdayEntry, setYesterdayEntry] = useState<DayEntry | null>(null);
   const missedDayChecked = useRef(false);
   const insets = useSafeAreaInsets();
+  const { startTutorial, registerActionHandler, isActive: tutorialIsActive } = useTutorial();
+  const tutorialFiredRef = useRef(false);
 
   useEffect(() => {
     getPendingRequests(currentUser.uid)
       .then((reqs) => setPendingRequestCount(reqs.length))
       .catch(() => {});
   }, [currentUser.uid]);
+
+  // Fire tutorial once for new users (after a short delay so the screen settles)
+  useEffect(() => {
+    if (tutorialIsActive) return; // already running — don't restart on remount
+    if (tutorialFiredRef.current) return;
+    if (currentUser.tutorialSeen) return;
+    tutorialFiredRef.current = true;
+    const t = setTimeout(() => startTutorial(currentUser.uid), 900);
+    return () => clearTimeout(t);
+  }, [currentUser.uid, currentUser.tutorialSeen, startTutorial, tutorialIsActive]);
+
+  // Register tutorial action handlers
+  useEffect(() => {
+    return registerActionHandler('open-menu', () => setMenuOpen(true));
+  }, [registerActionHandler]);
 
   const readOnly = activeUid !== currentUser.uid;
   const { dayEntry, loading: dayLoading } = useDayData(activeUid, activeProfile.challengeStartDate, activeUid === currentUser.uid);
@@ -478,7 +496,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
         {users.length > 0 ? (
           <UserTabBar users={users} activeUid={activeUid} onSelectUser={setActiveUid} currentUserUid={currentUser.uid} />
         ) : <View />}
-        <View style={styles.hamburgerWrapper}>
+        <View style={styles.hamburgerWrapper} nativeID="tutorial-hamburger">
           <TouchableOpacity
             onPress={() => setMenuOpen(true)}
             style={styles.hamburger}
@@ -576,7 +594,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
                 <Ionicons name="chevron-forward" size={12} color={theme.white} />
               </TouchableOpacity>
             )}
-            <View style={styles.dayHeader}>
+            <View style={styles.dayHeader} nativeID="tutorial-day-header">
               {activeProfile.challengeMode === 'general' ? (
                 <View style={styles.dayNumRow}>
                   <Text style={[styles.generalDate, { color: theme.accent, textShadowColor: theme.accentGlow }]}>{format(new Date(), 'EEE,MMM d').toUpperCase()}</Text>
@@ -611,7 +629,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
               <MilestoneBanner dayNum={dayNum} onDismiss={() => setDismissedMilestone(dayNum)} />
             )}
 
-            <View>
+            <View nativeID="tutorial-core-tasks">
               <TouchableOpacity onPress={() => setCoreOpen((o) => !o)} style={styles.sectionToggle}>
                 <Ionicons name={coreOpen ? 'chevron-down' : 'chevron-forward'} size={12} color={theme.text} />
                 <Text style={[styles.sectionLabel, { color: theme.text }]}>CORE TASKS</Text>
@@ -631,16 +649,18 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
             </View>
 
             {dayEntry && (
-              <CustomTaskList
-                tasks={tasks}
-                dayEntry={dayEntry}
-                uid={activeUid}
-                readOnly={readOnly}
-                hideActions={true}
-                onDayUpdate={wrappedUpdate}
-                onNudge={readOnly ? sendNudge : undefined}
-                nudgedTasks={readOnly ? nudgedTasks : undefined}
-              />
+              <View nativeID="tutorial-custom-tasks">
+                <CustomTaskList
+                  tasks={tasks}
+                  dayEntry={dayEntry}
+                  uid={activeUid}
+                  readOnly={readOnly}
+                  hideActions={true}
+                  onDayUpdate={wrappedUpdate}
+                  onNudge={readOnly ? sendNudge : undefined}
+                  nudgedTasks={readOnly ? nudgedTasks : undefined}
+                />
+              </View>
             )}
 
             {!readOnly && dayEntry && crews.some((c) => c.customCrewTasks.length > 0) && (
