@@ -604,7 +604,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
                 </View>
               )}
               {activeProfile.challengeMode !== 'general' && <Text style={[styles.dateText, { color: theme.textMuted }]}>{today}</Text>}
-              {dayEntry && dayEntry.dayNumber > 0 && <DailyProgress entry={dayEntry} />}
+              {dayEntry && !!activeProfile.challengeStartDate && <DailyProgress entry={dayEntry} />}
             </View>
 
             {!readOnly && dayNum > 0 && [25, 50, 75].includes(dayNum) && dismissedMilestone !== dayNum && (
@@ -844,7 +844,7 @@ const styles = StyleSheet.create({
     textShadowColor: colors.accentGlow, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 6,
   },
   dateText: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
-  dayNumRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  dayNumRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' },
   dayNumSmall: {
     fontFamily: fonts.pixel, fontSize: 26, color: colors.accent, lineHeight: 36,
     textShadowColor: colors.accentGlow, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 6,
