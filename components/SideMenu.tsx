@@ -17,6 +17,7 @@ import { getAvatarSource, AVATAR_PORTRAIT_RATIO } from '../lib/avatarMap';
 import { getCached, invalidate } from '../lib/cache';
 import { fonts, shadows } from '../lib/theme';
 import { useTheme } from '../context/ThemeContext';
+import { useTutorial } from '../context/TutorialContext';
 import { InstallPrompt } from './InstallPrompt';
 
 interface SideMenuProps {
@@ -53,6 +54,7 @@ function AvatarImg({ url, size }: { url: string; size: number }) {
 
 export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSeen }: SideMenuProps) {
   const { theme } = useTheme();
+  const { startTutorial, isActive: tutorialActive } = useTutorial();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const drawerAnim = useRef(new Animated.Value(DRAWER_WIDTH)).current;
@@ -172,40 +174,57 @@ export function SideMenu({ open, onClose, profile, onProfileUpdate, onRequestsSe
         <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} />
       </Animated.View>
 
-      <Animated.View style={[
-        styles.drawer,
-        { backgroundColor: theme.surface, borderLeftColor: theme.border, transform: [{ translateX: drawerAnim }] },
-      ]}>
+      <Animated.View
+        nativeID="tutorial-side-menu"
+        dataSet={{ open: open ? 'true' : 'false' }}
+        style={[
+          styles.drawer,
+          { backgroundColor: theme.surface, borderLeftColor: theme.border, transform: [{ translateX: drawerAnim }] },
+        ]}
+      >
         <View style={[styles.drawerHeader, { paddingTop: Math.max(insets.top, 16), borderBottomColor: theme.border }]}>
           <Text style={[styles.drawerTitle, { color: theme.accent }]}>MENU</Text>
-          <TouchableOpacity onPress={onClose} style={{ opacity: 0.6 }}>
-            <Ionicons name="close" size={18} color={theme.text} />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <TouchableOpacity
+              onPress={() => { onClose(); setTimeout(() => startTutorial(profile.uid), 320); }}
+              disabled={tutorialActive}
+              style={{ opacity: tutorialActive ? 0.3 : 0.6 }}
+            >
+              <Ionicons name="help-circle-outline" size={20} color={theme.text} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={onClose} style={{ opacity: 0.6 }}>
+              <Ionicons name="close" size={18} color={theme.text} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <ScrollView style={styles.scrollArea}>
-          <TouchableOpacity
-            onPress={() => { router.push('/profile' as any); onClose(); }}
-            style={[styles.profileBtn, { borderBottomColor: theme.border }]}
-          >
-            <View style={[styles.avatarFrameAccent, { borderColor: theme.accent, shadowColor: theme.accent }]}>
-              <AvatarImg url={getAvatarUrl(profile)} size={48} />
-            </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={[styles.profileName, { color: theme.text }]} numberOfLines={1}>{profile.displayName}</Text>
-              <Text style={[styles.profileCta, { color: theme.accent }]}>VIEW PROFILE</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={theme.accent} />
-          </TouchableOpacity>
+          <View nativeID="tutorial-menu-profile">
+            <TouchableOpacity
+              onPress={() => { router.push('/profile' as any); onClose(); }}
+              style={[styles.profileBtn, { borderBottomColor: theme.border }]}
+            >
+              <View style={[styles.avatarFrameAccent, { borderColor: theme.accent, shadowColor: theme.accent }]}>
+                <AvatarImg url={getAvatarUrl(profile)} size={48} />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={[styles.profileName, { color: theme.text }]} numberOfLines={1}>{profile.displayName}</Text>
+                <Text style={[styles.profileCta, { color: theme.accent }]}>VIEW PROFILE</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={theme.accent} />
+            </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity
-            onPress={() => { router.push('/tasks' as any); }}
-            style={[styles.menuRow, { borderBottomColor: theme.border }]}
-          >
-            <Ionicons name="list-outline" size={14} color={theme.textMuted} />
-            <Text style={[styles.menuRowText, { color: theme.textMuted }]}>MANAGE TASKS</Text>
-            <Ionicons name="chevron-forward" size={14} color={theme.textMuted} style={{ marginLeft: 'auto' }} />
-          </TouchableOpacity>
+          <View nativeID="tutorial-menu-tasks">
+            <TouchableOpacity
+              onPress={() => { router.push('/tasks' as any); }}
+              style={[styles.menuRow, { borderBottomColor: theme.border }]}
+            >
+              <Ionicons name="list-outline" size={14} color={theme.textMuted} />
+              <Text style={[styles.menuRowText, { color: theme.textMuted }]}>MANAGE TASKS</Text>
+              <Ionicons name="chevron-forward" size={14} color={theme.textMuted} style={{ marginLeft: 'auto' }} />
+            </TouchableOpacity>
+          </View>
 
           <View style={[styles.friendsSection, { borderBottomColor: theme.border }]}>
             <View style={styles.friendsHeader}>
