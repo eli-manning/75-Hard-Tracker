@@ -40,6 +40,7 @@ export interface UserProfile {
   purchasedNudgesToday?: number;  // paid nudges used today (max 5)
   nudgeResetDate?: string;        // "YYYY-MM-DD" — date of last reset
   missedDayPromptShownDate?: string; // "YYYY-MM-DD" — last date we showed the missed-day prompt
+  tutorialSeen?: boolean;
 }
 
 export interface DayEntry {

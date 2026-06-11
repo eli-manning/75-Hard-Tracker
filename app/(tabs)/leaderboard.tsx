@@ -147,7 +147,7 @@ function LeaderboardInner({ currentUser, onOptIn }: { currentUser: UserProfile; 
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+      <View nativeID="tutorial-leaderboard" style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Text style={styles.title}>LEADERBOARD</Text>
         <View style={styles.tabRow}>
           {(['friends', 'global'] as const).map((t) => (

@@ -522,7 +522,7 @@ function HistoryInner({ currentUser }: { currentUser: UserProfile }) {
         )}
 
         {/* Calendar */}
-        <View style={[styles.calendarCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <View nativeID="tutorial-calendar" style={[styles.calendarCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <View style={styles.calendarNav}>
             <TouchableOpacity onPress={() => setMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1))} style={styles.navBtn}>
               <Ionicons name="chevron-back" size={16} color={theme.text} />
@@ -593,7 +593,7 @@ function HistoryInner({ currentUser }: { currentUser: UserProfile }) {
         </View>
 
         {/* Stats */}
-        <View style={styles.statsGrid}>
+        <View nativeID="tutorial-stats" style={styles.statsGrid}>
           {[
             { label: 'CURRENT STREAK', value: `${currentStreak} DAYS` },
             { label: 'LONGEST STREAK', value: `${longest} DAYS` },

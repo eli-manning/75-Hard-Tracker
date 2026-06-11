@@ -167,16 +167,18 @@ export function ChallengeChecklist({ entry, readOnly, onUpdate, weightUnit = 'lb
 
       {/* Water */}
       {!isHidden('water') && (
-        <ChallengeItem
-          label="Drink 1 gallon of water"
-          icon="/images/water.png"
-          completed={entry.waterCompleted}
-          readOnly={readOnly}
-          onNudge={onNudge ? () => onNudge('water', "Don't forget to drink your gallon of water!") : undefined}
-          nudgedAlready={nudgedTasks?.has('water')}
-        >
-          <WaterTracker ozLogged={entry.waterOzLogged ?? 0} goal={128} readOnly={readOnly} onAdd={addWater} onSetCustom={setWater} />
-        </ChallengeItem>
+        <View nativeID="tutorial-water">
+          <ChallengeItem
+            label="Drink 1 gallon of water"
+            icon="/images/water.png"
+            completed={entry.waterCompleted}
+            readOnly={readOnly}
+            onNudge={onNudge ? () => onNudge('water', "Don't forget to drink your gallon of water!") : undefined}
+            nudgedAlready={nudgedTasks?.has('water')}
+          >
+            <WaterTracker ozLogged={entry.waterOzLogged ?? 0} goal={128} readOnly={readOnly} onAdd={addWater} onSetCustom={setWater} />
+          </ChallengeItem>
+        </View>
       )}
 
       {/* Reading */}

@@ -48,9 +48,16 @@ function WebBottomNav() {
       {NAV.map(({ href, label, icon, match }) => {
         const active = pathname.includes(match) ||
           (match === 'today' && pathname.startsWith('/tasks'));
+        const tutorialId =
+          match === 'today'       ? 'tutorial-nav-today' :
+          match === 'crews'       ? 'tutorial-nav-crews' :
+          match === 'history'     ? 'tutorial-nav-history' :
+          match === 'leaderboard' ? 'tutorial-nav-leaderboard' :
+          undefined;
         return (
           <button
             key={href}
+            id={tutorialId}
             onClick={() => router.replace(href as any)}
             style={{
               flex: 1,
