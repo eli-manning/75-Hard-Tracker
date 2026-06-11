@@ -14,6 +14,8 @@ import { useAuthContext } from '../context/AuthContext';
 import { NavVisibilityProvider, useNavVisibility } from '../context/NavVisibilityContext';
 import { NotificationsProvider } from '../context/NotificationsContext';
 import { ThemeProvider, useTheme } from '../context/ThemeContext';
+import { TutorialProvider } from '../context/TutorialContext';
+import { TutorialOverlay } from '../components/TutorialOverlay';
 import { BottomNav } from '../components/BottomNav';
 import { StarField } from '../components/StarField';
 
@@ -81,7 +83,7 @@ function AppShell() {
   // overflow:hidden clipping AND the body overflow:hidden + position:fixed iOS Safari bug).
   const showWebNav = Platform.OS === 'web' &&
     fontsLoaded && !authLoading && minElapsed && !navHidden &&
-    ['/today', '/crews', '/history', '/leaderboard'].includes(pathname);
+    ['/today', '/crews', '/history', '/leaderboard', '/tasks'].includes(pathname);
 
 
   return (
@@ -108,12 +110,15 @@ function AppWithNotifications() {
   const { user } = useAuthContext();
   return (
     <ThemeProvider>
-      <NotificationsProvider uid={user?.uid}>
-        <NavVisibilityProvider>
-          <StatusBar style="light" />
-          <AppShell />
-        </NavVisibilityProvider>
-      </NotificationsProvider>
+      <TutorialProvider>
+        <NotificationsProvider uid={user?.uid}>
+          <NavVisibilityProvider>
+            <StatusBar style="light" />
+            <AppShell />
+            <TutorialOverlay />
+          </NavVisibilityProvider>
+        </NotificationsProvider>
+      </TutorialProvider>
     </ThemeProvider>
   );
 }
