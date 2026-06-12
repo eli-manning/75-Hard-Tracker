@@ -57,7 +57,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     title: 'OPEN YOUR MENU',
     body: 'Tap the ☰ icon to open your side menu. From there you can access your profile, manage tasks, and connect with friends.',
     tooltipPos: 'below',
-    padding: 10,
+    padding: 4,
   },
   {
     route: '/(tabs)/today',

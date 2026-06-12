@@ -192,10 +192,12 @@ function TutorialOverlayWeb() {
           }
           stopAll(); // stop target poll
           const pad = step.padding ?? 8;
-          const sx = Math.max(2, r.x - pad);
-          const sy = Math.max(2, r.y - pad);
-          const sw = Math.min(r.width + pad * 2 - (sx - (r.x - pad)), window.innerWidth  - sx - 2);
-          const sh = Math.min(r.height + pad * 2 - (sy - (r.y - pad)), window.innerHeight - sy - 2);
+          // Keep 6px from every edge so the 2px ring border never bleeds off-screen
+          const EDGE = 6;
+          const sx = Math.max(EDGE, r.x - pad);
+          const sy = Math.max(EDGE, r.y - pad);
+          const sw = Math.min(r.width + pad * 2 - (sx - (r.x - pad)), window.innerWidth  - sx - EDGE);
+          const sh = Math.min(r.height + pad * 2 - (sy - (r.y - pad)), window.innerHeight - sy - EDGE);
           setSpot({ x: sx, y: sy, w: sw, h: sh });
           setVisible(true);
 
