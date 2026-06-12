@@ -265,7 +265,8 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
         ([key, required]) => !required || !!(dayEntry as Record<string, unknown>)[CORE_FIELD[key as keyof typeof CORE_FIELD]]
       );
       const crewTasksCompleted = dayEntry.crewTasksCompleted ?? [];
-      const customOk = crew.customCrewTasks.every((t) => crewTasksCompleted.includes(t.id));
+      const activeCrewTasks = crew.customCrewTasks.filter((t) => !(t as any).archived);
+      const customOk = activeCrewTasks.length === 0 || activeCrewTasks.every((t) => crewTasksCompleted.includes(t.id));
       const nowComplete = coreOk && customOk;
       const wasComplete = prevCrewCompletedRef.current.get(crew.id) ?? false;
       prevCrewCompletedRef.current.set(crew.id, nowComplete);
@@ -346,9 +347,13 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
     const newPts = computeDayPoints(merged, tasks, currentUser);
     const oldPts = dayEntry.dailyPoints ?? 0;
     const delta = newPts - oldPts;
-    await updateDayEntryWithPoints(activeUid, todayStr, { ...patch, dailyPoints: newPts }, delta);
-    if (delta !== 0) {
-      onProfileUpdate({ ...currentUser, totalPoints: Math.max(0, (currentUser.totalPoints ?? 0) + delta) });
+    try {
+      await updateDayEntryWithPoints(activeUid, todayStr, { ...patch, dailyPoints: newPts }, delta);
+      if (delta !== 0) {
+        onProfileUpdate({ ...currentUser, totalPoints: Math.max(0, (currentUser.totalPoints ?? 0) + delta) });
+      }
+    } catch {
+      // write failed — local state unchanged; Firestore offline queue will retry
     }
   }, [dayEntry, tasks, activeUid, todayStr, currentUser, onProfileUpdate]);
 
@@ -699,7 +704,8 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
                               wrappedUpdate({ crewTasksCompleted: completed ? current.filter((id) => id !== task.id) : [...current, task.id] });
                             }}
                             onSetProgress={(n) => {
-                              const goalAmount = task.amount!;
+                              const goalAmount = task.amount ?? 0;
+                              if (goalAmount <= 0) return;
                               const newProgress = { ...(dayEntry.customTaskProgress ?? {}), [task.id]: n };
                               const current = dayEntry.crewTasksCompleted ?? [];
                               const newCompleted = n >= goalAmount

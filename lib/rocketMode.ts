@@ -1,4 +1,4 @@
-export const ROCKET_UID = 'rq651qBc9oeTWx1mcBk9h3Wxh2t1';
+export const ROCKET_UID = process.env.EXPO_PUBLIC_ROCKET_UID ?? '';
 
 function rgba(hex: string, alpha: number): string {
   const n = parseInt(hex.slice(1), 16);

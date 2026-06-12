@@ -43,7 +43,8 @@ export function CustomTaskList({ tasks, dayEntry, uid, readOnly, hideActions, on
   }
 
   function handleSetProgress(task: CustomTask, amount: number) {
-    const goalAmount = task.goalAmount!;
+    const goalAmount = task.goalAmount ?? 0;
+    if (goalAmount <= 0) return;
     const currentProgress = dayEntry.customTaskProgress ?? {};
     const newProgress = { ...currentProgress, [task.id]: amount };
     const currentCompleted = dayEntry.customTasksCompleted ?? [];

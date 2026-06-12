@@ -21,11 +21,10 @@ import { generateSeed } from './avatar';
 import { setCached, setSessionCached, clearAll } from './cache';
 import { format } from 'date-fns';
 
-const CUSTOM_AVATAR_EMAILS = new Set([
-  'eli@themannings.com',
-  'eli.patrick.manning@gmail.com',
-  'rocketeloise@rocketmail.com',
-]);
+const CUSTOM_AVATAR_EMAILS = new Set(
+  (process.env.EXPO_PUBLIC_CUSTOM_AVATAR_EMAILS ?? '')
+    .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
+);
 
 async function handleNewGoogleUser(user: User): Promise<void> {
   const { uid, email, displayName: googleName } = user;

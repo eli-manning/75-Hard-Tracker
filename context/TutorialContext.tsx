@@ -168,6 +168,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   const [isActive, setIsActive] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const uidRef = useRef<string | null>(null);
+  const isActiveRef = useRef(false);
   const actionHandlers = useRef<Map<string, () => void>>(new Map());
 
   const registerActionHandler = useCallback((action: string, handler: () => void) => {
@@ -186,13 +187,16 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   const currentStepRef = useRef(0);
 
   const startTutorial = useCallback((uid: string) => {
+    if (isActiveRef.current) return;
     uidRef.current = uid;
     currentStepRef.current = 0;
+    isActiveRef.current = true;
     setCurrentStep(0);
     setIsActive(true);
   }, []);
 
   const finish = useCallback(() => {
+    isActiveRef.current = false;
     setIsActive(false);
     currentStepRef.current = 0;
     setCurrentStep(0);
