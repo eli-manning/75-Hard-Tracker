@@ -34,6 +34,9 @@ jobs:
           EXPO_PUBLIC_FIREBASE_VAPID_KEY: ${{ secrets.EXPO_PUBLIC_FIREBASE_VAPID_KEY }}
           EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
           EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID }}
+          EXPO_PUBLIC_CUSTOM_AVATAR_EMAILS: ${{ secrets.EXPO_PUBLIC_CUSTOM_AVATAR_EMAILS }}
+          EXPO_PUBLIC_CUSTOM_AVATAR_MAP: ${{ secrets.EXPO_PUBLIC_CUSTOM_AVATAR_MAP }}
+          EXPO_PUBLIC_ROCKET_UID: ${{ secrets.EXPO_PUBLIC_ROCKET_UID }}
 
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
