@@ -61,6 +61,16 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     route: '/(tabs)/today',
+    targetId: 'tutorial-side-menu',
+    gatingElementId: 'tutorial-side-menu',
+    advance: 'next',
+    title: 'YOUR MENU',
+    body: 'Profile and settings at the top, task manager below, friends in the middle, and terms/sign out at the bottom. Tap anywhere or NEXT to continue.',
+    tooltipPos: 'center',
+    padding: 0,
+  },
+  {
+    route: '/(tabs)/today',
     targetId: 'tutorial-menu-profile',
     gatingElementId: 'tutorial-side-menu',
     advance: 'route',
@@ -136,7 +146,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     route: '/(tabs)/today',
     advance: 'next',
     title: "YOU'RE ALL SET!",
-    body: 'Start checking off your tasks and build that streak. You can replay this tour anytime from your Profile page. Good luck — you\'ve got this!',
+    body: 'Start checking off your tasks and build that streak. Tap the ? in the side menu anytime to replay this tour. Good luck — you\'ve got this!',
     tooltipPos: 'center',
   },
 ];
