@@ -65,7 +65,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     gatingElementId: 'tutorial-side-menu',
     advance: 'next',
     title: 'YOUR MENU',
-    body: 'Profile and settings at the top, task manager below, friends in the middle, and terms/sign out at the bottom. Tap anywhere or NEXT to continue.',
+    body: 'Profile and settings at the top, task manager below, friends in the middle, and terms/sign out at the bottom.',
     tooltipPos: 'center',
     padding: 0,
   },
