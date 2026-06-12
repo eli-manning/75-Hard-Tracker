@@ -183,28 +183,30 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     updateUserProfile(uid, { tutorialSeen: true }).catch(() => {});
   }, []);
 
+  const currentStepRef = useRef(0);
+
   const startTutorial = useCallback((uid: string) => {
     uidRef.current = uid;
+    currentStepRef.current = 0;
     setCurrentStep(0);
     setIsActive(true);
   }, []);
 
-
   const finish = useCallback(() => {
     setIsActive(false);
+    currentStepRef.current = 0;
     setCurrentStep(0);
     if (uidRef.current) markSeen(uidRef.current);
   }, [markSeen]);
 
   const nextStep = useCallback(() => {
-    setCurrentStep((s) => {
-      const next = s + 1;
-      if (next >= TUTORIAL_STEPS.length) {
-        setTimeout(finish, 0);
-        return s;
-      }
-      return next;
-    });
+    const next = currentStepRef.current + 1;
+    if (next >= TUTORIAL_STEPS.length) {
+      finish();
+    } else {
+      currentStepRef.current = next;
+      setCurrentStep(next);
+    }
   }, [finish]);
 
   const skipTutorial = useCallback(() => {

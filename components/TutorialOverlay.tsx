@@ -241,9 +241,9 @@ function TutorialOverlayWeb() {
   const clipPath = spot ? buildClipPath(spot, vpW, vpH) : undefined;
   const centerX  = spot ? spot.x + spot.w / 2 : vpW / 2;
 
-  // Responsive width: shrink on narrow screens
-  const tooltipW    = Math.min(TOOLTIP_W, vpW - 24);
-  const tooltipLeft = Math.max(12, Math.min(centerX - tooltipW / 2, vpW - tooltipW - 12));
+  // Responsive width: shrink on narrow screens; 48px total horizontal margin for safe areas
+  const tooltipW    = Math.min(TOOLTIP_W, vpW - 48);
+  const tooltipLeft = Math.max(24, Math.min(centerX - tooltipW / 2, vpW - tooltipW - 24));
 
   // Adaptive max height (protect very short viewports)
   const maxH = Math.min(TOOLTIP_MAX_H, Math.round(vpH * 0.42));
