@@ -55,6 +55,8 @@ users.json
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+firebase-debug.log
+.firebase/
 
 # TypeScript
 *.tsbuildinfo
