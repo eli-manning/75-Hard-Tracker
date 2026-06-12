@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
 import { useAllUsers } from '../../hooks/useAllUsers';
-import { getUserProfile, getGlobalLeaderboard, updateUserProfile } from '../../lib/firestore';
+import { getUserProfile, getGlobalLeaderboard, updateUserProfile, sendFriendRequest } from '../../lib/firestore';
 import { UserProfile } from '../../lib/types';
 import { getAvatarUrl } from '../../lib/avatar';
 import { getAvatarSource } from '../../lib/avatarMap';
@@ -17,10 +17,14 @@ function LeaderboardRow({
   rank,
   profile,
   isCurrentUser,
+  onAddFriend,
+  requestSent,
 }: {
   rank: number;
   profile: UserProfile;
   isCurrentUser: boolean;
+  onAddFriend?: () => void;
+  requestSent?: boolean;
 }) {
   const avatarUrl = getAvatarUrl(profile);
   const isTopThree = rank <= 3;
@@ -43,10 +47,20 @@ function LeaderboardRow({
           {profile.totalPoints ?? 0} PTS
         </Text>
       </View>
-      {isCurrentUser && (
+      {isCurrentUser ? (
         <View style={rowStyles.youChip}>
           <Text style={rowStyles.youText}>YOU</Text>
         </View>
+      ) : onAddFriend != null && (
+        <TouchableOpacity
+          onPress={requestSent ? undefined : onAddFriend}
+          style={[rowStyles.addBtn, requestSent && rowStyles.addBtnSent]}
+          activeOpacity={requestSent ? 1 : 0.7}
+        >
+          <Text style={[rowStyles.addBtnText, requestSent && rowStyles.addBtnTextSent]}>
+            {requestSent ? 'SENT' : '+ ADD'}
+          </Text>
+        </TouchableOpacity>
       )}
     </View>
   );
@@ -85,7 +99,32 @@ const rowStyles = StyleSheet.create({
     flexShrink: 0,
   },
   youText: { fontFamily: fonts.pixel, fontSize: 5, color: colors.green },
+  addBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderWidth: 2,
+    borderColor: colors.accent,
+    flexShrink: 0,
+  },
+  addBtnSent: { borderColor: colors.textMuted },
+  addBtnText: { fontFamily: fonts.pixel, fontSize: 5, color: colors.accent },
+  addBtnTextSent: { color: colors.textMuted },
 });
+
+function OptInCard({ onOptIn, optingIn }: { onOptIn: () => void; optingIn: boolean }) {
+  return (
+    <View style={styles.optInCard}>
+      <Text style={styles.optInLabel}>YOU ARE NOT ON THE GLOBAL BOARD</Text>
+      <TouchableOpacity
+        onPress={onOptIn}
+        disabled={optingIn}
+        style={[styles.optInBtn, optingIn && { opacity: 0.5 }]}
+      >
+        <Text style={styles.optInBtnText}>{optingIn ? 'JOINING...' : 'JOIN GLOBAL LEADERBOARD'}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
 
 function LeaderboardInner({ currentUser, onOptIn }: { currentUser: UserProfile; onOptIn: () => void }) {
   const [tab, setTab] = useState<'friends' | 'global'>('friends');
@@ -93,7 +132,15 @@ function LeaderboardInner({ currentUser, onOptIn }: { currentUser: UserProfile; 
   const [globalList, setGlobalList] = useState<UserProfile[]>([]);
   const [loadingGlobal, setLoadingGlobal] = useState(false);
   const [optingIn, setOptingIn] = useState(false);
+  const [sentRequests, setSentRequests] = useState<Set<string>>(new Set());
   const insets = useSafeAreaInsets();
+
+  const friendSet = useMemo(() => new Set(currentUser.friends ?? []), [currentUser.friends]);
+
+  // Scroll tracking for sticky self-row
+  const [scrollY, setScrollY] = useState(0);
+  const [scrollViewHeight, setScrollViewHeight] = useState(0);
+  const [userRowY, setUserRowY] = useState<number | null>(null);
 
   const isOptedOut = currentUser.leaderboardOptOut !== false;
 
@@ -132,9 +179,20 @@ function LeaderboardInner({ currentUser, onOptIn }: { currentUser: UserProfile; 
     setOptingIn(false);
   }
 
+  async function handleAddFriend(toUid: string) {
+    setSentRequests((prev) => new Set(prev).add(toUid));
+    try {
+      await sendFriendRequest(currentUser.uid, toUid);
+    } catch {
+      setSentRequests((prev) => { const next = new Set(prev); next.delete(toUid); return next; });
+    }
+  }
+
   useFocusEffect(
     useCallback(() => {
       setGlobalList([]);
+      setUserRowY(null);
+      setScrollY(0);
     }, [])
   );
 
@@ -143,7 +201,25 @@ function LeaderboardInner({ currentUser, onOptIn }: { currentUser: UserProfile; 
     fetchGlobal();
   }, [tab, globalList.length]);
 
+  // Reset scroll tracking when switching tabs
+  useEffect(() => {
+    setScrollY(0);
+    setUserRowY(null);
+  }, [tab]);
+
   const inTopGlobal = tab === 'global' && globalList.some((u) => u.uid === currentUser.uid);
+
+  const userRank = inTopGlobal
+    ? globalList.findIndex((u) => u.uid === currentUser.uid) + 1
+    : globalList.filter((u) => (u.totalPoints ?? 0) > (currentUser.totalPoints ?? 0)).length + 1;
+
+  // Show floating self-row when opted in and own row is off-screen (below the fold or not in list)
+  const userRowVisible =
+    userRowY !== null &&
+    userRowY >= scrollY &&
+    userRowY <= scrollY + scrollViewHeight - 60;
+  const showFloatingRow =
+    tab === 'global' && !isOptedOut && !loadingGlobal && (!inTopGlobal || !userRowVisible);
 
   return (
     <View style={styles.container}>
@@ -163,82 +239,81 @@ function LeaderboardInner({ currentUser, onOptIn }: { currentUser: UserProfile; 
           ))}
         </View>
       </View>
-      <ScrollView contentContainerStyle={styles.list}>
-        {tab === 'friends' ? (
-          friendsList.length === 0 ? (
-            <View style={styles.empty}>
-              <Text style={styles.emptyText}>ADD FRIENDS TO SEE RANKINGS</Text>
-            </View>
-          ) : (
-            friendsList.map((p, i) => (
-              <LeaderboardRow
-                key={p.uid}
-                rank={i + 1}
-                profile={p}
-                isCurrentUser={p.uid === currentUser.uid}
-              />
-            ))
-          )
-        ) : loadingGlobal ? (
-          <View style={styles.loading}>
-            <Text style={styles.emptyText}>LOADING...</Text>
-          </View>
-        ) : (
-          <>
-            {globalList
-              .filter((p) => !(p.uid === currentUser.uid && isOptedOut))
-              .map((p, i) => (
+
+      <View
+        style={{ flex: 1 }}
+        onLayout={(e) => setScrollViewHeight(e.nativeEvent.layout.height)}
+      >
+        <ScrollView
+          contentContainerStyle={[styles.list, showFloatingRow && { paddingBottom: 84 }]}
+          scrollEventThrottle={Platform.OS === 'web' ? 0 : 16}
+          onScroll={(e) => setScrollY(e.nativeEvent.contentOffset.y)}
+        >
+          {tab === 'friends' ? (
+            friendsList.length === 0 ? (
+              <View style={styles.empty}>
+                <Text style={styles.emptyText}>ADD FRIENDS TO SEE RANKINGS</Text>
+              </View>
+            ) : (
+              friendsList.map((p, i) => (
                 <LeaderboardRow
                   key={p.uid}
                   rank={i + 1}
                   profile={p}
                   isCurrentUser={p.uid === currentUser.uid}
                 />
-              ))}
-            {!inTopGlobal && globalList.length > 0 && (
-              <>
-                <View style={styles.divider}>
-                  <Text style={styles.dividerText}>- - - - -</Text>
-                </View>
-                {isOptedOut ? (
-                  <View style={styles.optInCard}>
-                    <Text style={styles.optInLabel}>YOU ARE NOT ON THE GLOBAL BOARD</Text>
-                    <TouchableOpacity
-                      onPress={handleOptIn}
-                      disabled={optingIn}
-                      style={[styles.optInBtn, optingIn && { opacity: 0.5 }]}
-                    >
-                      <Text style={styles.optInBtnText}>{optingIn ? 'JOINING...' : 'JOIN GLOBAL LEADERBOARD'}</Text>
-                    </TouchableOpacity>
+              ))
+            )
+          ) : loadingGlobal ? (
+            <View style={styles.loading}>
+              <Text style={styles.emptyText}>LOADING...</Text>
+            </View>
+          ) : (
+            <>
+              {/* Join card pinned above #1 when not on the board */}
+              {isOptedOut && (
+                <OptInCard onOptIn={handleOptIn} optingIn={optingIn} />
+              )}
+
+              {globalList.map((p, i) => {
+                const isMe = p.uid === currentUser.uid;
+                const isFriend = friendSet.has(p.uid);
+                return (
+                  <View
+                    key={p.uid}
+                    onLayout={isMe ? (e) => setUserRowY(e.nativeEvent.layout.y) : undefined}
+                  >
+                    <LeaderboardRow
+                      rank={i + 1}
+                      profile={p}
+                      isCurrentUser={isMe}
+                      onAddFriend={!isMe && !isFriend ? () => handleAddFriend(p.uid) : undefined}
+                      requestSent={sentRequests.has(p.uid)}
+                    />
                   </View>
-                ) : (
-                  <LeaderboardRow
-                    rank={
-                      (currentUser.totalPoints ?? 0) > 0
-                        ? globalList.filter((u) => (u.totalPoints ?? 0) > (currentUser.totalPoints ?? 0)).length + 1
-                        : globalList.length + 1
-                    }
-                    profile={currentUser}
-                    isCurrentUser={true}
-                  />
-                )}
-              </>
-            )}
-            {isOptedOut && globalList.length === 0 && (
-              <View style={styles.optInCard}>
-                <Text style={styles.optInLabel}>YOU ARE NOT ON THE GLOBAL BOARD</Text>
-                <TouchableOpacity
-                  onPress={handleOptIn}
-                  disabled={optingIn}
-                  style={[styles.optInBtn, optingIn && { opacity: 0.5 }]}
-                >
-                  <Text style={styles.optInBtnText}>{optingIn ? 'JOINING...' : 'JOIN GLOBAL LEADERBOARD'}</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </>
+                );
+              })}
+
+              {globalList.length === 0 && !isOptedOut && (
+                <View style={styles.empty}>
+                  <Text style={styles.emptyText}>NO RESULTS</Text>
+                </View>
+              )}
+            </>
+          )}
+        </ScrollView>
+
+        {/* Floating self-row: shown when opted in but own row is off-screen */}
+        {showFloatingRow && (
+          <View style={styles.floatingRow}>
+            <LeaderboardRow
+              rank={userRank}
+              profile={currentUser}
+              isCurrentUser={true}
+            />
+          </View>
         )}
-      </ScrollView>
+      </View>
     </View>
   );
 }
@@ -286,8 +361,18 @@ const styles = StyleSheet.create({
   tabBtnText: { fontFamily: fonts.pixel, fontSize: 7, color: colors.textMuted },
   tabBtnTextActive: { color: colors.white },
   list: { padding: 16, gap: 8, paddingBottom: 100 },
-  divider: { alignItems: 'center', paddingVertical: 8 },
-  dividerText: { fontFamily: fonts.pixel, fontSize: 6, color: colors.textMuted },
+  floatingRow: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    paddingTop: 8,
+    backgroundColor: colors.bg,
+    borderTopWidth: 2,
+    borderTopColor: colors.border,
+  },
   empty: { alignItems: 'center', paddingVertical: 32 },
   emptyText: { fontFamily: fonts.pixel, fontSize: 7, color: colors.textMuted },
   loading: { alignItems: 'center', paddingVertical: 32 },
