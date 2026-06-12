@@ -152,6 +152,7 @@ function TutorialOverlayWeb() {
     // Poll for the target element
     timerRef.current = setTimeout(() => {
       let attempts = 0;
+      let scrollTries = 0;
       pollRef.current = setInterval(() => {
         if (stepRef.current !== currentStep) { stopAll(); return; }
         attempts++;
@@ -168,6 +169,26 @@ function TutorialOverlayWeb() {
           // Keep polling until the element is actually laid out (non-zero dimensions)
           if (r.width === 0 || r.height === 0) {
             return; // not ready yet — retry next tick
+          }
+          // Scroll into view if the element is outside the visible area.
+          // Account for ~80px bottom nav bar on mobile (safeBottom).
+          const safeBottom = window.innerHeight - 84;
+          const fullyVisible = r.top >= 0 && r.bottom <= safeBottom;
+          if (!fullyVisible && scrollTries < 4) {
+            scrollTries++;
+            // Scroll so the element bottom clears the nav bar with 24px breathing room
+            if (r.bottom > safeBottom) {
+              const overflow = r.bottom - safeBottom + 24;
+              const container = el.closest('[style*="overflow"]') as HTMLElement | null;
+              if (container) {
+                container.scrollTop += overflow;
+              } else {
+                (document.scrollingElement || document.documentElement).scrollTop += overflow;
+              }
+            } else {
+              el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+            return; // re-poll next tick with updated position
           }
           stopAll(); // stop target poll
           const pad = step.padding ?? 8;
