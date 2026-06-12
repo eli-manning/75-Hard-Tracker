@@ -41,6 +41,8 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     route: '/(tabs)/today',
     targetId: 'tutorial-custom-tasks',
+    action: 'collapse-core-tasks',
+    actionDelayMs: 380,
     advance: 'next',
     title: 'YOUR CUSTOM TASKS',
     body: 'Stack personal habits on top of the core tasks — cold shower, meditation, journaling, anything. Earn up to 10 bonus points per day.',

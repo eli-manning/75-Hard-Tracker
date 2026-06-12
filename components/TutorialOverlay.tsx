@@ -192,7 +192,11 @@ function TutorialOverlayWeb() {
           }
           stopAll(); // stop target poll
           const pad = step.padding ?? 8;
-          setSpot({ x: r.x - pad, y: r.y - pad, w: r.width + pad * 2, h: r.height + pad * 2 });
+          const sx = Math.max(2, r.x - pad);
+          const sy = Math.max(2, r.y - pad);
+          const sw = Math.min(r.width + pad * 2 - (sx - (r.x - pad)), window.innerWidth  - sx - 2);
+          const sh = Math.min(r.height + pad * 2 - (sy - (r.y - pad)), window.innerHeight - sy - 2);
+          setSpot({ x: sx, y: sy, w: sw, h: sh });
           setVisible(true);
 
           // For element-open: poll openElementId for data-open="true"

@@ -220,6 +220,10 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
     return registerActionHandler('open-menu', () => setMenuOpen(true));
   }, [registerActionHandler]);
 
+  useEffect(() => {
+    return registerActionHandler('collapse-core-tasks', () => setCoreOpen(false));
+  }, [registerActionHandler]);
+
   const readOnly = activeUid !== currentUser.uid;
   const { dayEntry, loading: dayLoading } = useDayData(activeUid, activeProfile.challengeStartDate, activeUid === currentUser.uid);
   const { tasks } = useCustomTasks(activeUid);
