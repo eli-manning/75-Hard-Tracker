@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
@@ -57,9 +58,11 @@ function LeaderboardRow({
           style={[rowStyles.addBtn, requestSent && rowStyles.addBtnSent]}
           activeOpacity={requestSent ? 1 : 0.7}
         >
-          <Text style={[rowStyles.addBtnText, requestSent && rowStyles.addBtnTextSent]}>
-            {requestSent ? 'SENT' : '+ ADD'}
-          </Text>
+          <Ionicons
+            name={requestSent ? 'checkmark' : 'person-add-outline'}
+            size={14}
+            color={requestSent ? colors.textMuted : colors.accent}
+          />
         </TouchableOpacity>
       )}
     </View>
@@ -100,15 +103,12 @@ const rowStyles = StyleSheet.create({
   },
   youText: { fontFamily: fonts.pixel, fontSize: 5, color: colors.green },
   addBtn: {
-    paddingHorizontal: 6,
-    paddingVertical: 4,
+    padding: 5,
     borderWidth: 2,
     borderColor: colors.accent,
     flexShrink: 0,
   },
   addBtnSent: { borderColor: colors.textMuted },
-  addBtnText: { fontFamily: fonts.pixel, fontSize: 5, color: colors.accent },
-  addBtnTextSent: { color: colors.textMuted },
 });
 
 function OptInCard({ onOptIn, optingIn }: { onOptIn: () => void; optingIn: boolean }) {
