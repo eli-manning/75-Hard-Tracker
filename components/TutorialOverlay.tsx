@@ -211,26 +211,49 @@ function TutorialOverlayWeb() {
   const isInteractive = step.advance !== 'next'; // user must tap a real element
   const { w: vpW, h: vpH } = vpSize;
 
-  const clipPath    = spot ? buildClipPath(spot, vpW, vpH) : undefined;
-  const centerX     = spot ? spot.x + spot.w / 2 : vpW / 2;
-  const tooltipLeft = Math.max(12, Math.min(centerX - TOOLTIP_W / 2, vpW - TOOLTIP_W - 12));
+  const clipPath = spot ? buildClipPath(spot, vpW, vpH) : undefined;
+  const centerX  = spot ? spot.x + spot.w / 2 : vpW / 2;
+
+  // Responsive width: shrink on narrow screens
+  const tooltipW    = Math.min(TOOLTIP_W, vpW - 24);
+  const tooltipLeft = Math.max(12, Math.min(centerX - tooltipW / 2, vpW - tooltipW - 12));
+
+  // Adaptive max height (protect very short viewports)
+  const maxH = Math.min(TOOLTIP_MAX_H, Math.round(vpH * 0.42));
+
+  // Smart vertical placement: if preferred side lacks room, flip to the other side
+  const MARGIN = 14; // gap between spotlight edge and tooltip
+  const PAD    = 10; // min distance from viewport edges
 
   let tooltipStyle: React.CSSProperties;
+  let tooltipAbove = false; // true = tooltip rendered above spotlight
+
   if (!spot || step.tooltipPos === 'center') {
     tooltipStyle = { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
-  } else if (step.tooltipPos === 'above') {
-    // Clamp so tooltip never gets pushed above viewport top (bottom-anchored)
-    const rawBottom = vpH - spot.y + 14;
-    tooltipStyle = { bottom: Math.min(rawBottom, vpH - TOOLTIP_MAX_H - 12), left: tooltipLeft };
   } else {
-    // Clamp so tooltip never overflows viewport bottom
-    const rawTop = spot.y + spot.h + 14;
-    tooltipStyle = { top: Math.min(rawTop, vpH - TOOLTIP_MAX_H - 12), left: tooltipLeft };
+    const spaceBelow = vpH - (spot.y + spot.h) - MARGIN - PAD;
+    const spaceAbove = spot.y - MARGIN - PAD;
+    const MIN_SPACE  = Math.min(maxH, 100); // minimum usable space to prefer a side
+
+    const wantsAbove = step.tooltipPos === 'above';
+    const canAbove   = spaceAbove >= MIN_SPACE;
+    const canBelow   = spaceBelow >= MIN_SPACE;
+    // Place on preferred side; flip only if preferred has no room and other side does
+    const placeAbove = wantsAbove ? (canAbove || !canBelow) : (!canBelow && canAbove);
+
+    if (placeAbove) {
+      tooltipAbove = true;
+      const rawBottom = vpH - spot.y + MARGIN;
+      tooltipStyle = { bottom: Math.min(rawBottom, vpH - PAD - maxH), left: tooltipLeft };
+    } else {
+      const rawTop = spot.y + spot.h + MARGIN;
+      tooltipStyle = { top: Math.min(rawTop, vpH - PAD - maxH), left: tooltipLeft };
+    }
   }
 
-  const showArrow  = !!spot && step.tooltipPos !== 'center';
-  const arrowLeft  = spot ? Math.max(16, Math.min(spot.x + spot.w / 2 - 8, vpW - 32)) : 0;
-  const arrowUp    = step.tooltipPos !== 'above';
+  const showArrow = !!spot && step.tooltipPos !== 'center';
+  const arrowLeft = spot ? Math.max(16, Math.min(spot.x + spot.w / 2 - 8, vpW - 32)) : 0;
+  const arrowUp   = !tooltipAbove; // arrow points up when tooltip is below the spotlight
 
   const overlay = (
     <div
@@ -298,8 +321,8 @@ function TutorialOverlayWeb() {
       <div
         style={{
           position: 'fixed',
-          width: TOOLTIP_W,
-          maxHeight: TOOLTIP_MAX_H,
+          width: tooltipW,
+          maxHeight: maxH,
           overflowY: 'auto',
           background: BG,
           border: `2px solid ${ACCENT}`,
