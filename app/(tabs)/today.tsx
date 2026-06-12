@@ -225,7 +225,11 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
   }, [registerActionHandler]);
 
   const readOnly = activeUid !== currentUser.uid;
-  const { dayEntry, loading: dayLoading } = useDayData(activeUid, activeProfile.challengeStartDate, activeUid === currentUser.uid);
+  const { dayEntry, loading: dayLoading, optimisticPatch } = useDayData(activeUid, activeProfile.challengeStartDate, activeUid === currentUser.uid);
+  // Tracks the running optimistic state between taps and snapshot arrival.
+  // Cleared to null whenever a Firestore snapshot updates dayEntry.
+  const optimisticEntryRef = useRef<DayEntry | null>(null);
+  useEffect(() => { optimisticEntryRef.current = null; }, [dayEntry]);
   const { tasks } = useCustomTasks(activeUid);
 
   // Reset prev-state tracking when switching between users so we don't false-trigger on return
@@ -342,20 +346,24 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
   const todayStr = format(new Date(), 'yyyy-MM-dd');
 
   const wrappedUpdate = useCallback(async (patch: Partial<DayEntry>) => {
-    if (!dayEntry) return;
-    const merged = { ...dayEntry, ...patch };
+    const base = optimisticEntryRef.current ?? dayEntry;
+    if (!base) return;
+    const merged = { ...base, ...patch };
     const newPts = computeDayPoints(merged, tasks, currentUser);
-    const oldPts = dayEntry.dailyPoints ?? 0;
+    const oldPts = base.dailyPoints ?? 0;
     const delta = newPts - oldPts;
+    // Update optimistic ref immediately so rapid taps compute the correct delta.
+    optimisticEntryRef.current = { ...merged, dailyPoints: newPts };
+    optimisticPatch({ ...patch, dailyPoints: newPts });
     try {
       await updateDayEntryWithPoints(activeUid, todayStr, { ...patch, dailyPoints: newPts }, delta);
       if (delta !== 0) {
         onProfileUpdate({ ...currentUser, totalPoints: Math.max(0, (currentUser.totalPoints ?? 0) + delta) });
       }
     } catch {
-      // write failed — local state unchanged; Firestore offline queue will retry
+      optimisticEntryRef.current = null;
     }
-  }, [dayEntry, tasks, activeUid, todayStr, currentUser, onProfileUpdate]);
+  }, [dayEntry, tasks, activeUid, todayStr, currentUser, onProfileUpdate, optimisticPatch]);
 
   async function handleRestartConfirm({ keepPoints, keepLongestStreak }: { keepPoints: boolean; keepLongestStreak: boolean }) {
     const newStartDate = format(new Date(), 'yyyy-MM-dd');

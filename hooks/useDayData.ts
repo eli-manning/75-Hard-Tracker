@@ -110,5 +110,11 @@ export function useDayData(uid: string | null, challengeStartDate: string | null
     [uid, today]
   );
 
-  return { dayEntry, loading, update };
+  // Optimistically patch local state immediately (before Firestore confirms).
+  // Snapshot arrival will overwrite with the canonical value.
+  const optimisticPatch = useCallback((patch: Partial<DayEntry>) => {
+    setDayEntry((prev) => (prev ? { ...prev, ...patch } : prev));
+  }, []);
+
+  return { dayEntry, loading, update, optimisticPatch };
 }
