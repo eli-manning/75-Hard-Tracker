@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Modal } from 'react-native';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Modal, useWindowDimensions } from 'react-native';
 import { format, differenceInDays, parseISO, subDays } from 'date-fns';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
@@ -151,6 +151,10 @@ function CrewTaskCard({
 
 function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile; onProfileUpdate: (p: UserProfile) => void }) {
   const { theme, isRocketMode } = useTheme();
+  const { width: screenWidth } = useWindowDimensions();
+  // Scale pixel-font day header so "DAY XX | XX,XXX PTS" always fits on one line
+  const dayNumFontSize  = Math.min(26, Math.floor(screenWidth * 0.057));
+  const generalFontSize = Math.min(36, Math.floor(screenWidth * 0.077));
   const { crews } = useUserCrews(currentUser.uid);
   const { users: allUsers } = useAllUsers();
   const users = useMemo(() => {
@@ -596,12 +600,12 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
             )}
             <View style={styles.dayHeader} nativeID="tutorial-day-header">
               {activeProfile.challengeMode === 'general' ? (
-                <View style={styles.dayNumRow}>
-                  <Text style={[styles.generalDate, { color: theme.accent, textShadowColor: theme.accentGlow }]}>{format(new Date(), 'EEE,MMM d').toUpperCase()}</Text>
+                <View style={[styles.dayNumRow, { flexWrap: 'nowrap' }]}>
+                  <Text numberOfLines={1} style={[styles.generalDate, { fontSize: generalFontSize, color: theme.accent, textShadowColor: theme.accentGlow }]}>{format(new Date(), 'EEE,MMM d').toUpperCase()}</Text>
                   {(activeProfile.totalPoints ?? 0) > 0 && (
                     <>
-                      <Text style={[styles.dayNumSep, { color: theme.textMuted }]}>|</Text>
-                      <Text style={[styles.generalDate, { color: theme.accent, textShadowColor: theme.accentGlow }]}>{activeProfile.totalPoints ?? 0} PTS</Text>
+                      <Text style={[styles.dayNumSep, { fontSize: generalFontSize * 0.56, color: theme.textMuted }]}>|</Text>
+                      <Text numberOfLines={1} style={[styles.generalDate, { fontSize: generalFontSize, color: theme.accent, textShadowColor: theme.accentGlow }]}>{activeProfile.totalPoints ?? 0} PTS</Text>
                     </>
                   )}
                 </View>
@@ -611,12 +615,12 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
                   <Text style={[styles.daysUntil, { color: theme.accent, textShadowColor: theme.accentGlow }]}>{Math.abs(dayNum) + 1} {Math.abs(dayNum) + 1 === 1 ? 'DAY' : 'DAYS'} AWAY</Text>
                 </>
               ) : (
-                <View style={styles.dayNumRow}>
-                  <Text style={[styles.dayNumSmall, { color: theme.accent, textShadowColor: theme.accentGlow }]}>DAY {dayNum}</Text>
+                <View style={[styles.dayNumRow, { flexWrap: 'nowrap' }]}>
+                  <Text numberOfLines={1} style={[styles.dayNumSmall, { fontSize: dayNumFontSize, color: theme.accent, textShadowColor: theme.accentGlow }]}>DAY {dayNum}</Text>
                   {(activeProfile.totalPoints ?? 0) > 0 && (
                     <>
-                      <Text style={[styles.dayNumSep, { color: theme.textMuted }]}>|</Text>
-                      <Text style={[styles.dayNumSmall, { color: theme.accent, textShadowColor: theme.accentGlow }]}>{activeProfile.totalPoints ?? 0} PTS</Text>
+                      <Text style={[styles.dayNumSep, { fontSize: dayNumFontSize * 0.77, color: theme.textMuted }]}>|</Text>
+                      <Text numberOfLines={1} style={[styles.dayNumSmall, { fontSize: dayNumFontSize, color: theme.accent, textShadowColor: theme.accentGlow }]}>{activeProfile.totalPoints ?? 0} PTS</Text>
                     </>
                   )}
                 </View>
