@@ -187,7 +187,7 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
   const [showSummary, setShowSummary] = useState(false);
   const [dayCompleted, setDayCompleted] = useState(false);
   const summaryShownRef = useRef(false);
-  const prevAllCoreRef = useRef<boolean | null>(null);
+  const hasSeenIncompleteRef = useRef(false);
   const prevCrewCompletedRef = useRef<Map<string, boolean>>(new Map());
   const [dismissedMilestone, setDismissedMilestone] = useState<number | null>(null);
   const [showRestartModal, setShowRestartModal] = useState(false);
@@ -230,16 +230,16 @@ function TodayInner({ currentUser, onProfileUpdate }: { currentUser: UserProfile
 
   // Reset prev-state tracking when switching between users so we don't false-trigger on return
   useEffect(() => {
-    prevAllCoreRef.current = null;
+    hasSeenIncompleteRef.current = false;
     prevCrewCompletedRef.current = new Map();
   }, [activeUid]);
 
   // Detect own-day allCoreCompleted false→true transition and show summary modal
   useEffect(() => {
     if (!dayEntry || activeUid !== currentUser.uid || summaryShownRef.current) return;
-    const prev = prevAllCoreRef.current;
-    prevAllCoreRef.current = dayEntry.allCoreCompleted;
-    if (prev === false && dayEntry.allCoreCompleted) {
+    if (!dayEntry.allCoreCompleted) {
+      hasSeenIncompleteRef.current = true;
+    } else if (hasSeenIncompleteRef.current) {
       summaryShownRef.current = true;
       setDayCompleted(true);
       setShowSummary(true);
